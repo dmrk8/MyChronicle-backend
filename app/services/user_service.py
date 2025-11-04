@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from app.repositories.user_repository import UserRepository
 from app.models.user_models import UserLogin, UserData
 from app.auth.jwt_handler import hash_password
@@ -25,4 +25,14 @@ class UserService:
         
         except Exception as e:
             print(f"Error creating user: {e}")
+            raise
+        
+    def get_by_username(self, username: str) -> Optional[UserData]:
+        try:
+            user = self.user_repository.get_by_username(username)
+            if user:
+                return user
+            return None
+        except Exception as e:
+            print(f"Error retrieving user by username {username}: {e}")
             raise

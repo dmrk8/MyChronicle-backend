@@ -27,7 +27,7 @@ async def get_current_user(request: Request) -> UserData:
             detail="Invalid token"
         )
     
-    user = user_service.get_user_by_username(username)
+    user = user_service.get_by_username(username)
     if user is None:
          raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
