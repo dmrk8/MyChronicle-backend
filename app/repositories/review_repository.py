@@ -132,20 +132,15 @@ class ReviewsCRUD:
             raise
 
     def get_reviews(self, user_id: str,
-                                      filters: dict,
-                                      page: int = 1,
-                                      per_page: int = 10,
-                                      sort_by: str = "title",
-                                      sort_order: int = 1) -> List[ReviewDB]: 
+                    filters: dict,
+                    page: int,
+                    per_page: int,
+                    sort_by: str,
+                    sort_order: int) -> List[ReviewDB]: 
         try:
             query = {"user_id": user_id}
             
-            if filters:
-                for key, value in filters.items():
-                    if key == "title":
-                        query[key] = {"$regex": value, "$options": "i"}
-                    else:
-                        query[key] = value
+            if filters: 
                 query.update(filters) 
             
             skip = (page - 1) * per_page

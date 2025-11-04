@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 class ReviewCreate(BaseModel):
-    media_id: str
+    media_id: int
     title: str
     type : str
     review: str

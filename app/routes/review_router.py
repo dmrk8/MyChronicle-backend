@@ -23,6 +23,7 @@ async def create_review(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#unused
 @review_router.get("/my-reviews/{media_type}")
 async def get_user_reviews(
     media_type: str,
@@ -96,7 +97,7 @@ async def get_library(
     per_page: int = Query(10, ge=1, le=50),
     sort_by: str = Query("created_at"),
     sort_order: int = Query(1, description="1 for ascending, -1 for descending"),
-    filters: Optional[dict] = None,
+    title: Optional[str] = Query(None),
     current_user: UserData = Depends(get_current_user)):
     try:
 
@@ -107,7 +108,7 @@ async def get_library(
             current_user,
             page,
             per_page,
-            filters,
+            title,
             sort_by,
             sort_order
         )
