@@ -5,6 +5,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import backendApi from '../api/backendApi';
 
 type User = {
   id: string;
@@ -37,50 +38,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch('http://localhost:8000/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const res = await backendApi.get('/auth/me', { withCredentials: true });
 
-      if (res.ok) {
-        const data: User = await res.json();
+      if (res.status == 200) {
+        const data: User = await res.data;
         setUser(data);
       } else {
         setUser(null);
       }
-    } catch {
+    } catch (error) {
+      console.error('failed to fetch current user:', error);
       setUser(null);
     }
   };
 
   const login = async (username: string, password: string) => {
-    const res = await fetch('http://localhost:8000/auth/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) throw new Error('login failed');
-    await fetchCurrentUser();
+    try {
+      const res = await backendApi.post(
+        '/auth/login',
+        { username, password },
+        { withCredentials: true }
+      );
+      if (res.status !== 200) throw new Error('Login failed');
+      await fetchCurrentUser();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Login failed');
+    }
   };
 
   const register = async (username: string, password: string) => {
-    const res = await fetch('http://localhost:8000/auth/register', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) throw new Error('registration failed');
+    try {
+      const res = await backendApi.post(
+        '/auth/register',
+        { username, password },
+        { withCredentials: true }
+      );
+      if (res.status !== 200) throw new Error('Registration failed');
+      await fetchCurrentUser();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Registration failed');
+    }
   };
 
   const logout = async () => {
-    const res = await fetch('http://localhost:8000/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!res.ok) throw new Error('logout failed');
-    setUser(null);
+    try {
+      const res = await backendApi.post('/auth/logout', {
+        withCredentials: true,
+      });
+      if (res.status !== 200) throw new Error('Logout failed');
+      setUser(null);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Logout failed');
+    }
   };
 
   return (
