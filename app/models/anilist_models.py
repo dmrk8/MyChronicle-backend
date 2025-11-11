@@ -1,30 +1,24 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 
 
 class Anilist_Media(BaseModel):
     media_id: int
-    title_english: Optional[str] 
+    title: dict = {}
     synonyms: List[str] = []
     cover_image: Optional[str] = None
     description: Optional[str] = None
-    start_year: Optional[int] 
-    end_year: Optional[int] 
-    type: str
-    
-class AniListDTO(BaseModel):
-    media_id: int
-    title_english: str = Field(alias = "title")
-    description: Optional[str] = None
     start_year: Optional[int] = None
-    end_year: Optional[int] = None 
-    type: str
-    cover_image: Optional[str] = None
+    end_year: Optional[int] = None
+    type: Optional[str] = None
+    duration: Optional[int] = None
+    status: Optional[str] = None
+    genres: Optional[List[str]] = None
+    country_of_origin: Optional[str] = None
+    format: Optional[str] = None
+    mean_score: Optional[int] = None
+    tags: Optional[List[dict]] = None
     
-    class Config:
-        populate_by_name = True
-    
-
 class AnilistPagination(BaseModel):
     results: List[Anilist_Media]
     page: int
