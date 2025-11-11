@@ -185,20 +185,20 @@ def map_anilist_to_media(response: dict) -> List[Anilist_Media]:
     media_list = response.get("data", {}).get("Page", {}).get("media", [])
     return [
         Anilist_Media(
-            media_id=item.get("id"),
+            media_id=item.get("id"), 
             title=item.get("title", {}),
             synonyms=item.get("synonyms", []),
             cover_image=item.get("coverImage", {}).get("large"),
             description=item.get("description"),
-            start_year=item.get("startDate", {}).get("year"),
-            end_year=item.get("endDate", {}).get("year"),
+            start_year=item.get("startDate", {}).get("year"), 
+            end_year=item.get("endDate", {}).get("year"), 
             type=item.get("type"),
             duration=item.get("duration"),
             status=item.get("status"),
             genres=item.get("genres"),
-            country_of_origin=item.get("countryOfOrigin"),
+            country_of_origin=item.get("countryOfOrigin"), 
             format=item.get("format"),
-            mean_score=item.get("meanScore"),
+            mean_score=item.get("meanScore"), 
             tags=item.get("tags", []),
         )
         for item in media_list
