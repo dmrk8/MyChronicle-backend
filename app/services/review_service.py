@@ -1,14 +1,19 @@
 from datetime import datetime
+import logging
 from app.repositories.review_repository import ReviewsCRUD 
-from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate
+from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate, ReviewResponse
 from app.models.user_models import UserData
 
-class ReviewService:
-    def __init__(self, media_type : str):
-        self.repository = ReviewsCRUD(media_type)
+logger = logging.getLogger("review_service")
+logging.basicConfig(level=logging.INFO)
 
-    def create_review(self, review_request : ReviewCreate, user_data: UserData):
+class ReviewService:
+    def __init__(self):
+        self.repository = ReviewsCRUD()
+
+    def create_review(self, review_request : ReviewCreate, user_data: UserData) -> ReviewResponse:
         if not user_data.id:
+            logger.error("User ID cannot be None.")
             raise ValueError("User ID cannot be None.")
     
         existing_review = self.repository.get_review_by_user_and_media(
@@ -16,14 +21,16 @@ class ReviewService:
         )
 
         if existing_review:
-            raise ValueError("record already exits")
-        if review_request.rating < 0 or review_request.rating > 10:
+            logger.warning(f"Review already exists for user {user_data.id} and media {review_request.media_id}")
+            raise ValueError("record already exists")
+        if review_request.rating is not None and (review_request.rating < 0 or review_request.rating > 10):
+            logger.warning(f"Invalid rating {review_request.rating} for user {user_data.id}")
             raise ValueError("rating must be between 0 and 10")
         
-        if len(review_request.review) > 5000:
+        if review_request.review is not None and len(review_request.review) > 5000:
+            logger.warning(f"Review text too long for user {user_data.id}")
             raise ValueError("Review must be less than 5000 characters")
 
-            
         review_data = ReviewDB( 
             user_id=user_data.id,
             media_id=review_request.media_id,
@@ -31,59 +38,81 @@ class ReviewService:
             type=review_request.type,
             rating=review_request.rating,
             review=review_request.review,
+            is_favorite=review_request.is_favorite,
             created_at=datetime.now(),
             updated_at=datetime.now()
         )
 
         try:
-            inserted_id = self.repository.create_review(review_data)
-            return inserted_id
-        
+            response = self.repository.create_review(review_data)
+            logger.info(f"Review created for user {user_data.id}, media {review_request.media_id}")
+            return response
         except Exception as e:
-            print("Error creating review in ReviewService:", e)
+            logger.error(f"Error creating review in ReviewService: {e}")
             raise
     
-    def update_review(self, update_request : ReviewUpdate, user: UserData):
-        user_review_data = self.repository.get_by_id(update_request.id)
+    
+    def update_review(self, update_request: ReviewUpdate, user: UserData) -> ReviewResponse:
+        review_data = self.repository.get_review_by_id(update_request.id)
         
-        if not user_review_data:
+        if not review_data:
+            logger.error(f"Review with id {update_request.id} not found for update")
             raise ValueError(f"Review with id {update_request.id} not found")
 
-        if user_review_data.user_id != user.id:
-            raise ValueError(f"not authorized")
+        if review_data.user_id != user.id:
+            logger.warning(f"User {user.id} not authorized to update review {update_request.id}")
+            raise ValueError("Not authorized")
         
-         
-        user_review_data.updated_at = datetime.now()
-        user_review_data.review = update_request.review or ""
-        user_review_data.rating = update_request.rating or 0.0
+        review_data.updated_at = datetime.now()
+        review_data.review = update_request.review or ""
+        review_data.rating = update_request.rating or 0.0
 
-        result = self.repository.update_review(user_review_data)
-              
-        return result
-            
-    def delete_review(self, review_id : str, user: UserData):
-        user_review_data = self.repository.get_by_id(review_id)
+        try:
+            response = self.repository.update_review(review_data)
+            logger.info(f"Review {update_request.id} updated by user {user.id}")
+            return response
+        except Exception as e:
+            logger.error(f"Error updating review in ReviewService: {e}")
+            raise
+             
+    def delete_review(self, review_id: str, user: UserData) -> ReviewResponse:
+        review_data = self.repository.get_review_by_id(review_id)
 
-        if not user_review_data:
+        if not review_data:
+            logger.error(f"Review with id {review_id} not found for deletion")
             raise ValueError(f"Review with id {review_id} not found")
 
-        if user_review_data.user_id != user.id:
-            raise ValueError(f"not authorized")
+        if review_data.user_id != user.id:
+            logger.warning(f"User {user.id} not authorized to delete review {review_id}")
+            raise ValueError("not authorized")
 
-        result = self.repository.delete_review(review_id)
-        return {"msg:": "review deleted succesfully"} 
+        try:
+            response = self.repository.delete_review(review_id)
+            logger.info(f"Review {review_id} deleted by user {user.id}")
+            return response
+        except Exception as e:
+            logger.error(f"Error deleting review in ReviewService: {e}")
+            raise
         
-    def get_reviews_by_userid(self, user: UserData):
+    def get_reviews_by_userid(self, user: UserData) -> ReviewResponse:
         if not user.id:
+            logger.error("User ID cannot be None.")
             raise ValueError("User ID cannot be None.")
         
-        review_list = self.repository.get_reviews_by_userid(user.id)
+        try:
+            review_list = self.repository.get_reviews_by_userid(user.id)
+            logger.info(f"Fetched {len(review_list)} reviews for user {user.id}")
+            return ReviewResponse(
+                message="Reviews fetched successfully",
+                data=review_list
+            )
+        except Exception as e:
+            logger.error(f"Error fetching reviews for user {user.id}: {e}")
+            raise
 
-        return review_list
-        
 
 
 
 
-            
+
 

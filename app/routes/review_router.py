@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 
@@ -7,90 +8,67 @@ from app.services.library_service import LibraryService
 from app.services.review_service import ReviewService
 from app.auth.auth_dependencies import get_current_user
 
+logger = logging.getLogger("review_router")
+logging.basicConfig(level=logging.INFO)
+
+# Dependency provider function
+def get_review_service():
+    return ReviewService()
+
 review_router = APIRouter(prefix="/review")
 
 @review_router.post("/create")
 async def create_review(
     review_request: ReviewCreate,
-    current_user: UserData = Depends(get_current_user)
+    current_user: UserData = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service)
 ):
-    
     try:
-        review_service = ReviewService(review_request.type)
-        result = review_service.create_review(review_request, current_user)
-        return {"message": "Review created successfully", "review_id": result}
-        
+        response = review_service.create_review(review_request, current_user)
+        logger.info(f"Review created for user {current_user.id}, media {review_request.media_id}")
+        return response
+    except ValueError as ve:
+        logger.warning(f"Validation error in create_review: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unexpected error in create_review: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-#unused
-@review_router.get("/my-reviews/{media_type}")
-async def get_user_reviews(
-    media_type: str,
-    current_user: UserData = Depends(get_current_user)
-):
-    
-    try:
-        review_service = ReviewService(media_type)
-        reviews = review_service.get_reviews_of_user(current_user)
-
-        return [
-            {
-                "id": review.id,
-                "user_id": review.user_id,
-                "media_id": review.media_id,
-                "title": review.title,
-                "review": review.review,
-                "rating": review.rating,
-                "type": review.type,
-                "created_at": review.created_at,
-                "updated_at": review.updated_at
-            }
-            for review in reviews
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-   
-@review_router.put("/update/{media_type}")
+@review_router.put("/update")
 async def update_review(
-    media_type: str,
     update_request: ReviewUpdate,
-    current_user: UserData = Depends(get_current_user)
+    current_user: UserData = Depends(get_current_user), 
+    review_service: ReviewService = Depends(get_review_service)
 ):
     try:
-        review_service = ReviewService(media_type)
-
-        review_service.update_review(update_request, current_user)
-
-        return {"update is a success"} 
-    
+        response = review_service.update_review(update_request, current_user)
+        logger.info(f"Review {update_request.id} updated by user {current_user.id}")
+        return response
+    except ValueError as ve:
+        logger.warning(f"Validation error in update_review: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-    
+        logger.error(f"Unexpected error in update_review: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@review_router.delete("/delete/{media_type}/{review_id}")
+@review_router.delete("/delete/{review_id}")
 async def delete_review(
-    media_type: str,
     review_id: str,
-    current_user: UserData = Depends(get_current_user)
+    current_user: UserData = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service)
 ):
     try:
-        review_service = ReviewService(media_type)
-
-        review_service.delete_review(review_id, current_user)
-
-        return {"message": "delete succesful"}
-    
+        response = review_service.delete_review(review_id, current_user)
+        logger.info(f"Review {review_id} deleted by user {current_user.id}")
+        return response
+    except ValueError as ve:
+        logger.warning(f"Validation error in delete_review: {ve}")
+        raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Unexpected error in delete_review: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-
- 
-@review_router.get("/library/{media_type}")
+@review_router.get("/library")
 async def get_library(
     media_type: str,
     page: int = Query(1, ge=1),
@@ -100,11 +78,8 @@ async def get_library(
     title: Optional[str] = Query(None),
     current_user: UserData = Depends(get_current_user)):
     try:
-
         library_service = LibraryService(media_type)
-
-
-        return await library_service.get_user_reviews(
+        response = await library_service.get_user_reviews(
             current_user,
             page,
             per_page,
@@ -112,7 +87,11 @@ async def get_library(
             sort_by,
             sort_order
         )
-        
+        logger.info(f"Fetched library for user {current_user.id} with media_type {media_type}")
+        return response
+    except ValueError as ve:
+        logger.warning(f"Validation error in get_library: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
- 
+        logger.error(f"Unexpected error in get_library: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
