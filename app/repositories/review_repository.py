@@ -48,9 +48,9 @@ class ReviewsCRUD:
             result = self.collection.insert_one(data)
             logger.info(f"Created review with id {result.inserted_id}")
             return ReviewResponse(
-                message="Review created successfully",
-                review_id=str(result.inserted_id),
-                acknowledged=result.acknowledged
+                message="Review created successfully", # type: ignore
+                review_id=str(result.inserted_id), # type: ignore
+                acknowledged=result.acknowledged # type: ignore
             )
         except Exception as e:
             logger.error(f"Error creating review: {e}")
@@ -61,10 +61,10 @@ class ReviewsCRUD:
             result = self.collection.delete_one({"_id": ObjectId(review_id)})
             logger.info(f"Deleted review with id {review_id}, deleted count: {result.deleted_count}")
             return ReviewResponse(
-                message="Review deleted",
-                review_id=review_id,
-                deleted_count=result.deleted_count,
-                acknowledged=result.acknowledged
+                message="Review deleted", # type: ignore
+                review_id=review_id, # type: ignore
+                deleted_count=result.deleted_count, # type: ignore
+                acknowledged=result.acknowledged # type: ignore
             )
         except Exception as e:
             logger.error(f"Error handling deleting review in repo: {e}")
@@ -85,11 +85,11 @@ class ReviewsCRUD:
             
             return ReviewResponse(
                 message="Review updated",
-                review_id=review_id,
-                matched_count=result.matched_count,
-                modified_count=result.modified_count,
+                review_id=review_id, # type: ignore
+                matched_count=result.matched_count, # type: ignore
+                modified_count=result.modified_count, # type: ignore
                 acknowledged=result.acknowledged,
-                updated_at=updated_data.updated_at
+                updated_at=updated_data.updated_at # type: ignore
             ) 
             
         except Exception as e:

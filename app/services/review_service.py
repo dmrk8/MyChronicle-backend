@@ -32,15 +32,14 @@ class ReviewService:
             raise ValueError("Review must be less than 5000 characters")
 
         review_data = ReviewDB( 
-            user_id=user_data.id,
-            media_id=review_request.media_id,
-            title=review_request.title,
+            user_id=user_data.id, # type: ignore
+            media_id=review_request.media_id, # type: ignore
             type=review_request.type,
             rating=review_request.rating,
             review=review_request.review,
-            is_favorite=review_request.is_favorite,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            is_favorite=review_request.is_favorite, # type: ignore
+            created_at=datetime.now(), # type: ignore
+            updated_at=datetime.now() # type: ignore
         )
 
         try:
@@ -103,8 +102,8 @@ class ReviewService:
             review_list = self.repository.get_reviews_by_userid(user.id)
             logger.info(f"Fetched {len(review_list)} reviews for user {user.id}")
             return ReviewResponse(
-                message="Reviews fetched successfully",
-                data=review_list
+                message="Reviews fetched successfully", # type: ignore
+                data=review_list # type: ignore
             )
         except Exception as e:
             logger.error(f"Error fetching reviews for user {user.id}: {e}")
