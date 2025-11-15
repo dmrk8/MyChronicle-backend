@@ -126,7 +126,29 @@ class ReviewService:
         except Exception as e:
             logger.error(f"Error getting review ID for user {user_id} and media {media_id}: {e}")
             raise
-
+    
+    def get_review_by_id(self, user_id:str, review_id: str) -> ReviewResponse:
+        """
+        Returns a ReviewResponse containing the review data for the given review_id,
+        or raises ValueError if not found.
+        """
+        if not user_id:
+            logger.warning("User ID cannot be None or empty in get_review_by_id")
+            raise ValueError("User ID cannot be None or empty")
+        
+        try:
+            review_data = self.repository.get_review_by_id_and_user_id(review_id, user_id)
+            if not review_data:
+                logger.info(f"No review found with id {review_id}")
+                raise ValueError("Review not found")
+            logger.info(f"Found review with id {review_id}")
+            return ReviewResponse(
+                message="Review fetched successfully",
+                data=review_data # type: ignore
+            )
+        except Exception as e:
+            logger.error(f"Error finding single review by _id {review_id}: {e}")
+            raise
 
 
 

@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Path, Query
 
 from app.models.review_models import ReviewCreate, ReviewUpdate
 from app.models.user_models import UserData
@@ -25,8 +25,8 @@ async def create_review(
 ):
     try:
         response = review_service.create_review(review_request, current_user)
-        logger.info(f"Review created for user {current_user.id}, media {review_request.media_id}")
-        return response
+        logger.info(f"Review created for user {current_user.id}, media {review_request.media_id} :  {response}")
+        return response.data
     except ValueError as ve:
         logger.warning(f"Validation error in create_review: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
@@ -42,8 +42,8 @@ async def update_review(
 ):
     try:
         response = review_service.update_review(update_request, current_user)
-        logger.info(f"Review {update_request.id} updated by user {current_user.id}")
-        return response
+        logger.info(f"Review {update_request.id} updated by user {current_user.id} :  {response}")
+        return response.data
     except ValueError as ve:
         logger.warning(f"Validation error in update_review: {ve}")
         raise HTTPException(status_code=400, detail=str(ve))
@@ -59,8 +59,8 @@ async def delete_review(
 ):
     try:
         response = review_service.delete_review(review_id, current_user)
-        logger.info(f"Review {review_id} deleted by user {current_user.id}")
-        return response
+        logger.info(f"Review {review_id} deleted by user {current_user.id} :  {response}")
+        return response.data
     except ValueError as ve:
         logger.warning(f"Validation error in delete_review: {ve}")
         raise HTTPException(status_code=404, detail=str(ve))
@@ -110,11 +110,31 @@ async def get_review_id(
             logger.warning("User ID is None in get_review_id")
             raise HTTPException(status_code=401, detail="User ID is missing")
         response = review_service.get_review_id_by_media_id(current_user.id, media_id)
-        logger.info(f"Fetched review ID for user {current_user.id} and media {media_id}")
-        return response
+        logger.info(f"Fetched review ID for user {current_user.id} and media {media_id} :  {response}")
+        return response.data
     except ValueError as ve:
         logger.warning(f"Validation error in get_review_id: {ve}")
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         logger.error(f"Unexpected error in get_review_id: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
+@review_router.get("/{review_id}")
+async def get_review_by_id(
+    review_id: str = Path(..., description="ID of the review"),
+    current_user: UserData = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service)
+):
+    """
+    Get the review data for the current user and a specific review ID.
+    """
+    try:
+        response = review_service.get_review_by_id(current_user.id, review_id) # type: ignore
+        logger.info(f"Fetched review with id {review_id} for user {current_user.id}: {response}")
+        return response.data
+    except ValueError as ve:
+        logger.warning(f"Validation error in get_review_by_id: {ve}")
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Unexpected error in get_review_by_id: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

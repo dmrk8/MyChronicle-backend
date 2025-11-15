@@ -106,16 +106,16 @@ class ReviewsCRUD:
             logger.error(f"Error getting reviews for user {user_id}: {e}")
             raise
 
-    def get_review_by_id(self, review_id : str) -> Optional[ReviewDB]:
+    def get_review_by_id_and_user_id(self, review_id: str, user_id: str) -> Optional[ReviewDB]:
         try:
-            data = self.collection.find_one({"_id": ObjectId(review_id)})
+            data = self.collection.find_one({"_id": ObjectId(review_id), "user_id": user_id})
             if data:
-                logger.info(f"Found review with id {review_id}")
+                logger.info(f"Found review with id {review_id} for user {user_id}")
                 return self.map_to_model(data)
-            logger.info(f"No review found with id {review_id}")
+            logger.info(f"No review found with id {review_id} for user {user_id}")
             return None
         except Exception as e:
-            logger.error(f"Error finding single review by _id {review_id}: {e}")
+            logger.error(f"Error finding review by _id {review_id} for user {user_id}: {e}")
             raise
 
     def get_review_by_user_and_media(self, user_id: str, media_id: int):

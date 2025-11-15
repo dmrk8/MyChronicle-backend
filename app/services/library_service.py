@@ -2,7 +2,6 @@ from typing import List, Optional
 from app.services.anilist_service import AnilistService
 from app.repositories.review_repository import ReviewsCRUD
 from app.models.user_models import UserData
-from app.extensions import auto_mapper
 
 class LibraryService:
     def __init__(self, collection_name):
@@ -30,15 +29,11 @@ class LibraryService:
 
         media_map = {item.media_id: item for item in media_list}
     
-        library_reviews = [
-            auto_mapper.map_to_library_review(r, media_map.get(int(r.media_id)))
-            for r in user_reviews
-        ]
         
         total = self.user_repo.count_reviews_by_user(user.id, filters)
         
         return {
-        "results": library_reviews,
+        "results": [],
         "page": page,
         "per_page": per_page,
         "total": total,
