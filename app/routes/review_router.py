@@ -95,3 +95,26 @@ async def get_library(
     except Exception as e:
         logger.error(f"Unexpected error in get_library: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@review_router.get("/id")
+async def get_review_id(
+    media_id: int = Query(..., alias="mediaId", description="ID of the media"),
+    current_user: UserData = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service)
+):
+    """
+    Get the review ID for the current user and a specific media.
+    """
+    try:
+        if current_user.id is None:
+            logger.warning("User ID is None in get_review_id")
+            raise HTTPException(status_code=401, detail="User ID is missing")
+        response = review_service.get_review_id_by_media_id(current_user.id, media_id)
+        logger.info(f"Fetched review ID for user {current_user.id} and media {media_id}")
+        return response
+    except ValueError as ve:
+        logger.warning(f"Validation error in get_review_id: {ve}")
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Unexpected error in get_review_id: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

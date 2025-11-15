@@ -102,14 +102,30 @@ class ReviewService:
             review_list = self.repository.get_reviews_by_userid(user.id)
             logger.info(f"Fetched {len(review_list)} reviews for user {user.id}")
             return ReviewResponse(
-                message="Reviews fetched successfully", # type: ignore
+                message="Reviews fetched successfully",
                 data=review_list # type: ignore
             )
         except Exception as e:
             logger.error(f"Error fetching reviews for user {user.id}: {e}")
             raise
-
-
+        
+    def get_review_id_by_media_id(self, user_id: str, media_id: int) -> ReviewResponse:
+        """
+        Returns a ReviewResponse containing the review ID for a given user and media, or raises ValueError if not found.
+        """
+        try:
+            review_id = self.repository.get_review_id_by_media_id(user_id, media_id)
+            if not review_id:
+                logger.info(f"No review ID found for user {user_id} and media {media_id}")
+                raise ValueError("Review not found")
+            logger.info(f"Found review ID {review_id} for user {user_id} and media {media_id}")
+            return ReviewResponse(
+                message="Review ID fetched successfully",
+                review_id=review_id # type: ignore
+            )
+        except Exception as e:
+            logger.error(f"Error getting review ID for user {user_id} and media {media_id}: {e}")
+            raise
 
 
 

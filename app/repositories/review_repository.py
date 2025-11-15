@@ -106,17 +106,6 @@ class ReviewsCRUD:
             logger.error(f"Error getting reviews for user {user_id}: {e}")
             raise
 
-    def get_all_reviews(self) -> List[ReviewDB]:
-        try:
-            cursor = self.collection.find()
-            results = [self.map_to_model(doc) for doc in cursor]
-            logger.info(f"Fetched {len(results)} total reviews")
-            return results
-        except Exception as e:
-            logger.error("Error at getting all reviews")
-            raise            
-    
-
     def get_review_by_id(self, review_id : str) -> Optional[ReviewDB]:
         try:
             data = self.collection.find_one({"_id": ObjectId(review_id)})
@@ -140,6 +129,18 @@ class ReviewsCRUD:
         except Exception as e:
             logger.error(f"Error getting review by user id and media id: {e}")
             raise
+        
+    def get_review_id_by_media_id(self, user_id: str, media_id: int) -> Optional[str]:
+        try:
+            data = self.collection.find_one({"user_id": user_id, "media_id": media_id}, {"_id": 1})
+            if data and "_id" in data:
+                logger.info(f"Found review ID for user {user_id} and media {media_id}")
+                return str(data["_id"])
+            logger.info(f"No review ID found for user {user_id} and media {media_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting review ID by user id and media id: {e}")
+            raise    
 
     def get_reviews(self, user_id: str,
                     filters: dict,
