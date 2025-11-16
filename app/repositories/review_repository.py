@@ -2,7 +2,7 @@ from typing import List, Optional
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
-from app.models.review_models import ReviewDB, ReviewResponse
+from app.models.review_models import ReviewDB, ReviewResponse, ReviewUpdate
 import os
 from dotenv import load_dotenv
 import logging
@@ -41,6 +41,15 @@ class ReviewsCRUD:
         logger.debug(f"Mapping MongoDB doc to ReviewDB: {mongo_doc}")
         return ReviewDB(**mongo_doc)
     
+    def is_exists(self, review_id: str) -> bool:
+        try:
+            exists = self.collection.count_documents({"_id": ObjectId(review_id)}, limit=1) > 0
+            logger.info(f"Review exists for id {review_id}: {exists}")
+            return exists
+        except Exception as e:
+            logger.error(f"Error checking existence for review id {review_id}: {e}")
+            raise    
+    
     def create_review(self, review_data : ReviewDB) -> ReviewResponse:
         try:
             data = review_data.model_dump()
@@ -70,16 +79,17 @@ class ReviewsCRUD:
             logger.error(f"Error handling deleting review in repo: {e}")
             raise
         
-    def update_review(self, updated_data : ReviewDB) -> ReviewResponse:
+    def update_review(self, review_update : ReviewUpdate) -> ReviewResponse:
         try:
-            data_dict = updated_data.model_dump()
+            data_dict = review_update.model_dump()
             review_id = data_dict.pop("id", None)
             if not review_id:
                 logger.error("Cannot update review without an id")
                 raise ValueError("Cannot update review without an id")
+            update_data = {k: v for k, v in data_dict.items() if v is not None}
             result = self.collection.update_one(
                 {"_id": ObjectId(review_id)},
-                {"$set": data_dict}
+                {"$set": update_data}
             )
             logger.info(f"Updated review with id {review_id}, matched count: {result.matched_count}, modified count: {result.modified_count}")
             
@@ -89,7 +99,7 @@ class ReviewsCRUD:
                 matched_count=result.matched_count, # type: ignore
                 modified_count=result.modified_count, # type: ignore
                 acknowledged=result.acknowledged,
-                updated_at=updated_data.updated_at # type: ignore
+                updated_at=review_update.updated_at # type: ignore
             ) 
             
         except Exception as e:
@@ -106,6 +116,18 @@ class ReviewsCRUD:
             logger.error(f"Error getting reviews for user {user_id}: {e}")
             raise
 
+    def get_review_by_id(self, review_id) -> Optional[ReviewDB]:
+        try:
+            data = self.collection.find_one({"_id": ObjectId(review_id)})
+            if data:
+                logger.info(f"Found review with id {review_id} ")
+                return self.map_to_model(data)
+            logger.info(f"No review found with id {review_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error finding review by _id {review_id} : {e}")
+            raise
+        
     def get_review_by_id_and_user_id(self, review_id: str, user_id: str) -> Optional[ReviewDB]:
         try:
             data = self.collection.find_one({"_id": ObjectId(review_id), "user_id": user_id})
