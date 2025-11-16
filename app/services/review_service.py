@@ -62,12 +62,18 @@ class ReviewService:
             logger.warning(f"User {user.id} not authorized to update review {update_request.id}")
             raise ValueError("Not authorized")
         
-        review_data.updated_at = datetime.now()
-        review_data.review = update_request.review or ""
-        review_data.rating = update_request.rating or 0.0
+        if update_request.rating is not None and (update_request.rating < 0 or update_request.rating > 10):
+            logger.warning(f"Invalid rating {update_request.rating} for user {user.id}")
+            raise ValueError("rating must be between 0 and 10")
+        
+        if update_request.review is not None and len(update_request.review) > 5000:
+            logger.warning(f"Review text too long for user {user.id}")
+            raise ValueError("Review must be less than 5000 characters")
 
+        update_request.updated_at = datetime.now()
+        
         try:
-            response = self.repository.update_review(review_data)
+            response = self.repository.update_review(update_request)
             logger.info(f"Review {update_request.id} updated by user {user.id}")
             return response
         except Exception as e:
@@ -121,7 +127,7 @@ class ReviewService:
             logger.info(f"Found review ID {review_id} for user {user_id} and media {media_id}")
             return ReviewResponse(
                 message="Review ID fetched successfully",
-                review_id=review_id # type: ignore
+                data=review_id # type: ignore
             )
         except Exception as e:
             logger.error(f"Error getting review ID for user {user_id} and media {media_id}: {e}")

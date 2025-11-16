@@ -24,6 +24,10 @@ class ReviewUpdate(BaseModel):
     id : str
     review: Optional[str] = None
     rating: Optional[float] = None
+    is_favorite: Optional[bool] = Field(None, alias="isFavorite")
+    updated_at : Optional[datetime] = Field(None, alias="updatedAt")
+    
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 class ReviewResponse(BaseModel):
     message: str
