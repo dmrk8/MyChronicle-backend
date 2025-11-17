@@ -1,15 +1,15 @@
 export interface MetadataType {
-  media_id: number;
+  mediaId: number;
   title: {
   english?: string;
   native?: string;
   romaji?: string;
 }; 
   description?: string;
-  start_year?: number;
-  end_year?: number;
+  startYear?: number;
+  endYear?: number;
   type: string;
-  cover_image?: string; 
+  coverImage?: string; 
   status?: string;
   meanScore?: number;
   genres?: string[];

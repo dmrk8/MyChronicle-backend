@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field, ConfigDict
 class ReviewCreate(BaseModel):
     media_id: int = Field(..., alias="mediaId")
     type : str
-    review: Optional[str]
-    rating: Optional[float]
-    is_favorite: bool = Field(..., alias="isFavorite")
+    review: Optional[str] = None
+    rating: Optional[float] = None
+    is_favorite: bool = Field(False, alias="isFavorite")
     
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

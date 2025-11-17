@@ -1,12 +1,27 @@
 export interface ReviewType {
-  id: string;
+  id?: string;
   mediaId: number;
   userId: string;
   title: string;
   type: string;
   review?: string;
-  rating?: string;
+  rating?: number;
+  isFavorite: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReviewCreate {
+  mediaId: number;
+  type: string;
+  review?: string;
+  rating?: number;
   isFavorite?: boolean;
-  created_at?: Date; 
-  updated_at?: Date;
+}
+
+export interface ReviewUpdate {
+  id: string;
+  review?: string;
+  rating?: number;
+  isFavorite?: boolean;
 }
