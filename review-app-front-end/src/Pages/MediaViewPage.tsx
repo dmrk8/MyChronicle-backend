@@ -7,20 +7,128 @@ import {
   MdLibraryAddCheck,
 } from 'react-icons/md';
 import { FaExternalLinkAlt } from 'react-icons/fa';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import IconButton from '../components/IconButton';
 import MediaInfoPair from '../components/MediaInfoPair';
+import type {
+  ReviewCreate,
+  ReviewType,
+  ReviewUpdate,
+} from '../types/ReviewType';
+import { BsFillInfoSquareFill } from 'react-icons/bs';
+import backendApi from '../components/api/backendApi';
 
 export default function MediaViewPage() {
   const location = useLocation();
   const mediaInfo = location.state.media as MetadataType;
+  const [reviewInfo, setReviewInfo] = useState<ReviewType | null>(null);
   const buttonSize = 40;
   const [rating, setRating] = useState<number | ''>('');
   const [review, setReview] = useState<string | ''>('');
+  const mediaLink = `https://anilist.co/${mediaInfo.type}/${mediaInfo.mediaId}/${mediaInfo.title.english}`;
+
+  useEffect(() => {
+    async function fetchReview() {
+      try {
+        const res = await backendApi.get(
+          `/review/id?mediaId=${mediaInfo.mediaId}`,
+          {
+            withCredentials: true,
+          }
+        );
+        if (res.status === 200) {
+          const reviewRes = await backendApi.get(`/review/${res.data}`, {
+            withCredentials: true,
+          });
+          if (reviewRes.status === 200 && reviewRes.data) {
+            setReviewInfo(reviewRes.data);
+            setRating(reviewRes.data.rating ?? '');
+            setReview(reviewRes.data.review ?? '');
+          }
+        }
+      } catch (err) {
+        // Log the error for debugging
+        console.error('Error fetching review:', err);
+      }
+    }
+    fetchReview();
+    // Only run on first mount
+    // eslint-disable-next-line
+  }, []);
+
+  const handleAddToLibrary = async () => {
+    try {
+      if (!reviewInfo) {
+        // Add to library (create review)
+        const reviewData: ReviewCreate = {
+          mediaId: mediaInfo.mediaId,
+          type: mediaInfo.type,
+        };
+        const res = await backendApi.post('/review/create', reviewData, {
+          withCredentials: true,
+        });
+        if (res.status === 200) {
+          const getRes = await backendApi.get(
+            `/review/id?mediaId=${mediaInfo.mediaId}`,
+            { withCredentials: true }
+          );
+          if (getRes.status === 200) {
+            const reviewRes = await backendApi.get(`/review/${getRes.data}`, {
+              withCredentials: true,
+            });
+            if (reviewRes.status === 200 && reviewRes.data) {
+              setReviewInfo(reviewRes.data);
+              setRating(reviewRes.data.rating ?? '');
+              setReview(reviewRes.data.review ?? '');
+            }
+          }
+        }
+      } else if (reviewInfo.id) {
+        // Remove from library (delete review)
+        const res = await backendApi.delete(`/review/delete/${reviewInfo.id}`, {
+          withCredentials: true,
+        });
+        if (res.status === 200) {
+          setReviewInfo(null);
+          setRating('');
+          setReview('');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update library status:', err);
+    }
+  };
+
+  const handleAddFavorite = async () => {
+    if (!reviewInfo?.id) return;
+    try {
+      const reviewUpdate: ReviewUpdate = {
+        id: reviewInfo.id!,
+        isFavorite: !reviewInfo.isFavorite,
+      };
+      const res = await backendApi.put('/review/update', reviewUpdate, {
+        withCredentials: true,
+      });
+
+      if (res.status === 200) {
+        const reviewRes = await backendApi.get(`/review/${reviewInfo.id}`, {
+          withCredentials: true,
+        });
+        if (reviewRes.status === 200 && reviewRes.data) {
+          setReviewInfo(reviewRes.data);
+          setRating(reviewRes.data.rating);
+          setReview(reviewRes.data.review);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update favorite status:', err);
+    }
+  };
 
   return (
     <div>
-      <div className="relative min-h-[60vh] w-screen max-w-none mx-0 overflow-hidden">
+      {/* Media Info */}
+      <div className="relative min-h-[60vh] w-screen mx-0 overflow-hidden">
         {/* Blurred background image */}
         {mediaInfo.coverImage && (
           <div
@@ -40,10 +148,10 @@ export default function MediaViewPage() {
 
         {/* Gradient transition at the bottom */}
         <div
-          className="absolute bottom-0 left-0 w-full h-40 z-10"
+          className="absolute flex bottom-0 left-0 w-full h-60 z-10"
           style={{
             background:
-              'linear-gradient(to bottom, transparent, var(--media-view-overlay-color) 90%)',
+              'linear-gradient(to bottom, transparent, var(--media-view-overlay-color) 40%)',
           }}
         >
           <div className="pointer-events-auto absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-20">
@@ -51,29 +159,33 @@ export default function MediaViewPage() {
               icon={<MdLibraryAdd className="cursor-pointer" />}
               conditionIcon={<MdLibraryAddCheck className="cursor-pointer" />}
               buttonSize={buttonSize}
-              label={mediaInfo.inLibrary ? 'In library' : 'Add to Library'}
-              condition={mediaInfo.inLibrary}
+              label={reviewInfo ? 'In library' : 'Add to Library'}
+              condition={!!reviewInfo}
+              onClick={handleAddToLibrary}
             />
+            {reviewInfo && (
+              <IconButton
+                icon={<MdFavoriteBorder />}
+                conditionIcon={<MdFavorite />}
+                label={reviewInfo?.isFavorite ? 'Favorite' : 'Add Favorite'}
+                buttonSize={buttonSize}
+                condition={reviewInfo?.isFavorite}
+                onClick={handleAddFavorite}
+              />
+            )}
             <IconButton
-              icon={<MdFavoriteBorder />}
-              conditionIcon={<MdFavorite />}
-              label={mediaInfo.isFavorite ? 'Favorite' : 'Add Favorite'}
-              buttonSize={buttonSize}
-              condition={mediaInfo.isFavorite}
-            />
-            <IconButton
-              icon={<FaExternalLinkAlt />}
+              icon={<BsFillInfoSquareFill />}
               conditionIcon={<FaExternalLinkAlt />}
               label="More Info"
               condition={false}
               buttonSize={buttonSize}
-              onClick={() => window.open(mediaInfo.url, '_blank')}
+              onClick={() => window.open(mediaLink, '_blank')}
             />
           </div>
         </div>
 
         {/* Foreground content */}
-        <div className="relative z-10 flex items-center px-50 py-20 pr-100">
+        <div className="relative z-10 flex flex-row items-center left-0 md:py-20 lg:pr-100 lg:px-50">
           {mediaInfo.coverImage && (
             <img
               src={mediaInfo.coverImage}
@@ -120,7 +232,7 @@ export default function MediaViewPage() {
             <MediaInfoPair label="End Date" value={mediaInfo.endYear} />
             <MediaInfoPair
               label="Mean Score"
-              value={`${mediaInfo.meanScore}/%`}
+              value={`${mediaInfo.meanScore}%`}
             />
             <MediaInfoPair
               label="Genres"
@@ -213,15 +325,49 @@ export default function MediaViewPage() {
               className="w-full text-lg  p-2 rounded bg-[var(--primary-front-color)] border border-zinc-700 focus:outline-none  resize-none"
               rows={9}
               placeholder="My review..."
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
             />
             {/* Save Button */}
             <button
               type="button"
-              className="self-end px-8 py-2 rounded bg-[var(--primary-front-color)] font-semibold cursor-pointer border-zinc-700 "
-              onClick={() => {
-                // TODO: Implement save logic here
+              className="self-end px-8 py-2 mt-4 rounded bg-[var(--primary-front-color)] font-semibold cursor-pointer border-zinc-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={async () => {
+                if (!reviewInfo) return; // Only allow save if review exists
+                try {
+                  const reviewUpdate: ReviewUpdate = {
+                    id: reviewInfo.id!,
+                    review: review,
+                    rating:
+                      typeof rating === 'number' ? rating : Number(rating),
+                  };
+                  const res = await backendApi.put(
+                    '/review/update',
+                    reviewUpdate,
+                    {
+                      withCredentials: true,
+                    }
+                  );
+                  if (res.status === 200) {
+                    const reviewRes = await backendApi.get(
+                      `/review/${reviewInfo.id}`,
+                      { withCredentials: true }
+                    );
+                    if (reviewRes.status === 200 && reviewRes.data) {
+                      setReviewInfo(reviewRes.data);
+                      setRating(reviewRes.data.rating);
+                      setReview(reviewRes.data.review);
+                    }
+                  }
+                } catch (err) {
+                  console.error('Failed to save review:', err);
+                }
               }}
-              disabled={review === '' && rating === ''}
+              disabled={
+                !reviewInfo ||
+                (review === (reviewInfo.review ?? '') &&
+                  rating === (reviewInfo.rating ?? ''))
+              }
             >
               Save
             </button>
