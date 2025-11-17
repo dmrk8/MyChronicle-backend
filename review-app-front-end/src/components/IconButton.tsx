@@ -28,7 +28,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
     <span className="transition-transform group-hover:scale-110 cursor-pointer duration-200">
       {condition ? conditionIcon : icon}
     </span>
-    <span className="text-xs mt-1 ">
+    <span className="text-base mt-1 ">
       {label}
     </span>
   </button>
