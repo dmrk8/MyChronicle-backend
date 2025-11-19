@@ -16,7 +16,7 @@ async def login(user_data: UserLogin, response: Response):
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=True #DONT FORGET  TO SET TRUE
+        secure=True 
     )
 
     return {"message": "Login successfull"}

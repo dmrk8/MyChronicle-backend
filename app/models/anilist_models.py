@@ -18,15 +18,10 @@ class Anilist_Media(BaseModel):
     mean_score: Optional[int] = Field(None, serialization_alias="meanScore")
     tags: Optional[List[dict]] = None
 
-    class Config:
-        allow_population_by_field_name = True
-        from_attributes = True
-    
 class AnilistPagination(BaseModel):
     results: List[Anilist_Media]
     page: int
     per_page: int = Field(..., serialization_alias="perPage")
     has_next_page: bool = Field(..., serialization_alias="hasNextPage")
 
-    class Config:
-        allow_population_by_field_name = True
+    
