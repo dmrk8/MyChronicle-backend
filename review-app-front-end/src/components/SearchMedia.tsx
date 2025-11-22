@@ -1,28 +1,36 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { UseInfiniteScroll } from './useInfiniteScroll';
-import MediaModal from './MediaModal';
-import SearchBar from './SearchBar';
-import BoxGrid from './BoxGrid';
-import type { MediaType } from '../types/Media';
+import BoxGrid from './MediaDisplayBoxGrid';
+import type { MetadataType } from '../types/MetadataType';
+import backendApi from './api/backendApi';
+import { useNavigate, useSearchParams } from 'react-router';
 
 interface SearchMediaProps {
   mediaType: string; // e.g., "anime", "manga", "movies"
-  apiEndpoint: string; // API endpoint for fetching media
   placeholder?: string; // Placeholder for the search bar
 }
 
-function SearchMedia({
-  mediaType,
-  apiEndpoint,
-  placeholder = 'Search...',
-}: SearchMediaProps) {
+function SearchMedia({ mediaType }: SearchMediaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<number>(1);
   const [hasNextPage, setHasNextPage] = useState<boolean>(true);
   const [query, setQuery] = useState<string>('');
-  const [results, setResults] = useState<MediaType[]>([]);
+  const [results, setResults] = useState<MetadataType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedMedia, setSelectedMedia] = useState<MediaType | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const debounceRef = useRef<number | null>(null);
+  const navigate = useNavigate();
+
+  const handleMediaClick = (media: MetadataType) => {
+    navigate(`/${media.type}/${media.mediaId}/${media.title.english}`, {
+      state: { media },
+    });
+  };
+
+  useEffect(() => {
+    const urlQuery = searchParams.get('search') || '';
+    setQuery(urlQuery);
+  }, [searchParams]);
 
   const handleSearch = useCallback(
     async (newPage = 1) => {
@@ -32,12 +40,12 @@ function SearchMedia({
 
         const perPage = newPage === 1 ? 30 : 10;
 
-        const response = await fetch(
-          `${apiEndpoint}?query=${encodeURIComponent(
+        const response = await backendApi.get(
+          `media/search/${mediaType}?query=${encodeURIComponent(
             query
           )}&page=${newPage}&per_page=${perPage}`
         );
-        const data = await response.json();
+        const data = await response.data;
 
         setResults((prev) =>
           newPage === 1 ? data.results : [...prev, ...data.results]
@@ -52,8 +60,20 @@ function SearchMedia({
         setLoading(false);
       }
     },
-    [query, hasNextPage, apiEndpoint]
+    [query, hasNextPage, mediaType]
   );
+
+  // Auto-search when query changes, with debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchParams({ search: query });
+      handleSearch(1);
+    }, 400); // 400ms debounce
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [handleSearch, query, setSearchParams]); // Only run when query change
 
   UseInfiniteScroll({
     callback: () => handleSearch(page),
@@ -65,46 +85,18 @@ function SearchMedia({
   return (
     <div className="h-screen flex flex-col">
       {/* Search bar */}
-      <SearchBar
+      <input
+        type="text"
         value={query}
-        onChange={(value) => setQuery(value)}
-        onSearch={() => handleSearch(1)}
-        placeholder={placeholder}
+        onChange={(e) => setQuery(e.target.value)}
+        className="w-full px-4 py-2 rounded bg-gray-800 text-white focus:outline-none"
       />
 
       {/* Box grid */}
-      <div ref={containerRef} className="flex-1 overflow-auto p-4">
-        <BoxGrid
-          items={results}
-          renderItem={(media) =>
-            media.cover_image ? (
-              <div
-                key={media.media_id}
-                className="relative cursor-pointer transform hover:scale-105 transition-transform"
-                onClick={() => setSelectedMedia(media)}
-              >
-                <img
-                  src={media.cover_image}
-                  alt={media.title}
-                  className="w-full h-48 object-cover rounded-xl shadow-lg"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-xl">
-                  <span className="text-white text-center font-semibold">
-                    {media.title}
-                  </span>
-                </div>
-              </div>
-            ) : null
-          }
-        />
-        {loading && <p className="text-center mt-4">Loading...</p>}
+      <div ref={containerRef} className="flex-1 overflow-auto py-30 px-60">
+        <BoxGrid items={results} onClick={handleMediaClick} />
+        {loading && <p className="text-center mt-4 text-white">Loading...</p>}
       </div>
-
-      {/* Modal */}
-      <MediaModal
-        media={selectedMedia}
-        onClose={() => setSelectedMedia(null)}
-      />
     </div>
   );
 }
