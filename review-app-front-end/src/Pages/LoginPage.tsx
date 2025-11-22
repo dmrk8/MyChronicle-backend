@@ -52,10 +52,7 @@ export default function LoginPage() {
           />
         ))}
       </div>
-      <div className="w-96 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold text-center text-black mb-6">
-          Welcome
-        </h2>
+      <div className="w-96 p-6 color[var(--primary-front-color)] rounded-lg shadow-md">
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label

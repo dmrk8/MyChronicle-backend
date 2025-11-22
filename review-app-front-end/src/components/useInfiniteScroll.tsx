@@ -4,7 +4,7 @@ interface UseInfiniteScrollProps {
   callback: () => void; //called when you need more data
   isLoading: boolean;
   hasNextPage: boolean;
-  container?: HTMLElement | null;
+  container?: HTMLElement | null; //work on the element provided
 }
 
 export function UseInfiniteScroll({
