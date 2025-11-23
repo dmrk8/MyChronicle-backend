@@ -1,205 +1,115 @@
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple, Dict
 import httpx
+import asyncio
 
-from app.models.anilist_models import Anilist_Media
-from app.extensions.anilist_cache import anilits_cache
+from app.models.anilist_models import AnilistMedia, AnilistMediaMinimal
 
 ANILIST_URL = "https://graphql.anilist.co"
 
 class AnilistApi:
     def __init__(self):
         pass
-
-    # @anilits_cache(ttl=300, model=Anilist_Media, is_list=True)
-    async def get_anime(self, query: str, page: int = 1, per_Page: int = 10) -> Tuple[List[Anilist_Media], Any]:
-        graphql_query = {
-            "query": """
-            query($search: String, $perPage: Int, $page: Int) {
-                Page(perPage: $perPage, page: $page) {
-                    pageInfo {
-                        total
-                        currentPage
-                        lastPage
-                        hasNextPage
-                    }
-                    media(type: ANIME, search: $search) {
+    
+    async def get_featured_media(
+        self,
+        page: int, 
+        per_page: int,
+        season: Optional[str],
+        season_year: Optional[int],
+        sort: str, 
+        media_type: str
+    ) -> List[AnilistMediaMinimal]:
+        """
+        Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
+        Uses the provided GraphQL query with different parameters for each category.
+        """
+        
+        variables = {
+            "page": page,
+            "perPage": per_page,
+            "sort": [sort],
+            "type": media_type
+            }
+        
+        if season:
+            variables["season"] = season
+        if season_year:
+            variables["seasonYear"] = season_year
+            
+        graphql_query = { 
+            "query": """ 
+            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int) {
+              Page(page: $page, perPage: $perPage) {
+                media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear) {
+                  id
+                  title {
+                    english
+                    romaji
+                  }
+                  format
+                  genres
+                  episodes
+                  duration
+                  status
+                  nextAiringEpisode {
+                    episode
+                    airingAt
+                    timeUntilAiring
+                  }
+                  studios {
+                    edges {
+                      isMain
+                      node {
                         id
-                        title {
-                            english
-                            native
-                            romaji
-                        }
-                        synonyms
-                        coverImage {
-                            large
-                        }
-                        description
-                        startDate {
-                            year
-                        }
-                        endDate {
-                            year
-                        }
-                        type
-                        duration
-                        status
-                        genres
-                        countryOfOrigin
-                        format
-                        meanScore
-                        tags {
-                            name
-                        }
+                        name
+                      }
                     }
+                  }
+                  coverImage {
+                    large
+                  }
+                  season
+                  seasonYear
+                  averageScore
                 }
+              }
             }
             """,
-            "variables": {
-                "search": query,
-                "perPage": per_Page,
-                "page": page
-            }
+            "variables": variables
         }
 
         async with httpx.AsyncClient() as client:
             response = await client.post(ANILIST_URL, json=graphql_query)
             response.raise_for_status()
             data = response.json()
+            
+            # Extract media data from the response
+            media_list = data.get("data", {}).get("Page", {}).get("media", [])
+            
+            # Map each media item to AnilistMedia model using model_validate
+            featured_media = [AnilistMediaMinimal.model_validate(media) for media in media_list]
+            
+            return featured_media
+            
+            
+    
+    def browse_media(self):
+        pass
+    
+    def search_media(self):
+        pass
 
-        media_list = map_anilist_to_media(data)
-        page_info = data.get("data", {}).get("Page", {}).get("pageInfo", {})
 
-        return media_list, page_info
 
-    # @anilits_cache(ttl=300, model=Anilist_Media, is_list=True)
-    async def get_comic(self, query: str, page: int = 1, per_Page: int = 10) -> Tuple[List[Anilist_Media], Any]:
-        graphql_query = {
-            "query": """
-            query($search: String, $perPage: Int, $page: Int) {
-                Page(perPage: $perPage, page: $page) {
-                    pageInfo {
-                        total
-                        currentPage
-                        lastPage
-                        hasNextPage
-                    }
-                    media(type: MANGA, search: $search) {
-                        id
-                        title {
-                            english
-                            native
-                            romaji
-                        }
-                        synonyms
-                        coverImage {
-                            large
-                        }
-                        description
-                        startDate {
-                            year
-                        }
-                        endDate {
-                            year
-                        }
-                        type
-                        duration
-                        status
-                        genres
-                        countryOfOrigin
-                        format
-                        meanScore
-                        tags {
-                            name
-                        }
-                    }
-                }
-            }
-            """,
-            "variables": {
-                "search": query,
-                "perPage": per_Page,
-                "page": page
-            }
-        }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ANILIST_URL, json=graphql_query)
-            response.raise_for_status()
-            data = response.json()
 
-        media_list = map_anilist_to_media(data)
-        page_info = data.get("data", {}).get("Page", {}).get("pageInfo", {})
 
-        return media_list, page_info
 
-    async def get_media_list_by_id_list(self, id_in: List[int]) -> List[Anilist_Media]:
-        graphql_query = {
-            "query": """
-            query Page($idIn: [Int]) {
-                Page(perPage: 50) {
-                    media(id_in: $idIn) {
-                        id
-                        title {
-                            english
-                            native
-                            romaji
-                        }
-                        synonyms
-                        coverImage {
-                            large
-                        }
-                        description
-                        startDate {
-                            year
-                        }
-                        endDate {
-                            year
-                        }
-                        type
-                        duration
-                        status
-                        genres
-                        countryOfOrigin
-                        format
-                        meanScore
-                        tags {
-                            name
-                        }
-                    }
-                }
-            }
-            """,
-            "variables": {
-                "idIn": id_in
-            }
-        }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ANILIST_URL, json=graphql_query)
-            response.raise_for_status()
-            data = response.json()
 
-        return map_anilist_to_media(data)
 
-def map_anilist_to_media(response: dict) -> List[Anilist_Media]:
-    media_list = response.get("data", {}).get("Page", {}).get("media", [])
-    return [
-        Anilist_Media(
-            media_id=item.get("id"), 
-            title=item.get("title", {}),
-            synonyms=item.get("synonyms", []),
-            cover_image=item.get("coverImage", {}).get("large"),
-            description=item.get("description"),
-            start_year=item.get("startDate", {}).get("year"), 
-            end_year=item.get("endDate", {}).get("year"), 
-            type=item.get("type"),
-            duration=item.get("duration"),
-            status=item.get("status"),
-            genres=item.get("genres"),
-            country_of_origin=item.get("countryOfOrigin"), 
-            format=item.get("format"),
-            mean_score=item.get("meanScore"), 
-            tags=item.get("tags", []),
-        )
-        for item in media_list
-    ]
+
+
+
+
+
