@@ -22,8 +22,11 @@ async def get_featured_media(
     media_type: str = Query(None, alias="mediaType"),
     service: AnilistService = Depends(get_anilist_service)
 ):
+    logger.info(f"Received request for featured media: page={page}, per_page={per_page}, season={season}, season_year={season_year}, sort={sort}, media_type={media_type}")
     try:
-        return await service.get_featured_media(page, per_page, season, season_year, sort, media_type)
+        result = await service.get_featured_media(page, per_page, season, season_year, sort, media_type)
+        logger.info(f"Successfully returned {len(result)} featured media items")
+        return result
     except Exception as e:
         logger.error(f"Error fetching featured media: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")

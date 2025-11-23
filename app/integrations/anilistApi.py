@@ -1,10 +1,13 @@
 from typing import Any, List, Optional, Tuple, Dict
 import httpx
 import asyncio
+import logging
 
 from app.models.anilist_models import AnilistMedia, AnilistMediaMinimal
 
 ANILIST_URL = "https://graphql.anilist.co"
+
+logger = logging.getLogger(__name__)
 
 class AnilistApi:
     def __init__(self):
@@ -78,18 +81,33 @@ class AnilistApi:
             "variables": variables
         }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ANILIST_URL, json=graphql_query)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Extract media data from the response
-            media_list = data.get("data", {}).get("Page", {}).get("media", [])
-            
-            # Map each media item to AnilistMedia model using model_validate
-            featured_media = [AnilistMediaMinimal.model_validate(media) for media in media_list]
-            
-            return featured_media
+        try:
+            logger.info(f"Sending GraphQL request to Anilist: variables={variables}")
+            async with httpx.AsyncClient() as client:
+                response = await client.post(ANILIST_URL, json=graphql_query)
+                response.raise_for_status()
+                data = response.json()
+                
+                # Extract media data from the response
+                media_list = data.get("data", {}).get("Page", {}).get("media", [])
+                
+                # Map each media item to AnilistMedia model using model_validate
+                featured_media = [AnilistMediaMinimal.model_validate(media) for media in media_list]
+                
+                logger.info(f"Successfully fetched {len(featured_media)} featured media items")
+                return featured_media
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error while fetching featured media: {e.response.status_code} - {e.response.text}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error while fetching featured media: {str(e)}")
+            raise
+        except ValueError as e:
+            logger.error(f"JSON parsing or validation error while fetching featured media: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while fetching featured media: {str(e)}")
+            raise
             
             
     

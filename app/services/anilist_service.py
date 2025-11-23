@@ -42,5 +42,9 @@ class AnilistService:
                                  sort: str = "POPULARITY_DESC",
                                  media_type: str = "ANIME"
                                  ) -> List[AnilistMediaMinimal]:
-        return await self.anilist_api.get_featured_media(page, per_page, season, season_year, sort, media_type)
-        
+        try:
+            logger.info(f"Fetching featured media: page={page}, per_page={per_page}, season={season}, season_year={season_year}, sort={sort}, media_type={media_type}")
+            return await self.anilist_api.get_featured_media(page, per_page, season, season_year, sort, media_type)
+        except Exception as e:
+            logger.error(f"Error fetching featured media: {str(e)}")
+            raise
