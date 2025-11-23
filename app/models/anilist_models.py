@@ -24,6 +24,13 @@ class Title(BaseModel):
     english: Optional[str] = None
     romaji: Optional[str] = None
     native: Optional[str] = None
+
+class NextAiringEpisode(BaseModel):
+    episode: Optional[int] = None
+    airing_at: Optional[int] = Field(None, alias="airingAt")
+    time_until_airing: Optional[int] = Field(None, alias="timeUntilAiring")
+    
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
     
 class AnilistMediaMinimal(BaseModel):
     id: int = Field(..., alias="id")
@@ -33,7 +40,7 @@ class AnilistMediaMinimal(BaseModel):
     episodes: Optional[int] = None
     duration: Optional[int] = None
     status: Optional[str] = None
-    next_airing_episode: Optional[dict] = Field(None, alias="nextAiringEpisode")
+    next_airing_episode: Optional[NextAiringEpisode] = Field(None, alias="nextAiringEpisode")
     main_studio: Optional[str] = Field(None, alias="mainStudio")
     cover_image_large: Optional[str] = Field(None, alias="coverImageLarge")
     season: Optional[str] = None

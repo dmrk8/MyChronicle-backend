@@ -5,12 +5,12 @@ from app.routes.search_router import search_router
 from app.routes.auth_router import auth_router
 from app.routes.user_router import user_router
 from app.routes.review_router import review_router
+from app.routes.discover_router import discover_router
 
 app = FastAPI()
 
 origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1",
+    "http://localhost:5173"
 ]
 
 app.add_middleware(
@@ -26,6 +26,7 @@ app.include_router(search_router)
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(review_router)
+app.include_router(discover_router)
 
 @app.get("/")
 async def root(q : str):

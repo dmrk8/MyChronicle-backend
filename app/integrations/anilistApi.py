@@ -13,6 +13,15 @@ class AnilistApi:
     def __init__(self):
         pass
     
+    @staticmethod
+    def extract_main_studio(studios_data: dict) -> Optional[str]:
+        """Extract main studio name from studios edges"""
+        if studios_data and studios_data.get("edges"):
+            for edge in studios_data["edges"]:
+                if edge.get("isMain"):
+                    return edge["node"]["name"]
+        return None
+    
     async def get_featured_media(
         self,
         page: int, 
@@ -83,19 +92,31 @@ class AnilistApi:
 
         try:
             logger.info(f"Sending GraphQL request to Anilist: variables={variables}")
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(ANILIST_URL, json=graphql_query)
                 response.raise_for_status()
                 data = response.json()
                 
+                if "errors" in data:
+                    logger.error("AniList GraphQL error: %s", data["errors"])
+                    raise Exception(f"AniList error: {data['errors']}")
+            
                 # Extract media data from the response
                 media_list = data.get("data", {}).get("Page", {}).get("media", [])
                 
                 # Map each media item to AnilistMedia model using model_validate
-                featured_media = [AnilistMediaMinimal.model_validate(media) for media in media_list]
+                featured_media = []
+                for media in media_list:
+                    # Extract main studio
+                    media["main_studio"] = self.extract_main_studio(media.get("studios"))
+                    # Get the large cover image
+                    media["coverImageLarge"] = media.get("coverImage", {}).get("large")
+                    
+                    featured_media.append(AnilistMediaMinimal.model_validate(media))      
                 
                 logger.info(f"Successfully fetched {len(featured_media)} featured media items")
                 return featured_media
+                
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error while fetching featured media: {e.response.status_code} - {e.response.text}")
             raise
