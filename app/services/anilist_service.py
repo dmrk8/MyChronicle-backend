@@ -61,11 +61,25 @@ class AnilistService:
                            format: Optional[str] = None,
                            status: Optional[str] = None,
                            genre_in: Optional[List[str]] = None,
-                           tag_in: Optional[List[str]] = None
+                           tag_in: Optional[List[str]] = None,
+                           is_adult: Optional[bool] = None,
+                        country_of_origin: Optional[str] = None
                            ) -> AnilistPagination:
         try:
-            logger.info(f"Searching media: page={page}, per_page={per_page}, media_type={media_type}, sort={sort}, season={season}, season_year={season_year}, format={format}, status={status}, genre_in={genre_in}, tag_in={tag_in}")
-            media_list, page_info = await self.anilist_api.search_media(page, per_page, search, media_type, sort, season, season_year, format, status, genre_in, tag_in)
+            logger.info(f"Searching media: page={page}, per_page={per_page}, media_type={media_type}, sort={sort}, season={season}, season_year={season_year}, format={format}, status={status}, genre_in={genre_in}, tag_in={tag_in}, is_adult={is_adult}, country_of_origin={country_of_origin}")
+            media_list, page_info = await self.anilist_api.search_media(page,
+                                                                        per_page,
+                                                                        search,
+                                                                        media_type.upper(),
+                                                                        sort,
+                                                                        season,
+                                                                        season_year,
+                                                                        format,
+                                                                        status,
+                                                                        genre_in,
+                                                                        tag_in,
+                                                                        is_adult,
+                                                                        country_of_origin)
             return AnilistPagination(
                 results=media_list,
                 page=page_info.current_page,
