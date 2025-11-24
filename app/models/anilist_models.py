@@ -48,12 +48,20 @@ class AnilistMediaMinimal(BaseModel):
     average_score: Optional[int] = Field(None, alias="averageScore")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
+class AnilistPageInfo(BaseModel):
+    current_page: int = Field(..., alias="currentPage")
+    has_next_page: bool = Field(..., alias="hasNextPage")
+    per_page: int = Field(..., alias="perPage")
+    total: int
+    
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+ 
 class AnilistPagination(BaseModel):
-    results: List[AnilistMedia]
+    results: List[AnilistMediaMinimal]
     page: int
     per_page: int = Field(..., alias="perPage")
     has_next_page: bool = Field(..., alias="hasNextPage")
+    total : int
     
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
