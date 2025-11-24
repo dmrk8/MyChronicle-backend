@@ -31,6 +31,11 @@ class NextAiringEpisode(BaseModel):
     time_until_airing: Optional[int] = Field(None, alias="timeUntilAiring")
     
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class MediaDate(BaseModel):
+    year: Optional[int] = None
+    month: Optional[int] = None
+    day: Optional[int] = None
     
 class AnilistMediaMinimal(BaseModel):
     id: int = Field(..., alias="id")
@@ -39,13 +44,18 @@ class AnilistMediaMinimal(BaseModel):
     genres: Optional[List[str]] = None
     episodes: Optional[int] = None
     duration: Optional[int] = None
+    chapters: Optional[int] = None
     status: Optional[str] = None
+    start_date: Optional[MediaDate] = Field(None, alias="startDate")
+    end_date: Optional[MediaDate] = Field(None, alias="endDate")
     next_airing_episode: Optional[NextAiringEpisode] = Field(None, alias="nextAiringEpisode")
     main_studio: Optional[str] = Field(None, alias="mainStudio")
     cover_image_large: Optional[str] = Field(None, alias="coverImageLarge")
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
     average_score: Optional[int] = Field(None, alias="averageScore")
+    
+    
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 class AnilistPageInfo(BaseModel):
@@ -53,7 +63,7 @@ class AnilistPageInfo(BaseModel):
     has_next_page: bool = Field(..., alias="hasNextPage")
     per_page: int = Field(..., alias="perPage")
     total: int
-    
+
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
  
 class AnilistPagination(BaseModel):

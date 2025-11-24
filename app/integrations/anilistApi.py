@@ -137,12 +137,14 @@ class AnilistApi:
         search: Optional[str],
         media_type: str,
         sort: str,
-        season: Optional[str] = None,
-        season_year: Optional[int] = None,
-        format: Optional[str] = None,
-        status: Optional[str] = None,
-        genre_in: Optional[List[str]] = None,
-        tag_in: Optional[List[str]] = None
+        season: Optional[str],
+        season_year: Optional[int],
+        format: Optional[str],
+        status: Optional[str],
+        genre_in: Optional[List[str]],
+        tag_in: Optional[List[str]],
+        is_adult: Optional[bool] = None,
+        country_of_origin: Optional[str] = None
     ) -> tuple[List[AnilistMediaMinimal], AnilistPageInfo]:
         """
         Searches for media based on the provided parameters.
@@ -153,7 +155,8 @@ class AnilistApi:
             "page": page,
             "perPage": per_page,
             "type": media_type,
-            "sort": [sort]
+            "sort": [sort],
+            "search": search
         }
         
         if season:
@@ -168,10 +171,15 @@ class AnilistApi:
             variables["genreIn"] = genre_in
         if tag_in:
             variables["tagIn"] = tag_in
+        if is_adult:
+            variables["isAdult"] = is_adult
+        if country_of_origin:
+            variables["countryOfOrigin"] = country_of_origin
+        
             
         graphql_query = { 
             "query": """ 
-            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String) {
+            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
               Page(page: $page, perPage: $perPage) {
                 pageInfo {
                   currentPage
@@ -179,7 +187,7 @@ class AnilistApi:
                   perPage
                   total
                 }
-                media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear, format: $format, status: $status, genre_in: $genreIn, tag_in: $tagIn, $search: String) {
+                media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear, format: $format, status: $status, genre_in: $genreIn, tag_in: $tagIn, search: $search, isAdult: $isAdult, countryOfOrigin: $countryOfOrigin) {
                   id
                   title {
                     english
@@ -210,6 +218,17 @@ class AnilistApi:
                   season
                   seasonYear
                   averageScore
+                  chapters
+                  startDate {
+                    year
+                    day
+                    month
+                  }
+                  endDate {
+                    year
+                    month
+                    day
+                  }
                 }
               }
             }
