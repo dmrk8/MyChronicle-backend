@@ -2,19 +2,24 @@ import logging
 import traceback
 from typing import List, Optional
 from fastapi import APIRouter, Path, Query, HTTPException, Depends
+import httpx
 
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
+from app.enums.anilist_enums import MediaType, SortOption
 
 search_router = APIRouter(prefix="/search")
 
 logger = logging.getLogger(__name__)
 
+
 def get_anilist_service():
     return AnilistService()
 
+
 def get_tmdb_service():
     return TMDBService()
+
 
 @search_router.get("/movie")
 async def search_movie(
@@ -22,14 +27,11 @@ async def search_movie(
     query: str = Query(min_length=1),
     page: int = Query(1, ge=1),
     language: str = Query("en-US"),
-    include_adult: bool = Query(False)
+    include_adult: bool = Query(False),
 ):
     try:
         result = await tmdb_service.search_movies(
-            query=query, 
-            page=page, 
-            language=language, 
-            include_adult=include_adult
+            query=query, page=page, language=language, include_adult=include_adult
         )
         if result is None:
             raise HTTPException(status_code=500, detail="Failed to search movies")
@@ -38,22 +40,25 @@ async def search_movie(
         logger.error("Error searching movie: %s\n%s", str(e), traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error searching movie: {str(e)}")
 
+
 @search_router.get("/{media_type}")
 async def search_anime(
     media_type: str = Path(..., regex="^(anime|manga)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=50, alias="perPage"),
-    search: Optional[str] = Query(None),
-    sort: str = Query(None),  
-    season: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, min_length=1),
+    sort: str = Query(SortOption.POPULARITY_DESC),
+    season: Optional[str] = Query(None, regex="^(SPRING|SUMMER|FALL|WINTER)$"),
     season_year: Optional[int] = Query(None, alias="seasonYear"),
-    format: Optional[str] = Query(None),
+    format: Optional[str] = Query(
+        None, regex="^(TV|TV_SHORT|MOVIE|SPECIAL|OVA|ONA|MUSIC|MANGA|NOVEL|ONE_SHOT)$"
+    ),
     status: Optional[str] = Query(None),
     genre_in: Optional[List[str]] = Query(None, alias="genreIn"),
     tag_in: Optional[List[str]] = Query(None, alias="tagIn"),
     is_adult: Optional[bool] = Query(None, alias="isAdult"),
-    country_of_origin: Optional[str] = Query(None, alias="countryOfOrigin"),
-    service: AnilistService = Depends(get_anilist_service)
+    country_of_origin: Optional[str] = Query(None, regex="^(JP|KR|CN)$", alias="countryOfOrigin"),
+    service: AnilistService = Depends(get_anilist_service),
 ):
     logger.info(
         f"Received request for search media: "
@@ -65,13 +70,30 @@ async def search_anime(
     )
     try:
         result = await service.search_media(
-            page, per_page, search, media_type, sort, season, 
-            season_year, format, status, genre_in, tag_in, is_adult, 
-            country_of_origin
+            page,
+            per_page,
+            search,
+            media_type.upper(),
+            sort,
+            season,
+            season_year,
+            format,
+            status,
+            genre_in,
+            tag_in,
+            is_adult,
+            country_of_origin,
         )
         logger.info(f"Successfully returned {len(result.results)} search media items")
         return result
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error searching media: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(
+            status_code=e.response.status_code, detail=f"AniList API error: {e.response.text}"
+        )
+    except ValueError as e:
+        logger.error(f"Validation error searching media: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         logger.error(f"Error searching media: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
