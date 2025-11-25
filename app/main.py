@@ -6,6 +6,7 @@ from app.routes.auth_router import auth_router
 from app.routes.user_router import user_router
 from app.routes.review_router import review_router
 from app.routes.discover_router import discover_router
+from app.routes.media_router import media_router
 
 app = FastAPI()
 
@@ -27,6 +28,7 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(review_router)
 app.include_router(discover_router)
+app.include_router(media_router)
 
 @app.get("/")
 async def root(q : str):
