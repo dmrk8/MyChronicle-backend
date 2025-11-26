@@ -8,12 +8,9 @@ class TMDBMediaMinimal(BaseModel):
     genre_ids: List[int] = Field(..., alias="genreIds")
     id: int
     original_language: str = Field(..., alias="originalLanguage")
-    overview: Optional[str] = None
     popularity: float
-    poster_path: Optional[str] = Field(None, alias="posterPath")
-    media_type: str = Field(..., alias="mediaType")
+    media_type: Optional[str] = Field(None, alias="mediaType")
     vote_average: float = Field(..., alias="voteAverage")
-    vote_count: int = Field(..., alias="voteCount")
 
     # Movie-specific fields
     title: Optional[str] = None

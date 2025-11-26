@@ -70,48 +70,100 @@ class TMDBApi:
             logger.error(f"Unexpected error fetching trending media: {str(e)}")
             raise
 
+    # async def search_movie(
+    #     self,
+    #     page: int,
+    #     query: str,
+    #     language: str = "en-US",  # language of the query results
+    #     include_adult: bool = False,  # amateur porn like JAVs
+    # ) -> TMDBPagination:
+    #     logger.info(
+    #         f"Searching movies for query: '{query}', page: {page}, language: {language}, include_adult: {include_adult}"
+    #     )
+    #     params = {
+    #         "query": query,
+    #         "language": language,
+    #         "page": page,
+    #         "include_adult": str(include_adult).lower(),
+    #     }
 
+    #     async with httpx.AsyncClient() as client:
+    #         response = await client.get(self.BASE_URL, headers=self.HEADERS, params=params)
+    #         response.raise_for_status()
+    #         try:
+    #             data = response.json()
+    #             movies = []
+    #             for movie_data in data["results"]:
+    #                 movies.append(self.map_movie_search_results(movie_data))
 
-# async def search_movie(
-#     self,
-#     page: int,
-#     query: str,
-#     language: str = "en-US",  # language of the query results
-#     include_adult: bool = False,  # amateur porn like JAVs
-# ) -> TMDBPagination:
-#     logger.info(
-#         f"Searching movies for query: '{query}', page: {page}, language: {language}, include_adult: {include_adult}"
-#     )
-#     params = {
-#         "query": query,
-#         "language": language,
-#         "page": page,
-#         "include_adult": str(include_adult).lower(),
-#     }
+    #             logger.info(
+    #                 f"Successfully retrieved {len(movies)} movies from page {data.get('page', 1)} of {data.get('total_pages', 1)}"
+    #             )
+    #             return TMDBPagination(
+    #                 results=movies,
+    #                 page=data.get("page", 1),
+    #                 total_pages=data.get("total_pages", 1),
+    #                 total_results=data.get("total_results", 0),
+    #             )
+    #         except Exception as e:
+    #             logger.error(f"Error processing API response for query '{query}': {e}")
+    #             raise ValueError(f"Invalid API response: {e}")
 
-#     async with httpx.AsyncClient() as client:
-#         response = await client.get(self.BASE_URL, headers=self.HEADERS, params=params)
-#         response.raise_for_status()
-#         try:
-#             data = response.json()
-#             movies = []
-#             for movie_data in data["results"]:
-#                 movies.append(self.map_movie_search_results(movie_data))
+    # def map_movie_search_results(self, data) -> TMDB_Search_Movie:
+    #     return TMDB_Search_Movie.model_validate(data)
 
-#             logger.info(
-#                 f"Successfully retrieved {len(movies)} movies from page {data.get('page', 1)} of {data.get('total_pages', 1)}"
-#             )
-#             return TMDBPagination(
-#                 results=movies,
-#                 page=data.get("page", 1),
-#                 total_pages=data.get("total_pages", 1),
-#                 total_results=data.get("total_results", 0),
-#             )
-#         except Exception as e:
-#             logger.error(f"Error processing API response for query '{query}': {e}")
-#             raise ValueError(f"Invalid API response: {e}")
+    async def get_popular_season(
+        self,
+        media_type: str,  # "movie" or "tv"
+        start_date: str,  # e.g., "2025-08-26"
+        end_date: str,  # e.g., "2025-11-26"
+        page: int,
+        language: str,
+        sort_by: str,
+    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+        """
+        Fetches popular movies in a specific season (date range) from TMDB.
+        """
 
-# def map_movie_search_results(self, data) -> TMDB_Search_Movie:
-#     return TMDB_Search_Movie.model_validate(data)
+        date_param = "primary_release_date" if media_type == "movie" else "air_date"
+        url = f"https://api.themoviedb.org/3/discover/{media_type}?sort_by={sort_by}&{date_param}.gte={start_date}&{date_param}.lte={end_date}&without_keywords=210024&language={language}&page={page}"
 
-# ... existing code ...
+        try:
+            logger.info(
+                f"Fetching popular season movies: start_date={start_date}, end_date={end_date}, page={page}, language={language}, sort_by={sort_by}"
+            )
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, headers=self.HEADERS)
+                response.raise_for_status()
+                data = response.json()
+
+                # Map results to TMDBMediaMinimal
+                results = [
+                    TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+                ]
+
+                page_info = TMDBPageInfo.model_validate(
+                    {
+                        "page": data.get("page", 1),
+                        "total_pages": data.get("total_pages", 1),
+                        "total_results": data.get("total_results", 0),
+                    }
+                )
+
+                logger.info(f"Successfully fetched {len(results)} popular season movies")
+                return results, page_info
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error fetching popular season movies: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error fetching popular season movies: {str(e)}")
+            raise
+        except ValueError as e:
+            logger.error(f"JSON parsing or validation error: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching popular season movies: {str(e)}")
+            raise

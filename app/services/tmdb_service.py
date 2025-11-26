@@ -57,3 +57,44 @@ class TMDBService:
         except Exception as e:
             logger.error(f"Service: Failed to get trending {media_type}: {e}")
             raise
+
+    async def get_popular_season(
+        self,
+        media_type: str,
+        start_date: str,
+        end_date: str,
+        page: int,
+        language: str,
+        sort_by: str,
+    ) -> TMDBPagination:
+        """
+        Service method to get popular season media using TMDB API.
+        Handles business logic, logging, and error handling.
+        """
+        try:
+            logger.info(
+                f"Service: Initiating popular season {media_type} fetch for start_date {start_date}, end_date {end_date} on page {page}"
+            )
+            results, page_info = await self.api.get_popular_season(
+                media_type=media_type,
+                start_date=start_date,
+                end_date=end_date,
+                page=page,
+                language=language,
+                sort_by=sort_by,
+            )
+            result = TMDBPagination(
+                results=results,
+                page=page_info.page,
+                total_pages=page_info.total_pages,  # type: ignore
+                total_results=page_info.total_results,  # type: ignore
+            )
+            logger.info(
+                f"Service: Successfully retrieved {len(result.results)} popular season {media_type} items"
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Service: Failed to get popular season {media_type}: {e}")
+            raise
+
+    # ... existing code ...
