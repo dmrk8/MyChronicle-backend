@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import api from '../../components/api/api';
+import api from '../../components/api/backendApi';
 import { UseInfiniteScroll } from '../../components/useInfiniteScroll';
-import type { LibraryReviewType } from '../../types/LibraryReviewType';
+import type { LibraryReviewType } from '../../types/ReviewType';
 
 export default function UserLibrary() {
   const containerRef = useRef<HTMLDivElement>(null);

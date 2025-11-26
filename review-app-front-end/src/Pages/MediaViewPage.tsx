@@ -26,6 +26,8 @@ export default function MediaViewPage() {
   const [rating, setRating] = useState<number | ''>('');
   const [review, setReview] = useState<string | ''>('');
   const mediaLink = `https://anilist.co/${mediaInfo.type}/${mediaInfo.mediaId}/${mediaInfo.title.english}`;
+  const [loading, setLoading] = useState<boolean>(true);
+  const [libraryPending, setLibraryPending] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchReview() {
@@ -49,6 +51,8 @@ export default function MediaViewPage() {
       } catch (err) {
         // Log the error for debugging
         console.error('Error fetching review:', err);
+      } finally {
+        setLoading(false);
       }
     }
     fetchReview();
@@ -57,12 +61,14 @@ export default function MediaViewPage() {
   }, []);
 
   const handleAddToLibrary = async () => {
+    setLibraryPending(true);
     try {
       if (!reviewInfo) {
+        setReviewInfo({} as ReviewType);
         // Add to library (create review)
         const reviewData: ReviewCreate = {
           mediaId: mediaInfo.mediaId,
-          type: mediaInfo.type,
+          type: mediaInfo.type
         };
         const res = await backendApi.post('/review/create', reviewData, {
           withCredentials: true,
@@ -84,6 +90,9 @@ export default function MediaViewPage() {
           }
         }
       } else if (reviewInfo.id) {
+        setReviewInfo(null);
+        setRating('');
+        setReview('');
         // Remove from library (delete review)
         const res = await backendApi.delete(`/review/delete/${reviewInfo.id}`, {
           withCredentials: true,
@@ -285,7 +294,7 @@ export default function MediaViewPage() {
               <label htmlFor="rating" className="-ml-2">
                 Rating:
               </label>
-              <div className="relative">
+              <div className="relative disabled:opacity-60 disabled:cursor-not-allowed">
                 <input
                   id="rating"
                   type="number"
@@ -312,6 +321,7 @@ export default function MediaViewPage() {
                         : Math.max(0, Math.min(Number(e.target.value), 10))
                     );
                   }}
+                  disabled= {!reviewInfo}
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2   text-3xl pointer-events-none">
                   / 10
@@ -320,13 +330,14 @@ export default function MediaViewPage() {
             </div>
           </div>
           {/* Review input */}
-          <form className="mb-6 flex flex-col gap-4 w-3xl text-[color:var(--media-view-primary-text-color)]">
+          <form className="mb-6 flex flex-col gap-4 w-3xl text-[color:var(--media-view-primary-text-color)] disabled:opacity-60 disabled:cursor-not-alloweddisabled:opacity-60 disabled:cursor-not-allowed">
             <textarea
               className="w-full text-lg  p-2 rounded bg-[var(--primary-front-color)] border border-zinc-700 focus:outline-none  resize-none"
               rows={9}
               placeholder="My review..."
               value={review}
               onChange={(e) => setReview(e.target.value)}
+              disabled= {!reviewInfo}
             />
             {/* Save Button */}
             <button

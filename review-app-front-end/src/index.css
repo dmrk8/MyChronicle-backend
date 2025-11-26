@@ -1,2 +1,26 @@
-@import "tailwindcss"
+@import "tailwindcss";
+
+
+:root {
+  --background-color: #0B1622;
+  --primary-front-color: #151F2E;
+  --media-view-overlay-color: #0B1622;
+  --media-view-primary-text-color: #92A0B0;
+  --media-view-secondary-text-color: #5C6B79
+}
+
+body {
+  background: var(--background-color);
+}
+
+/* Hide number input spinners for Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* hide for firefor */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
 
