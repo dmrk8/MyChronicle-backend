@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import logging
 import traceback
 from typing import List, Optional
@@ -20,29 +21,30 @@ def get_anilist_service():
 def get_tmdb_service():
     return TMDBService()
 
-
-@search_router.get("/movie")
-async def search_movie(
-    tmdb_service: TMDBService = Depends(get_tmdb_service),
-    query: str = Query(min_length=1),
-    page: int = Query(1, ge=1),
-    language: str = Query("en-US"),
-    include_adult: bool = Query(False),
-):
-    try:
-        result = await tmdb_service.search_movies(
-            query=query, page=page, language=language, include_adult=include_adult
-        )
-        if result is None:
-            raise HTTPException(status_code=500, detail="Failed to search movies")
-        return result
-    except Exception as e:
-        logger.error("Error searching movie: %s\n%s", str(e), traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error searching movie: {str(e)}")
+    # @search_router.get("/movie")
+    # async def search_movie(
+    tmdb_service: TMDBService = (Depends(get_tmdb_service),)
+    query: str = (Query(min_length=1),)
+    page: int = (Query(1, ge=1),)
+    language: str = (Query("en-US"),)
+    include_adult: bool = (Query(False),)
 
 
-@search_router.get("/{media_type}")
-async def search_anime(
+# ):
+#   try:
+#       result = await tmdb_service.search_movies(
+#          query=query, page=page, language=language, include_adult=include_adult
+#     )
+#    if result is None:
+#       raise HTTPException(status_code=500, detail="Failed to search movies")
+#  return result
+#    except Exception as e:
+#       logger.error("Error searching movie: %s\n%s", str(e), traceback.format_exc())
+#      raise HTTPException(status_code=500, detail=f"Error searching movie: {str(e)}")
+
+
+@search_router.get("/anilist/{media_type}")
+async def search_anilist(
     media_type: str = Path(..., regex="^(anime|manga)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=50, alias="perPage"),
@@ -96,4 +98,56 @@ async def search_anime(
         raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         logger.error(f"Error searching media: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@search_router.get("/tmdb/{media_type}")
+async def search_tmdb(
+    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
+    start_date: Optional[str] = Query(
+        None,
+        description="Start date (default: 3 months ago)",
+        alias="startDate"
+    ),
+    end_date: str = Query(
+        datetime.now().strftime("%Y-%m-%d"), description="End date (default: today)",
+        alias="endDate"
+    ),
+    page: int = Query(1, ge=1, description="Page number"),
+    language: str = Query("en-US", description="Language for results"),
+    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
+    with_genres: Optional[str] = Query(
+        None, description="Genre IDs (comma-separated)", alias="withGenres"
+    ),  # can be a comma (AND) or pipe (OR) separated query
+    with_keywords: Optional[str] = Query(None, description="Keyword IDs (comma-separated)", alias="withKeywords"),
+    with_runtime_gte: Optional[int] = Query(None, ge=0, description="Minimum runtime in minutes", alias="withRuntimeGte"),
+    with_runtime_lte: Optional[int] = Query(None, ge=0, description="Maximum runtime in minutes", alias="withRuntimeLte"),
+    with_original_language: Optional[str] = Query(
+        None, description="Original language (e.g., 'us')", alias="withOriginalLanguage"
+    ),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for discover media: media_type={media_type}, start_date={start_date}, end_date={end_date}, page={page}, language={language}, sort_by={sort_by}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}"
+    )
+    try:
+        result = await service.get_discover_media(
+            media_type,
+            start_date,
+            end_date,
+            page,
+            language,
+            sort_by,
+            with_genres,
+            with_keywords,
+            with_runtime_gte,
+            with_runtime_lte,
+            with_original_language,
+        )
+        if result is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch discover media")
+        logger.info(f"Successfully returned {len(result.results)} discover media items")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching discover media: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")

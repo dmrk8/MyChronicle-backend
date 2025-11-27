@@ -97,4 +97,52 @@ class TMDBService:
             logger.error(f"Service: Failed to get popular season {media_type}: {e}")
             raise
 
-    # ... existing code ...
+    async def get_discover_media(
+        self,
+        media_type: str,
+        start_date: Optional[str],
+        end_date: str,
+        page: int,
+        language: str,
+        sort_by: str,
+        with_genres: Optional[str] = None,
+        with_keywords: Optional[str] = None,
+        with_runtime_gte: Optional[int] = None,
+        with_runtime_lte: Optional[int] = None,
+        with_original_language: Optional[str] = None,
+    ) -> Optional[TMDBPagination]:
+        """
+        Service method to get discovered media using TMDB API.
+        Handles business logic, logging, and error handling.
+        """
+        try:
+            logger.info(
+                f"Service: Initiating discover {media_type} fetch for start_date {start_date}, end_date {end_date} on page {page}"
+            )
+            results, page_info = await self.api.get_discover_media(
+                media_type=media_type,
+                start_date=start_date,
+                end_date=end_date,
+                page=page,
+                language=language,
+                sort_by=sort_by,
+                with_genres=with_genres,
+                with_keywords=with_keywords,
+                with_runtime_gte=with_runtime_gte,
+                with_runtime_lte=with_runtime_lte,
+                with_original_language=with_original_language,
+            )
+            result = TMDBPagination(
+                results=results,
+                page=page_info.page,
+                total_pages=page_info.total_pages,  # type: ignore
+                total_results=page_info.total_results,  # type: ignore
+            )
+            logger.info(
+                f"Service: Successfully retrieved {len(result.results)} discover {media_type} items"
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Service: Failed to get discover {media_type}: {e}")
+            raise
+
