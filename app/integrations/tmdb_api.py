@@ -171,16 +171,21 @@ class TMDBApi:
     async def get_discover_media(
         self,
         media_type: str,  # "movie" or "tv"
-        start_date: Optional[str],
-        end_date: str,  # e.g., "2025-11-26"
         page: int,
         language: str,
         sort_by: str,
+        primary_release_date_gte: Optional[str] = None,  # For movies
+        primary_release_date_lte: Optional[str] = None,  # For movies
+        air_date_gte: Optional[str] = None,  # For TV
+        air_date_lte: Optional[str] = None,  # For TV
+        first_air_date_gte: Optional[str] = None,  # For TV
+        first_air_date_lte: Optional[str] = None,  # For TV
         with_genres: Optional[str] = None,
         with_keywords: Optional[str] = None,
         with_runtime_gte: Optional[int] = None,
         with_runtime_lte: Optional[int] = None,
         with_original_language: Optional[str] = None,
+        with_status: Optional[str] = None,  # 3 ended, 4 canceled, 5 returning series
     ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
         """
         Fetches discovered media (movie or TV) with filters from TMDB.
@@ -194,11 +199,21 @@ class TMDBApi:
             "without_keywords": "210024",
         }
 
+        # Add date params only if provided
+        if primary_release_date_gte:
+            params["primary_release_date.gte"] = primary_release_date_gte
+        if primary_release_date_lte:
+            params["primary_release_date.lte"] = primary_release_date_lte
+        if air_date_gte:
+            params["air_date.gte"] = air_date_gte
+        if air_date_lte:
+            params["air_date.lte"] = air_date_lte
+        if first_air_date_gte:
+            params["first_air_date.gte"] = first_air_date_gte
+        if first_air_date_lte:
+            params["first_air_date.lte"] = first_air_date_lte
+
         if media_type == "movie":
-            if start_date:
-                params["primary_release_date.gte"] = start_date
-            params["primary_release_date.lte"] = end_date
-            params["include_video"] = "false"
             if with_genres:
                 params["with_genres"] = with_genres
             if with_keywords:
@@ -210,12 +225,6 @@ class TMDBApi:
             if with_original_language:
                 params["with_original_language"] = with_original_language
         elif media_type == "tv":
-            if start_date:
-                params["air_date.gte"] = start_date
-            params["air_date.lte"] = end_date
-            params["first_air_date.gte"] = start_date
-            params["first_air_date.lte"] = end_date
-            params["include_null_first_air_dates"] = "false"
             if with_genres:
                 params["with_genres"] = with_genres
             if with_keywords:
@@ -226,6 +235,8 @@ class TMDBApi:
                 params["with_runtime.lte"] = str(with_runtime_lte)
             if with_original_language:
                 params["with_original_language"] = with_original_language
+            if with_status:
+                params["with_status"] = with_status
 
         # Build URL with params
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -233,7 +244,7 @@ class TMDBApi:
 
         try:
             logger.info(
-                f"Fetching discover {media_type}: start_date={start_date}, end_date={end_date}, page={page}, language={language}, sort_by={sort_by}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}"
+                f"Fetching discover {media_type}: page={page}, language={language}, sort_by={sort_by}, primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, with_status={with_status}"
             )
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, headers=self.HEADERS)

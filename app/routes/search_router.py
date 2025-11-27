@@ -104,45 +104,74 @@ async def search_anilist(
 @search_router.get("/tmdb/{media_type}")
 async def search_tmdb(
     media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
-    start_date: Optional[str] = Query(
+    primary_release_date_gte: Optional[str] = Query(
         None,
-        description="Start date (default: 3 months ago)",
-        alias="startDate"
+        description="Primary release date greater than or equal to (for movies)",
+        alias="primaryReleaseDateGte",
     ),
-    end_date: str = Query(
-        datetime.now().strftime("%Y-%m-%d"), description="End date (default: today)",
-        alias="endDate"
+    primary_release_date_lte: Optional[str] = Query(
+        None,
+        description="Primary release date less than or equal to (for movies)",
+        alias="primaryReleaseDateLte",
+    ),
+    air_date_gte: Optional[str] = Query(
+        None, description="Air date greater than or equal to (for TV)", alias="airDateGte"
+    ),
+    air_date_lte: Optional[str] = Query(
+        None, description="Air date less than or equal to (for TV)", alias="airDateLte"
+    ),
+    first_air_date_gte: Optional[str] = Query(
+        None,
+        description="First air date greater than or equal to (for TV)",
+        alias="firstAirDateGte",
+    ),
+    first_air_date_lte: Optional[str] = Query(
+        None, description="First air date less than or equal to (for TV)", alias="firstAirDateLte"
     ),
     page: int = Query(1, ge=1, description="Page number"),
     language: str = Query("en-US", description="Language for results"),
     sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
     with_genres: Optional[str] = Query(
         None, description="Genre IDs (comma-separated)", alias="withGenres"
-    ),  # can be a comma (AND) or pipe (OR) separated query
-    with_keywords: Optional[str] = Query(None, description="Keyword IDs (comma-separated)", alias="withKeywords"),
-    with_runtime_gte: Optional[int] = Query(None, ge=0, description="Minimum runtime in minutes", alias="withRuntimeGte"),
-    with_runtime_lte: Optional[int] = Query(None, ge=0, description="Maximum runtime in minutes", alias="withRuntimeLte"),
+    ),
+    with_keywords: Optional[str] = Query(
+        None, description="Keyword IDs (comma-separated)", alias="withKeywords"
+    ),
+    with_runtime_gte: Optional[int] = Query(
+        None, ge=0, description="Minimum runtime in minutes", alias="withRuntimeGte"
+    ),
+    with_runtime_lte: Optional[int] = Query(
+        None, ge=0, description="Maximum runtime in minutes", alias="withRuntimeLte"
+    ),
     with_original_language: Optional[str] = Query(
         None, description="Original language (e.g., 'us')", alias="withOriginalLanguage"
+    ),
+    with_status: Optional[str] = Query(
+        None, description="Status filter (for TV)", alias="withStatus"
     ),
     service: TMDBService = Depends(get_tmdb_service),
 ):
     logger.info(
-        f"Received request for discover media: media_type={media_type}, start_date={start_date}, end_date={end_date}, page={page}, language={language}, sort_by={sort_by}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}"
+        f"Received request for discover media: media_type={media_type}, primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, page={page}, language={language}, sort_by={sort_by}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, with_status={with_status}"
     )
     try:
         result = await service.get_discover_media(
-            media_type,
-            start_date,
-            end_date,
-            page,
-            language,
-            sort_by,
-            with_genres,
-            with_keywords,
-            with_runtime_gte,
-            with_runtime_lte,
-            with_original_language,
+            media_type=media_type,
+            page=page,
+            language=language,
+            sort_by=sort_by,
+            primary_release_date_gte=primary_release_date_gte,
+            primary_release_date_lte=primary_release_date_lte,
+            air_date_gte=air_date_gte,
+            air_date_lte=air_date_lte,
+            first_air_date_gte=first_air_date_gte,
+            first_air_date_lte=first_air_date_lte,
+            with_genres=with_genres,
+            with_keywords=with_keywords,
+            with_runtime_gte=with_runtime_gte,
+            with_runtime_lte=with_runtime_lte,
+            with_original_language=with_original_language,
+            with_status=with_status,
         )
         if result is None:
             raise HTTPException(status_code=500, detail="Failed to fetch discover media")

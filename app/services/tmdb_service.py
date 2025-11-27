@@ -100,37 +100,45 @@ class TMDBService:
     async def get_discover_media(
         self,
         media_type: str,
-        start_date: Optional[str],
-        end_date: str,
         page: int,
         language: str,
         sort_by: str,
+        primary_release_date_gte: Optional[str] = None,
+        primary_release_date_lte: Optional[str] = None,
+        air_date_gte: Optional[str] = None,
+        air_date_lte: Optional[str] = None,
+        first_air_date_gte: Optional[str] = None,
+        first_air_date_lte: Optional[str] = None,
         with_genres: Optional[str] = None,
         with_keywords: Optional[str] = None,
         with_runtime_gte: Optional[int] = None,
         with_runtime_lte: Optional[int] = None,
         with_original_language: Optional[str] = None,
+        with_status: Optional[str] = None,  # For TV: status filter
     ) -> Optional[TMDBPagination]:
         """
         Service method to get discovered media using TMDB API.
         Handles business logic, logging, and error handling.
         """
         try:
-            logger.info(
-                f"Service: Initiating discover {media_type} fetch for start_date {start_date}, end_date {end_date} on page {page}"
-            )
+            logger.info(f"Service: Initiating discover {media_type} fetch for page {page}")
             results, page_info = await self.api.get_discover_media(
                 media_type=media_type,
-                start_date=start_date,
-                end_date=end_date,
                 page=page,
                 language=language,
                 sort_by=sort_by,
+                primary_release_date_gte=primary_release_date_gte,
+                primary_release_date_lte=primary_release_date_lte,
+                air_date_gte=air_date_gte,
+                air_date_lte=air_date_lte,
+                first_air_date_gte=first_air_date_gte,
+                first_air_date_lte=first_air_date_lte,
                 with_genres=with_genres,
                 with_keywords=with_keywords,
                 with_runtime_gte=with_runtime_gte,
                 with_runtime_lte=with_runtime_lte,
                 with_original_language=with_original_language,
+                with_status=with_status,
             )
             result = TMDBPagination(
                 results=results,
@@ -145,4 +153,3 @@ class TMDBService:
         except Exception as e:
             logger.error(f"Service: Failed to get discover {media_type}: {e}")
             raise
-
