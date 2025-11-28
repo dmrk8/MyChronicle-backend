@@ -1,7 +1,7 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 from app.integrations.tmdb_api import TMDBApi
-from app.models.tmdb_models import TMDBPagination
+from app.models.tmdb_models import TMDBPagination, TMDBMediaDetail
 
 logger = logging.getLogger(__name__)
 
@@ -9,26 +9,6 @@ logger = logging.getLogger(__name__)
 class TMDBService:
     def __init__(self):
         self.api = TMDBApi()
-
-    # ... existing code ...
-
-    # async def search_movies(
-    #     self, query: str, page: int, language: str, include_adult: bool
-    # ) -> Optional[TMDBPagination]:
-    #     """
-    #     Service method to search for movies using TMDB API.
-    #     Handles business logic, logging, and error handling.
-    #     """
-    #     try:
-    #         logger.info(f"Service: Initiating movie search for '{query}' on page {page}")
-    #         result = await self.api.search_movie(
-    #             page=page, query=query, language=language, include_adult=include_adult
-    #         )
-    #         logger.info(f"Service: Successfully retrieved {len(result.results)} movies")
-    #         return result
-    #     except Exception as e:
-    #         logger.error(f"Service: Failed to search movies for '{query}': {e}")
-    #         return None  # Or raise custom exception
 
     async def get_trending_media(
         self, media_type: str, time_window: str, language: str, page: int
@@ -57,6 +37,7 @@ class TMDBService:
         except Exception as e:
             logger.error(f"Service: Failed to get trending {media_type}: {e}")
             raise
+
 
     async def get_popular_season(
         self,
@@ -153,3 +134,32 @@ class TMDBService:
         except Exception as e:
             logger.error(f"Service: Failed to get discover {media_type}: {e}")
             raise
+
+    async def get_media_detail(
+        self,
+        media_type: str,
+        media_id: int,
+        language: str,
+    ) -> TMDBMediaDetail:
+        """
+        Service method to get media detail using TMDB API.
+        Handles business logic, logging, and error handling.
+        """
+        try:
+            logger.info(
+                f"Service: Initiating media detail fetch for {media_type} {media_id}"
+            )
+            result = await self.api.get_media_detail(
+                media_type=media_type,
+                media_id=media_id,
+                language=language,
+            )
+            logger.info(
+                f"Service: Successfully retrieved media detail for {media_type} {media_id}"
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Service: Failed to get media detail for {media_type} {media_id}: {e}")
+            raise
+
+    
