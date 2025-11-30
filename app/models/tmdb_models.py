@@ -104,10 +104,24 @@ class TMDBMovieKeywords(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
+class TMDBExternalIds(BaseModel):
+    imdb_id: Optional[str] = Field(None, alias="imdbId")
+    freebase_mid: Optional[str] = None
+    freebase_id: Optional[str] = None
+    tvdb_id: Optional[int] = None
+    tvrage_id: Optional[int] = None
+    wikidata_id: Optional[str] = None
+    facebook_id: Optional[str] = None
+    instagram_id: Optional[str] = None
+    twitter_id: Optional[str] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    
 class TMDBMediaMinimal(BaseModel):
     adult: bool
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
-    genre_ids : List[int] = Field(..., alias="genreIds")
+    genre_ids: List[int] = Field(..., alias="genreIds")
     id: int
     original_language: str = Field(..., alias="originalLanguage")
     popularity: float
@@ -192,6 +206,7 @@ class TMDBTVDetail(TMDBMediaDetailBase):
     in_production: Optional[bool] = Field(None, alias="inProduction")
     languages: Optional[List[str]] = None
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
+    external_ids: Optional[TMDBExternalIds] = None
     last_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="lastEpisodeToAir")
     name: Optional[str] = None
     next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="nextEpisodeToAir")

@@ -1,10 +1,16 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 import httpx
 from dotenv import load_dotenv
 import os
 import logging
 import asyncio
-from app.models.tmdb_models import TMDBMediaMinimal, TMDBPageInfo, TMDBMovieDetail, TMDBTVDetail
+from app.models.tmdb_models import (
+    TMDBMediaMinimal,
+    TMDBPageInfo,
+    TMDBMovieDetail,
+    TMDBTVDetail,
+    TMDBExternalIds,
+)
 
 load_dotenv()
 
@@ -379,7 +385,7 @@ class TMDBApi:
         """
         Fetches detailed information for a specific TV show from TMDB, including keywords.
         """
-        url = f"{self.BASE_URL}/tv/{tv_id}?append_to_response=keywords&language={language}"
+        url = f"{self.BASE_URL}/tv/{tv_id}?append_to_response=keywords,external_ids&language={language}"
 
         try:
             logger.info(f"Fetching TV detail: tv_id={tv_id}, language={language}")

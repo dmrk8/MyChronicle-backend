@@ -37,24 +37,39 @@ async def get_media_detail(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@media_router.get("/tmdb/{media_type}/{media_id}")
-async def get_tmdb_media_detail(
-    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
-    media_id: int = Path(..., ge=1, description="Media ID"),
+@media_router.get("/tmdb/movie/{movie_id}")
+async def get_tmdb_movie_detail(
+    movie_id: int = Path(..., ge=1, description="Movie ID"),
     language: str = Query("en-US", description="Language for results"),
     service: TMDBService = Depends(get_tmdb_service),
 ):
-    logger.info(
-        f"Received request for TMDB media detail: media_type={media_type}, media_id={media_id}, language={language}"
-    )
+    logger.info(f"Received request for TMDB movie detail: movie_id={movie_id}, language={language}")
     try:
-        result = await service.get_media_detail(
-            media_type=media_type,
-            media_id=media_id,
+        result = await service.get_movie_detail(
+            movie_id=movie_id,
             language=language,
         )
-        logger.info(f"Successfully returned media detail for {media_type} {media_id}")
+        logger.info(f"Successfully returned movie detail for {movie_id}")
         return result
     except Exception as e:
-        logger.error(f"Error fetching TMDB media detail: {traceback.format_exc()}")
+        logger.error(f"Error fetching TMDB movie detail: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@media_router.get("/tmdb/tv/{tv_id}")
+async def get_tmdb_tv_detail(
+    tv_id: int = Path(..., ge=1, description="TV Show ID"),
+    language: str = Query("en-US", description="Language for results"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(f"Received request for TMDB TV detail: tv_id={tv_id}, language={language}")
+    try:
+        result = await service.get_tv_detail(
+            tv_id=tv_id,
+            language=language,
+        )
+        logger.info(f"Successfully returned TV detail for {tv_id}")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching TMDB TV detail: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")

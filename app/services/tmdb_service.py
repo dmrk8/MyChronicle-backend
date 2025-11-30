@@ -179,6 +179,10 @@ class TMDBService:
         try:
             logger.info(f"Service: Initiating TV detail fetch for {tv_id}")
             result = await self.api.get_tv_detail(tv_id, language)
+
+            if result.external_ids:
+                result.imdb_id = result.external_ids.imdb_id
+
             if result.imdb_id is not None:
                 rating = await self.imdb_service.get_imdb_rating(result.imdb_id)
                 result.imdb_rating_count = rating.rating_count
@@ -309,6 +313,26 @@ class TMDBService:
             logger.info(f"Service: Initiating bulk movie details fetch for {len(movie_ids)} movies")
             results = await self.api.get_bulk_movie_details(movie_ids, language)
 
+            # Concurrently fetch IMDB ratings
+            imdb_tasks = []
+            for result in results:
+                if result.imdb_id is not None:
+                    imdb_tasks.append(self.imdb_service.get_imdb_rating(result.imdb_id))
+                else:
+                    imdb_tasks.append(asyncio.sleep(0))  # Placeholder task that does nothing
+
+            imdb_ratings = await asyncio.gather(*imdb_tasks, return_exceptions=True)
+
+            for i, result in enumerate(results):
+                rating = imdb_ratings[i]
+                if isinstance(rating, Exception):
+                    logger.warning(f"Failed to get IMDB rating for movie {result.id}: {rating}")
+                elif rating is not None:
+                    result.imdb_rating_count = rating.rating_count  # type: ignore
+                    result.imdb_rating_value = rating.rating_value  # type: ignore
+                else:
+                    logger.info(f"IMDB ID is empty for movie {result.id}")
+
             logger.info(
                 f"Service: Successfully retrieved bulk movie details for {len(results)} movies"
             )
@@ -345,8 +369,8 @@ class TMDBService:
                 if isinstance(rating, Exception):
                     logger.warning(f"Failed to get IMDB rating for TV {result.id}: {rating}")
                 elif rating is not None:
-                    result.imdb_rating_count = rating.rating_count
-                    result.imdb_rating_value = rating.rating_value
+                    result.imdb_rating_count = rating.rating_count  # type: ignore
+                    result.imdb_rating_value = rating.rating_value  # type: ignore
                 else:
                     logger.info(f"IMDB ID is empty for TV {result.id}")
 
