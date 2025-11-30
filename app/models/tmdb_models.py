@@ -134,41 +134,58 @@ class TMDBKeyword(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class TMDBKeywords(BaseModel):
+class TMDBTvKeywords(BaseModel):
     results: List[TMDBKeyword]
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class TMDBMovieKeywords(BaseModel):
+    keywords: List[TMDBKeyword]
 
-class TMDBMediaDetail(BaseModel):
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+
+class TMDBMediaDetailBase(BaseModel):
     adult: bool
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
-    belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
-        None, alias="belongsToCollection"
-    )
-    budget: Optional[int] = None
     genres: List[TMDBGenre]
     id: int
     imdb_id: Optional[str] = Field(None, alias="imdbId")
+    imdb_rating_count: Optional[int] = None
+    imdb_rating_value: Optional[float] = None
     origin_country: List[str] = Field(..., alias="originCountry")
     original_language: str = Field(..., alias="originalLanguage")
-    original_title: Optional[str] = Field(None, alias="originalTitle")
     overview: str
     popularity: float
     poster_path: Optional[str] = Field(None, alias="posterPath")
     production_companies: List[TMDBProductionCompany] = Field(..., alias="productionCompanies")
-    release_date: Optional[str] = Field(None, alias="releaseDate")
-    revenue: Optional[int] = None
-    runtime: Optional[int] = None
     spoken_languages: List[TMDBSpokenLanguage] = Field(..., alias="spokenLanguages")
     status: str
     tagline: Optional[str] = None
-    title: Optional[str] = None
     vote_average: float = Field(..., alias="voteAverage")
     vote_count: Optional[int] = Field(None, alias="voteCount")
     media_type: Optional[str] = Field(None, alias="mediaType")
 
-    # TV-specific fields
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBMovieDetail(TMDBMediaDetailBase):
+    belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
+        None, alias="belongsToCollection"
+    )
+    budget: Optional[int] = None
+    original_title: Optional[str] = Field(None, alias="originalTitle")
+    release_date: Optional[str] = Field(None, alias="releaseDate")
+    revenue: Optional[int] = None
+    runtime: Optional[int] = None
+    title: Optional[str] = None
+    keywords: Optional[TMDBMovieKeywords] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBTVDetail(TMDBMediaDetailBase):
     created_by: Optional[List[TMDBCreatedBy]] = Field(None, alias="createdBy")
     episode_run_time: Optional[List[int]] = Field(None, alias="episodeRunTime")
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
@@ -184,6 +201,6 @@ class TMDBMediaDetail(BaseModel):
     original_name: Optional[str] = Field(None, alias="originalName")
     seasons: Optional[List[TMDBSeason]] = None
     type: Optional[str] = None
-    keywords: Optional[TMDBKeywords] = None
+    keywords: Optional[TMDBTvKeywords] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

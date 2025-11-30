@@ -1,10 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 import httpx
 from dotenv import load_dotenv
 import os
 import logging
 import asyncio
-from app.models.tmdb_models import TMDBMediaMinimal, TMDBPageInfo, TMDBMediaDetail 
+from app.models.tmdb_models import TMDBMediaMinimal, TMDBPageInfo, TMDBMovieDetail, TMDBTVDetail
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,97 @@ class TMDBApi:
             logger.error(f"Unexpected error fetching trending media: {str(e)}")
             raise
 
+    async def search_movies(
+        self,
+        page: int,
+        query: str,
+        language: str = "en-US",
+        include_adult: bool = False,
+    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+        """
+        Searches for movies on TMDB.
+        """
+        url = f"{self.BASE_URL}/search/movie"
+        params = {
+            "query": query,
+            "language": language,
+            "page": page,
+            "include_adult": str(include_adult).lower(),
+        }
+
+        try:
+            logger.info(
+                f"Searching movies for query: '{query}', page: {page}, language: {language}, include_adult: {include_adult}"
+            )
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=self.HEADERS, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                results = [
+                    TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+                ]
+                page_info = TMDBPageInfo.model_validate(
+                    {
+                        "page": data.get("page", page),
+                        "total_pages": data.get("total_pages", 1),
+                        "total_results": data.get("total_results", 0),
+                    }
+                )
+                logger.info(
+                    f"Successfully retrieved {len(results)} movies from page {data.get('page', 1)} of {data.get('total_pages', 1)}"
+                )
+                return results, page_info
+
+        except Exception as e:
+            logger.error(f"Error searching movies for query '{query}': {e}")
+            raise ValueError(f"Invalid API response: {e}")
+
+    async def search_tv(
+        self,
+        page: int,
+        query: str,
+        language: str = "en-US",
+        include_adult: bool = False,
+    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+        """
+        Searches for TV shows on TMDB.
+        """
+        url = f"{self.BASE_URL}/search/tv"
+        params = {
+            "query": query,
+            "language": language,
+            "page": page,
+            "include_adult": str(include_adult).lower(),
+        }
+
+        try:
+            logger.info(
+                f"Searching TV shows for query: '{query}', page: {page}, language: {language}, include_adult: {include_adult}"
+            )
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=self.HEADERS, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                results = [
+                    TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+                ]
+                page_info = TMDBPageInfo.model_validate(
+                    {
+                        "page": data.get("page", page),
+                        "total_pages": data.get("total_pages", 1),
+                        "total_results": data.get("total_results", 0),
+                    }
+                )
+                logger.info(
+                    f"Successfully retrieved {len(results)} TV shows from page {data.get('page', 1)} of {data.get('total_pages', 1)}"
+                )
+                return results, page_info
+
+        except Exception as e:
+            logger.error(f"Error searching TV shows for query '{query}': {e}")
+            raise ValueError(f"Invalid API response: {e}")
 
     async def get_popular_season(
         self,
@@ -241,45 +333,146 @@ class TMDBApi:
             logger.error(f"Unexpected error fetching discover {media_type}: {str(e)}")
             raise
 
-    async def get_media_detail(
+    async def get_movie_detail(
         self,
-        media_type: str,  # "movie" or "tv"
-        media_id: int,
+        movie_id: int,
         language: str,
-    ) -> TMDBMediaDetail:
+    ) -> TMDBMovieDetail:
         """
-        Fetches detailed information for a specific movie or TV show from TMDB, including keywords.
+        Fetches detailed information for a specific movie from TMDB, including keywords.
         """
-        url = f"{self.BASE_URL}/{media_type}/{media_id}?append_to_response=keywords&language={language}"
+        url = f"{self.BASE_URL}/movie/{movie_id}?append_to_response=keywords&language={language}"
 
         try:
-            logger.info(
-                f"Fetching media detail: media_type={media_type}, media_id={media_id}, language={language}"
-            )
+            logger.info(f"Fetching movie detail: movie_id={movie_id}, language={language}")
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, headers=self.HEADERS)
                 response.raise_for_status()
                 data = response.json()
 
-                # Validate and return TMDBMediaDetail
-                media_detail = TMDBMediaDetail.model_validate(data)
+                # Validate and return TMDBMovieDetail
+                movie_detail = TMDBMovieDetail.model_validate(data)
 
-                logger.info(f"Successfully fetched media detail for {media_type} {media_id}")
-                return media_detail
+                logger.info(f"Successfully fetched movie detail for {movie_id}")
+                return movie_detail
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error fetching media detail: {e.response.status_code} - {e.response.text}"
+                f"HTTP error fetching movie detail: {e.response.status_code} - {e.response.text}"
             )
             raise
         except httpx.RequestError as e:
-            logger.error(f"Request error fetching media detail: {str(e)}")
+            logger.error(f"Request error fetching movie detail: {str(e)}")
             raise
         except ValueError as e:
             logger.error(f"JSON parsing or validation error: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error fetching media detail: {str(e)}")
+            logger.error(f"Unexpected error fetching movie detail: {str(e)}")
             raise
 
-    
+    async def get_tv_detail(
+        self,
+        tv_id: int,
+        language: str,
+    ) -> TMDBTVDetail:
+        """
+        Fetches detailed information for a specific TV show from TMDB, including keywords.
+        """
+        url = f"{self.BASE_URL}/tv/{tv_id}?append_to_response=keywords&language={language}"
+
+        try:
+            logger.info(f"Fetching TV detail: tv_id={tv_id}, language={language}")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, headers=self.HEADERS)
+                response.raise_for_status()
+                data = response.json()
+
+                # Validate and return TMDBTVDetail
+                tv_detail = TMDBTVDetail.model_validate(data)
+
+                logger.info(f"Successfully fetched TV detail for {tv_id}")
+                return tv_detail
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error fetching TV detail: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error fetching TV detail: {str(e)}")
+            raise
+        except ValueError as e:
+            logger.error(f"JSON parsing or validation error: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching TV detail: {str(e)}")
+            raise
+
+    async def get_bulk_movie_details(
+        self,
+        movie_ids: List[int],
+        language: str = "en-US",
+    ) -> List[TMDBMovieDetail]:
+        """
+        Fetches detailed information for multiple movies concurrently from TMDB, including keywords.
+        """
+        try:
+            logger.info(f"Fetching bulk movie details: movie_ids={movie_ids}, language={language}")
+
+            # Create tasks for concurrent fetching
+            tasks = [self.get_movie_detail(movie_id, language) for movie_id in movie_ids]
+
+            # Gather results, allowing exceptions to be handled
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Filter out exceptions and collect successful results
+            successful_results = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"Failed to fetch movie detail for {movie_ids[i]}: {str(result)}")
+                else:
+                    successful_results.append(result)
+
+            logger.info(
+                f"Successfully fetched {len(successful_results)} out of {len(movie_ids)} bulk movie details"
+            )
+            return successful_results
+
+        except Exception as e:
+            logger.error(f"Unexpected error fetching bulk movie details: {str(e)}")
+            raise
+
+    async def get_bulk_tv_details(
+        self,
+        tv_ids: List[int],
+        language: str = "en-US",
+    ) -> List[TMDBTVDetail]:
+        """
+        Fetches detailed information for multiple TV shows concurrently from TMDB, including keywords.
+        """
+        try:
+            logger.info(f"Fetching bulk TV details: tv_ids={tv_ids}, language={language}")
+
+            # Create tasks for concurrent fetching
+            tasks = [self.get_tv_detail(tv_id, language) for tv_id in tv_ids]
+
+            # Gather results, allowing exceptions to be handled
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Filter out exceptions and collect successful results
+            successful_results = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"Failed to fetch TV detail for {tv_ids[i]}: {str(result)}")
+                else:
+                    successful_results.append(result)
+
+            logger.info(
+                f"Successfully fetched {len(successful_results)} out of {len(tv_ids)} bulk TV details"
+            )
+            return successful_results
+
+        except Exception as e:
+            logger.error(f"Unexpected error fetching bulk TV details: {str(e)}")
+            raise
