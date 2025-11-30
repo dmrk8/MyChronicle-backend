@@ -8,6 +8,7 @@ import httpx
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
 from app.enums.anilist_enums import MediaType, SortOption
+from app.enums.tmdb_enums import TMDBSortOption
 
 search_router = APIRouter(prefix="/search")
 
@@ -20,27 +21,6 @@ def get_anilist_service():
 
 def get_tmdb_service():
     return TMDBService()
-
-    # @search_router.get("/movie")
-    # async def search_movie(
-    tmdb_service: TMDBService = (Depends(get_tmdb_service),)
-    query: str = (Query(min_length=1),)
-    page: int = (Query(1, ge=1),)
-    language: str = (Query("en-US"),)
-    include_adult: bool = (Query(False),)
-
-
-# ):
-#   try:
-#       result = await tmdb_service.search_movies(
-#          query=query, page=page, language=language, include_adult=include_adult
-#     )
-#    if result is None:
-#       raise HTTPException(status_code=500, detail="Failed to search movies")
-#  return result
-#    except Exception as e:
-#       logger.error("Error searching movie: %s\n%s", str(e), traceback.format_exc())
-#      raise HTTPException(status_code=500, detail=f"Error searching movie: {str(e)}")
 
 
 @search_router.get("/anilist/{media_type}")
@@ -179,4 +159,49 @@ async def search_tmdb(
         return result
     except Exception as e:
         logger.error(f"Error fetching discover media: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@search_router.get("test/movie")
+async def search_movie_test(
+    page: int = Query(1, ge=1, description="Page number"),
+    sort_by: str = Query(TMDBSortOption.POPULARITY_DESC, description="Sort by", alias="sortBy"),
+    language: str = Query("en-US", description="Language for results"),
+    search: str = Query(None, min_length=1, description="Search query"),
+    genres: List[int] = Query([], description="List of genre IDs"),
+    keywords: List[int] = Query([], description="List of keyword IDs"),
+    length_lte: int = Query(300, ge=0, description="Maximum length in minutes", alias="lengthLte"),
+    length_gte: int = Query(0, ge=0, description="Minimum length in minutes", alias="lengthGte"),
+    release_date_gte: Optional[str] = Query(
+        None, description="Release date greater than or equal to", alias="releaseDateGte"
+    ),
+    release_date_lte: Optional[str] = Query(
+        None, description="Release date less than or equal to", alias="releaseDateLte"
+    ),
+    with_original_language: Optional[str] = Query(
+        None, description="Original language", alias="withOriginalLanguage"
+    ),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for search movie: page={page}, sort_by={sort_by}, language={language}, search={search}, genres={genres}, keywords={keywords}, length_lte={length_lte}, length_gte={length_gte}, release_date_gte={release_date_gte}, release_date_lte={release_date_lte}, with_original_language={with_original_language}"
+    )
+    try:
+        result = await service.search_movie_test(
+            page=page,
+            sort_by=sort_by,
+            language=language,
+            search=search,
+            genres=genres,
+            keywords=keywords,
+            length_lte=length_lte,
+            length_gte=length_gte,
+            release_date_gte=release_date_gte,
+            release_date_lte=release_date_lte,
+            with_original_language=with_original_language,
+        )
+        logger.info(f"Successfully returned {len(result.results)} search movie results")
+        return result
+    except Exception as e:
+        logger.error(f"Error searching movie: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
