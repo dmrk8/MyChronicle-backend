@@ -86,14 +86,77 @@ class TMDBService:
             logger.error(f"Service: Failed to get popular season {media_type}: {e}")
             raise
 
-    async def get_discover_media(
+    async def search_movie(
         self,
-        media_type: str,
+        search: Optional[str],
         page: int,
         language: str,
         sort_by: str,
         primary_release_date_gte: Optional[str] = None,
         primary_release_date_lte: Optional[str] = None,
+        with_genres: Optional[str] = None,
+        with_keywords: Optional[str] = None,
+        with_runtime_gte: Optional[int] = None,
+        with_runtime_lte: Optional[int] = None,
+        with_original_language: Optional[str] = None,
+        without_genres: Optional[str] = None,
+        without_keywords: Optional[str] = None,
+    ) -> TMDBPagination:
+        """
+        Service method to search or discover movies using TMDB API.
+        If query is provided, performs search; otherwise, performs discover.
+        Handles business logic, logging, and error handling.
+        """
+        try:
+            if search:
+                logger.info(f"Service: Initiating movie search for query '{search}' on page {page}")
+                results, page_info = await self.api.get_search_movie(
+                    query=search, page=page, language=language
+                )
+            else:
+                logger.info(f"Service: Initiating discover movie fetch for page {page}")
+            
+                # Ensure 210024 (anime) is always excluded
+                if without_keywords:
+                    keyword_list = without_keywords.split(",")
+                    if "210024" not in keyword_list:
+                        keyword_list.append("210024")
+                    without_keywords = ",".join(keyword_list)
+                else:
+                    without_keywords = "210024"
+                    
+                results, page_info = await self.api.get_discover_movie(
+                    page=page,
+                    language=language,
+                    sort_by=sort_by,
+                    primary_release_date_gte=primary_release_date_gte,
+                    primary_release_date_lte=primary_release_date_lte,
+                    with_genres=with_genres,
+                    with_keywords=with_keywords,
+                    with_runtime_gte=with_runtime_gte,
+                    with_runtime_lte=with_runtime_lte,
+                    with_original_language=with_original_language,
+                    without_genres=without_genres,
+                    without_keywords=without_keywords,
+                )
+            result = TMDBPagination(
+                results=results,
+                page=page_info.page,
+                total_pages=page_info.total_pages,  # type: ignore
+                total_results=page_info.total_results,  # type: ignore
+            )
+            logger.info(f"Service: Successfully retrieved {len(result.results)} movie items")
+            return result
+        except Exception as e:
+            logger.error(f"Service: Failed to get movies: {e}")
+            raise
+
+    async def search_tv(
+        self,
+        search: Optional[str],
+        page: int,
+        language: str,
+        sort_by: str,
         air_date_gte: Optional[str] = None,
         air_date_lte: Optional[str] = None,
         first_air_date_gte: Optional[str] = None,
@@ -103,44 +166,60 @@ class TMDBService:
         with_runtime_gte: Optional[int] = None,
         with_runtime_lte: Optional[int] = None,
         with_original_language: Optional[str] = None,
-        with_status: Optional[str] = None,  # For TV: status filter
-    ) -> Optional[TMDBPagination]:
+        with_status: Optional[str] = None,
+        without_genres: Optional[str] = None,
+        without_keywords: Optional[str] = None,
+    ) -> TMDBPagination:
         """
-        Service method to get discovered media using TMDB API.
+        Service method to search or discover TV shows using TMDB API.
+        If query is provided, performs search; otherwise, performs discover.
         Handles business logic, logging, and error handling.
         """
         try:
-            logger.info(f"Service: Initiating discover {media_type} fetch for page {page}")
-            results, page_info = await self.api.get_discover_media(
-                media_type=media_type,
-                page=page,
-                language=language,
-                sort_by=sort_by,
-                primary_release_date_gte=primary_release_date_gte,
-                primary_release_date_lte=primary_release_date_lte,
-                air_date_gte=air_date_gte,
-                air_date_lte=air_date_lte,
-                first_air_date_gte=first_air_date_gte,
-                first_air_date_lte=first_air_date_lte,
-                with_genres=with_genres,
-                with_keywords=with_keywords,
-                with_runtime_gte=with_runtime_gte,
-                with_runtime_lte=with_runtime_lte,
-                with_original_language=with_original_language,
-                with_status=with_status,
-            )
+            if search:
+                logger.info(f"Service: Initiating TV search for search '{search}' on page {page}")
+                results, page_info = await self.api.get_search_tv(
+                    query=search, page=page, language=language
+                )
+            else:
+                logger.info(f"Service: Initiating discover TV fetch for page {page}")
+                
+                # Ensure 210024 (anime) is always excluded
+                if without_keywords:
+                    keyword_list = without_keywords.split(",")
+                    if "210024" not in keyword_list:
+                        keyword_list.append("210024")
+                    without_keywords = ",".join(keyword_list)
+                else:
+                    without_keywords = "210024"
+           
+                results, page_info = await self.api.get_discover_tv(
+                    page=page,
+                    language=language,
+                    sort_by=sort_by,
+                    air_date_gte=air_date_gte,
+                    air_date_lte=air_date_lte,
+                    first_air_date_gte=first_air_date_gte,
+                    first_air_date_lte=first_air_date_lte,
+                    with_genres=with_genres,
+                    with_keywords=with_keywords,
+                    with_runtime_gte=with_runtime_gte,
+                    with_runtime_lte=with_runtime_lte,
+                    with_original_language=with_original_language,
+                    with_status=with_status,
+                    without_genres=without_genres,
+                    without_keywords=without_keywords,
+                )
             result = TMDBPagination(
                 results=results,
                 page=page_info.page,
                 total_pages=page_info.total_pages,  # type: ignore
                 total_results=page_info.total_results,  # type: ignore
             )
-            logger.info(
-                f"Service: Successfully retrieved {len(result.results)} discover {media_type} items"
-            )
+            logger.info(f"Service: Successfully retrieved {len(result.results)} TV items")
             return result
         except Exception as e:
-            logger.error(f"Service: Failed to get discover {media_type}: {e}")
+            logger.error(f"Service: Failed to get TV shows: {e}")
             raise
 
     async def get_movie_detail(
@@ -155,12 +234,7 @@ class TMDBService:
         try:
             logger.info(f"Service: Initiating movie detail fetch for {movie_id}")
             result = await self.api.get_movie_detail(movie_id, language)
-            if result.imdb_id is not None:
-                rating = await self.imdb_service.get_imdb_rating(result.imdb_id)
-                result.imdb_rating_count = rating.rating_count
-                result.imdb_rating_value = rating.rating_value
-            else:
-                logger.info("IMDB ID is empty")
+
             logger.info(f"Service: Successfully retrieved movie detail for {movie_id}")
             return result
         except Exception as e:
@@ -180,15 +254,6 @@ class TMDBService:
             logger.info(f"Service: Initiating TV detail fetch for {tv_id}")
             result = await self.api.get_tv_detail(tv_id, language)
 
-            if result.external_ids:
-                result.imdb_id = result.external_ids.imdb_id
-
-            if result.imdb_id is not None:
-                rating = await self.imdb_service.get_imdb_rating(result.imdb_id)
-                result.imdb_rating_count = rating.rating_count
-                result.imdb_rating_value = rating.rating_value
-            else:
-                logger.info("IMDB ID is empty")
             logger.info(f"Service: Successfully retrieved TV detail for {tv_id}")
             return result
         except Exception as e:
@@ -213,10 +278,10 @@ class TMDBService:
         Service method to search and filter movies.
         """
         try:
-            logger.info(f"Service: Initiating movie search for query '{search}' on page {page}")
+            logger.info(f"Service: Initiating movie search for search '{search}' on page {page}")
 
             if search:
-                results, page_info = await self.api.search_movies(
+                results, page_info = await self.api.get_search_movie(
                     query=search, page=page, language=language
                 )
 
@@ -276,8 +341,6 @@ class TMDBService:
                 if sort_by:
                     if sort_by == "POPULARITY_DESC":
                         filtered_results.sort(key=lambda x: x.popularity, reverse=True)
-                    elif sort_by == "IMDB_DESC":
-                        filtered_results.sort(key=lambda x: x.imdb_rating_value or 0, reverse=True)
 
                 # Convert filtered results to TMDBMediaMinimal
                 results = [

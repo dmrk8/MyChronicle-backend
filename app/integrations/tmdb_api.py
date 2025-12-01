@@ -77,7 +77,7 @@ class TMDBApi:
             logger.error(f"Unexpected error fetching trending media: {str(e)}")
             raise
 
-    async def search_movies(
+    async def get_search_movie(
         self,
         page: int,
         query: str,
@@ -123,7 +123,7 @@ class TMDBApi:
             logger.error(f"Error searching movies for query '{query}': {e}")
             raise ValueError(f"Invalid API response: {e}")
 
-    async def search_tv(
+    async def get_search_tv(
         self,
         page: int,
         query: str,
@@ -225,75 +225,50 @@ class TMDBApi:
             logger.error(f"Unexpected error fetching popular season movies: {str(e)}")
             raise
 
-    async def get_discover_media(
+    async def get_discover_movie(
         self,
-        media_type: str,  # "movie" or "tv"
         page: int,
         language: str,
         sort_by: str,
         primary_release_date_gte: Optional[str] = None,  # For movies
         primary_release_date_lte: Optional[str] = None,  # For movies
-        air_date_gte: Optional[str] = None,  # For TV
-        air_date_lte: Optional[str] = None,  # For TV
-        first_air_date_gte: Optional[str] = None,  # For TV
-        first_air_date_lte: Optional[str] = None,  # For TV
         with_genres: Optional[str] = None,
         with_keywords: Optional[str] = None,
         with_runtime_gte: Optional[int] = None,
         with_runtime_lte: Optional[int] = None,
         with_original_language: Optional[str] = None,
-        with_status: Optional[str] = None,  # 3 ended, 4 canceled, 5 returning series
+        without_genres: Optional[str] = None,
+        without_keywords: Optional[str] = None,
     ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
         """
-        Fetches discovered media (movie or TV) with filters from TMDB.
+        Fetches discovered movies with filters from TMDB.
         """
-        base_url = f"{self.BASE_URL}/discover/{media_type}?"
+        base_url = f"{self.BASE_URL}/discover/movie?"
         params = {
             "language": language,
             "page": page,
             "sort_by": sort_by,
-            "include_adult": "false",
-            "without_keywords": "210024",
+            "include_adult": "false"
         }
 
-        # Add date params only if provided
         if primary_release_date_gte:
             params["primary_release_date.gte"] = primary_release_date_gte
         if primary_release_date_lte:
             params["primary_release_date.lte"] = primary_release_date_lte
-        if air_date_gte:
-            params["air_date.gte"] = air_date_gte
-        if air_date_lte:
-            params["air_date.lte"] = air_date_lte
-        if first_air_date_gte:
-            params["first_air_date.gte"] = first_air_date_gte
-        if first_air_date_lte:
-            params["first_air_date.lte"] = first_air_date_lte
-
-        if media_type == "movie":
-            if with_genres:
-                params["with_genres"] = with_genres
-            if with_keywords:
-                params["with_keywords"] = with_keywords
-            if with_runtime_gte is not None:
-                params["with_runtime.gte"] = str(with_runtime_gte)
-            if with_runtime_lte is not None:
-                params["with_runtime.lte"] = str(with_runtime_lte)
-            if with_original_language:
-                params["with_original_language"] = with_original_language
-        elif media_type == "tv":
-            if with_genres:
-                params["with_genres"] = with_genres
-            if with_keywords:
-                params["with_keywords"] = with_keywords
-            if with_runtime_gte is not None:
-                params["with_runtime.gte"] = str(with_runtime_gte)
-            if with_runtime_lte is not None:
-                params["with_runtime.lte"] = str(with_runtime_lte)
-            if with_original_language:
-                params["with_original_language"] = with_original_language
-            if with_status:
-                params["with_status"] = with_status
+        if with_genres:
+            params["with_genres"] = with_genres
+        if with_keywords:
+            params["with_keywords"] = with_keywords
+        if with_runtime_gte is not None:
+            params["with_runtime.gte"] = str(with_runtime_gte)
+        if with_runtime_lte is not None:
+            params["with_runtime.lte"] = str(with_runtime_lte)
+        if with_original_language:
+            params["with_original_language"] = with_original_language
+        if without_genres:
+            params["without_genres"] = without_genres
+        if without_keywords:
+            params["without_keywords"] = without_keywords
 
         # Build URL with params
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
@@ -301,7 +276,7 @@ class TMDBApi:
 
         try:
             logger.info(
-                f"Fetching discover {media_type}: page={page}, language={language}, sort_by={sort_by}, primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, with_status={with_status}"
+                f"Fetching discover movie: page={page}, language={language}, sort_by={sort_by}, primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, without_genres={without_genres}, without_keywords={without_keywords}"
             )
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, headers=self.HEADERS)
@@ -321,22 +296,121 @@ class TMDBApi:
                     }
                 )
 
-                logger.info(f"Successfully fetched {len(results)} discover {media_type} items")
+                logger.info(f"Successfully fetched {len(results)} discover movie items")
                 return results, page_info
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error fetching discover {media_type}: {e.response.status_code} - {e.response.text}"
+                f"HTTP error fetching discover movie: {e.response.status_code} - {e.response.text}"
             )
             raise
         except httpx.RequestError as e:
-            logger.error(f"Request error fetching discover {media_type}: {str(e)}")
+            logger.error(f"Request error fetching discover movie: {str(e)}")
             raise
         except ValueError as e:
             logger.error(f"JSON parsing or validation error: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error fetching discover {media_type}: {str(e)}")
+            logger.error(f"Unexpected error fetching discover movie: {str(e)}")
+            raise
+
+    async def get_discover_tv(
+        self,
+        page: int,
+        language: str,
+        sort_by: str,
+        air_date_gte: Optional[str] = None,
+        air_date_lte: Optional[str] = None,
+        first_air_date_gte: Optional[str] = None,
+        first_air_date_lte: Optional[str] = None,
+        with_genres: Optional[str] = None,
+        with_keywords: Optional[str] = None,
+        with_runtime_gte: Optional[int] = None,
+        with_runtime_lte: Optional[int] = None,
+        with_original_language: Optional[str] = None,
+        with_status: Optional[str] = None,  # 3 ended, 4 canceled, 5 returning series
+        without_genres: Optional[str] = None,
+        without_keywords: Optional[str] = None,
+    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+        """
+        Fetches discovered TV shows with filters from TMDB.
+        """
+        base_url = f"{self.BASE_URL}/discover/tv?"
+        params = {
+            "language": language,
+            "page": page,
+            "sort_by": sort_by,
+            "include_adult": "false",
+        }
+
+        # Add date params only if provided
+        if air_date_gte:
+            params["air_date.gte"] = air_date_gte
+        if air_date_lte:
+            params["air_date.lte"] = air_date_lte
+        if first_air_date_gte:
+            params["first_air_date.gte"] = first_air_date_gte
+        if first_air_date_lte:
+            params["first_air_date.lte"] = first_air_date_lte
+        if with_genres:
+            params["with_genres"] = with_genres
+        if with_keywords:
+            params["with_keywords"] = with_keywords
+        if with_runtime_gte is not None:
+            params["with_runtime.gte"] = str(with_runtime_gte)
+        if with_runtime_lte is not None:
+            params["with_runtime.lte"] = str(with_runtime_lte)
+        if with_original_language:
+            params["with_original_language"] = with_original_language
+        if with_status:
+            params["with_status"] = with_status
+        if without_genres:
+            params["without_genres"] = without_genres
+        if without_keywords:
+            params["without_keywords"] = without_keywords
+
+        # Build URL with params
+        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+        url = base_url + query_string
+
+        try:
+            logger.info(
+                f"Fetching discover tv: page={page}, language={language}, sort_by={sort_by}, air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, with_status={with_status}, without_genres={without_genres}, without_keywords={without_keywords}"
+            )
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, headers=self.HEADERS)
+                response.raise_for_status()
+                data = response.json()
+
+                # Map results to TMDBMediaMinimal
+                results = [
+                    TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+                ]
+
+                page_info = TMDBPageInfo.model_validate(
+                    {
+                        "page": data.get("page", page),
+                        "total_pages": data.get("total_pages", 1),
+                        "total_results": data.get("total_results", 0),
+                    }
+                )
+
+                logger.info(f"Successfully fetched {len(results)} discover tv items")
+                return results, page_info
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error fetching discover tv: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error fetching discover tv: {str(e)}")
+            raise
+        except ValueError as e:
+            logger.error(f"JSON parsing or validation error: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching discover tv: {str(e)}")
             raise
 
     async def get_movie_detail(

@@ -81,36 +81,22 @@ async def search_anilist(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@search_router.get("/tmdb/{media_type}")
-async def search_tmdb(
-    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
+@search_router.get("/tmdb/movie")
+async def search_tmdb_movie(
+    search: str = Query(None, min_length=1, description="search query"),
+    page: int = Query(1, ge=1, description="Page number"),
+    language: str = Query("en-US", description="Language for results"),
+    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
     primary_release_date_gte: Optional[str] = Query(
         None,
-        description="Primary release date greater than or equal to (for movies)",
+        description="Primary release date greater than or equal to",
         alias="primaryReleaseDateGte",
     ),
     primary_release_date_lte: Optional[str] = Query(
         None,
-        description="Primary release date less than or equal to (for movies)",
+        description="Primary release date less than or equal to",
         alias="primaryReleaseDateLte",
     ),
-    air_date_gte: Optional[str] = Query(
-        None, description="Air date greater than or equal to (for TV)", alias="airDateGte"
-    ),
-    air_date_lte: Optional[str] = Query(
-        None, description="Air date less than or equal to (for TV)", alias="airDateLte"
-    ),
-    first_air_date_gte: Optional[str] = Query(
-        None,
-        description="First air date greater than or equal to (for TV)",
-        alias="firstAirDateGte",
-    ),
-    first_air_date_lte: Optional[str] = Query(
-        None, description="First air date less than or equal to (for TV)", alias="firstAirDateLte"
-    ),
-    page: int = Query(1, ge=1, description="Page number"),
-    language: str = Query("en-US", description="Language for results"),
-    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
     with_genres: Optional[str] = Query(
         None, description="Genre IDs (comma-separated)", alias="withGenres"
     ),
@@ -126,22 +112,102 @@ async def search_tmdb(
     with_original_language: Optional[str] = Query(
         None, description="Original language (e.g., 'us')", alias="withOriginalLanguage"
     ),
-    with_status: Optional[str] = Query(
-        None, description="Status filter (for TV)", alias="withStatus"
+    without_genres: Optional[str] = Query(
+        None, description="Exclude genre IDs (comma-separated)", alias="withoutGenres"
+    ),
+    without_keywords: Optional[str] = Query(
+        None, description="Exclude keyword IDs (comma-separated)", alias="withoutKeywords"
     ),
     service: TMDBService = Depends(get_tmdb_service),
 ):
     logger.info(
-        f"Received request for discover media: media_type={media_type}, primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, page={page}, language={language}, sort_by={sort_by}, with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, with_status={with_status}"
+        f"Received request for discover movies: page={page}, language={language}, sort_by={sort_by}, "
+        f"primary_release_date_gte={primary_release_date_gte}, primary_release_date_lte={primary_release_date_lte}, "
+        f"with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, "
+        f"with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, "
+        f"without_genres={without_genres}, without_keywords={without_keywords}"
     )
     try:
-        result = await service.get_discover_media(
-            media_type=media_type,
+        result = await service.search_movie(
+            search=search,
             page=page,
             language=language,
             sort_by=sort_by,
             primary_release_date_gte=primary_release_date_gte,
             primary_release_date_lte=primary_release_date_lte,
+            with_genres=with_genres,
+            with_keywords=with_keywords,
+            with_runtime_gte=with_runtime_gte,
+            with_runtime_lte=with_runtime_lte,
+            with_original_language=with_original_language,
+            without_genres=without_genres,
+            without_keywords=without_keywords,
+        )
+        logger.info(f"Successfully returned {len(result.results)} discover movie items")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching discover movies: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@search_router.get("/tmdb/tv")
+async def search_tmdb_tv(
+    search: str = Query(None, min_length=1, description="search query"),
+    page: int = Query(1, ge=1, description="Page number"),
+    language: str = Query("en-US", description="Language for results"),
+    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
+    air_date_gte: Optional[str] = Query(
+        None, description="Air date greater than or equal to", alias="airDateGte"
+    ),
+    air_date_lte: Optional[str] = Query(
+        None, description="Air date less than or equal to", alias="airDateLte"
+    ),
+    first_air_date_gte: Optional[str] = Query(
+        None,
+        description="First air date greater than or equal to",
+        alias="firstAirDateGte",
+    ),
+    first_air_date_lte: Optional[str] = Query(
+        None, description="First air date less than or equal to", alias="firstAirDateLte"
+    ),
+    with_genres: Optional[str] = Query(
+        None, description="Genre IDs (comma-separated)", alias="withGenres"
+    ),
+    with_keywords: Optional[str] = Query(
+        None, description="Keyword IDs (comma-separated)", alias="withKeywords"
+    ),
+    with_runtime_gte: Optional[int] = Query(
+        None, ge=0, description="Minimum runtime in minutes", alias="withRuntimeGte"
+    ),
+    with_runtime_lte: Optional[int] = Query(
+        None, ge=0, description="Maximum runtime in minutes", alias="withRuntimeLte"
+    ),
+    with_original_language: Optional[str] = Query(
+        None, description="Original language (e.g., 'us')", alias="withOriginalLanguage"
+    ),
+    with_status: Optional[str] = Query(None, description="Status filter", alias="withStatus"),
+    without_genres: Optional[str] = Query(
+        None, description="Exclude genre IDs (comma-separated)", alias="withoutGenres"
+    ),
+    without_keywords: Optional[str] = Query(
+        None, description="Exclude keyword IDs (comma-separated)", alias="withoutKeywords"
+    ),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for discover TV: page={page}, language={language}, sort_by={sort_by}, "
+        f"air_date_gte={air_date_gte}, air_date_lte={air_date_lte}, "
+        f"first_air_date_gte={first_air_date_gte}, first_air_date_lte={first_air_date_lte}, "
+        f"with_genres={with_genres}, with_keywords={with_keywords}, with_runtime_gte={with_runtime_gte}, "
+        f"with_runtime_lte={with_runtime_lte}, with_original_language={with_original_language}, "
+        f"with_status={with_status}, without_genres={without_genres}, without_keywords={without_keywords}"
+    )
+    try:
+        result = await service.search_tv(
+            search=search,
+            page=page,
+            language=language,
+            sort_by=sort_by,
             air_date_gte=air_date_gte,
             air_date_lte=air_date_lte,
             first_air_date_gte=first_air_date_gte,
@@ -152,56 +218,11 @@ async def search_tmdb(
             with_runtime_lte=with_runtime_lte,
             with_original_language=with_original_language,
             with_status=with_status,
+            without_genres=without_genres,
+            without_keywords=without_keywords,
         )
-        if result is None:
-            raise HTTPException(status_code=500, detail="Failed to fetch discover media")
-        logger.info(f"Successfully returned {len(result.results)} discover media items")
+        logger.info(f"Successfully returned {len(result.results)} discover TV items")
         return result
     except Exception as e:
-        logger.error(f"Error fetching discover media: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@search_router.get("test/movie")
-async def search_movie_test(
-    page: int = Query(1, ge=1, description="Page number"),
-    sort_by: str = Query(TMDBSortOption.POPULARITY_DESC, description="Sort by", alias="sortBy"),
-    language: str = Query("en-US", description="Language for results"),
-    search: str = Query(None, min_length=1, description="Search query"),
-    genres: List[int] = Query([], description="List of genre IDs"),
-    keywords: List[int] = Query([], description="List of keyword IDs"),
-    length_lte: int = Query(300, ge=0, description="Maximum length in minutes", alias="lengthLte"),
-    length_gte: int = Query(0, ge=0, description="Minimum length in minutes", alias="lengthGte"),
-    release_date_gte: Optional[str] = Query(
-        None, description="Release date greater than or equal to", alias="releaseDateGte"
-    ),
-    release_date_lte: Optional[str] = Query(
-        None, description="Release date less than or equal to", alias="releaseDateLte"
-    ),
-    with_original_language: Optional[str] = Query(
-        None, description="Original language", alias="withOriginalLanguage"
-    ),
-    service: TMDBService = Depends(get_tmdb_service),
-):
-    logger.info(
-        f"Received request for search movie: page={page}, sort_by={sort_by}, language={language}, search={search}, genres={genres}, keywords={keywords}, length_lte={length_lte}, length_gte={length_gte}, release_date_gte={release_date_gte}, release_date_lte={release_date_lte}, with_original_language={with_original_language}"
-    )
-    try:
-        result = await service.search_movie_test(
-            page=page,
-            sort_by=sort_by,
-            language=language,
-            search=search,
-            genres=genres,
-            keywords=keywords,
-            length_lte=length_lte,
-            length_gte=length_gte,
-            release_date_gte=release_date_gte,
-            release_date_lte=release_date_lte,
-            with_original_language=with_original_language,
-        )
-        logger.info(f"Successfully returned {len(result.results)} search movie results")
-        return result
-    except Exception as e:
-        logger.error(f"Error searching movie: {traceback.format_exc()}")
+        logger.error(f"Error fetching discover TV: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
