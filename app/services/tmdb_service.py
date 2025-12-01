@@ -114,6 +114,13 @@ class TMDBService:
                 results, page_info = await self.api.get_search_movie(
                     query=search, page=page, language=language
                 )
+                
+                filtered_results = [
+                    media for media in results
+                    if not (16 in media.genre_ids and media.original_language == "ja")
+                ]
+                
+                results = filtered_results
             else:
                 logger.info(f"Service: Initiating discover movie fetch for page {page}")
 
@@ -182,6 +189,13 @@ class TMDBService:
                 results, page_info = await self.api.get_search_tv(
                     query=search, page=page, language=language
                 )
+                
+                filtered_results = [
+                    media for media in results
+                    if not (16 in media.genre_ids and media.original_language == "ja")
+                ]
+                
+                results = filtered_results
             else:
                 logger.info(f"Service: Initiating discover TV fetch for page {page}")
 
