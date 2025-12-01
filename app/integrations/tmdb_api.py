@@ -5,6 +5,7 @@ import os
 import logging
 import asyncio
 from app.models.tmdb_models import (
+    TMDBCollection,
     TMDBMediaMinimal,
     TMDBPageInfo,
     TMDBMovieDetail,
@@ -556,3 +557,42 @@ class TMDBApi:
         except Exception as e:
             logger.error(f"Unexpected error fetching bulk TV details: {str(e)}")
             raise
+    
+    async def get_collection_detail(
+        self,
+        collection_id: int,
+        language: str,
+    ) -> TMDBCollection:
+        """
+        Fetches detailed information for a specific collection from TMDB.
+        """
+        url = f"{self.BASE_URL}/collection/{collection_id}?language={language}"
+    
+        try:
+            logger.info(f"Fetching collection detail: collection_id={collection_id}, language={language}")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, headers=self.HEADERS)
+                response.raise_for_status()
+                data = response.json()
+    
+                # Validate and return TMDBCollection
+                collection_detail = TMDBCollection.model_validate(data)
+    
+                logger.info(f"Successfully fetched collection detail for {collection_id}")
+                return collection_detail
+    
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error fetching collection detail: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error fetching collection detail: {str(e)}")
+            raise
+        except ValueError as e:
+            logger.error(f"JSON parsing or validation error: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching collection detail: {str(e)}")
+            raise
+    

@@ -6,6 +6,7 @@ from app.models.tmdb_models import (
     TMDBPagination,
     TMDBMovieDetail,
     TMDBTVDetail,
+    TMDBCollection,
     TMDBMediaMinimal,
     TMDBPageInfo,
 )
@@ -115,7 +116,7 @@ class TMDBService:
                 )
             else:
                 logger.info(f"Service: Initiating discover movie fetch for page {page}")
-            
+
                 # Ensure 210024 (anime) is always excluded
                 if without_keywords:
                     keyword_list = without_keywords.split(",")
@@ -124,7 +125,7 @@ class TMDBService:
                     without_keywords = ",".join(keyword_list)
                 else:
                     without_keywords = "210024"
-                    
+
                 results, page_info = await self.api.get_discover_movie(
                     page=page,
                     language=language,
@@ -183,7 +184,7 @@ class TMDBService:
                 )
             else:
                 logger.info(f"Service: Initiating discover TV fetch for page {page}")
-                
+
                 # Ensure 210024 (anime) is always excluded
                 if without_keywords:
                     keyword_list = without_keywords.split(",")
@@ -192,7 +193,7 @@ class TMDBService:
                     without_keywords = ",".join(keyword_list)
                 else:
                     without_keywords = "210024"
-           
+
                 results, page_info = await self.api.get_discover_tv(
                     page=page,
                     language=language,
@@ -443,4 +444,23 @@ class TMDBService:
             return results
         except Exception as e:
             logger.error(f"Service: Failed to get bulk TV details: {e}")
+            raise
+
+    async def get_collection_detail(
+        self,
+        collection_id: int,
+        language: str,
+    ) -> TMDBCollection:
+        """
+        Service method to get collection detail using TMDB API.
+        Handles business logic, logging, and error handling.
+        """
+        try:
+            logger.info(f"Service: Initiating collection detail fetch for {collection_id}")
+            result = await self.api.get_collection_detail(collection_id, language)
+
+            logger.info(f"Service: Successfully retrieved collection detail for {collection_id}")
+            return result
+        except Exception as e:
+            logger.error(f"Service: Failed to get collection detail for {collection_id}: {e}")
             raise

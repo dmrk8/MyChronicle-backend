@@ -73,3 +73,24 @@ async def get_tmdb_tv_detail(
     except Exception as e:
         logger.error(f"Error fetching TMDB TV detail: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@media_router.get("/tmdb/collection/{collection_id}")
+async def get_tmdb_collection_detail(
+    collection_id: int = Path(..., ge=1, description="Collection ID"),
+    language: str = Query("en-US", description="Language for results"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for TMDB collection detail: collection_id={collection_id}, language={language}")
+    try:
+        result = await service.get_collection_detail(
+            collection_id=collection_id,
+            language=language,
+        )
+        logger.info(f"Successfully returned collection detail for {collection_id}")
+        return result
+    except Exception as e:
+        logger.error(
+            f"Error fetching TMDB collection detail: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
