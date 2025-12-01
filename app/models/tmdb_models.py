@@ -117,7 +117,31 @@ class TMDBExternalIds(BaseModel):
     twitter_id: Optional[str] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-    
+
+class TMDBCollectionPart(BaseModel):
+    adult: bool
+    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
+    id: int
+    title: str
+    original_title: str = Field(..., alias="originalTitle")
+    media_type: str = Field(..., alias="mediaType")
+    release_date: str = Field(..., alias="releaseDate")
+    video: bool
+    vote_average: float = Field(..., alias="voteAverage")
+    vote_count: int = Field(..., alias="voteCount")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class TMDBCollection(BaseModel):
+    id: int
+    name: str
+    overview: str
+    poster_path: Optional[str] = Field(None, alias="posterPath")
+    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
+    parts: List[TMDBCollectionPart]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 class TMDBMediaMinimal(BaseModel):
     adult: bool
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
@@ -127,7 +151,6 @@ class TMDBMediaMinimal(BaseModel):
     popularity: float
     media_type: Optional[str] = Field(None, alias="mediaType")
     vote_average: float = Field(..., alias="voteAverage")
-    imdb_rating_value: Optional[float] = None
 
     # Movie-specific fields
     title: Optional[str] = None
@@ -166,8 +189,6 @@ class TMDBMediaDetailBase(BaseModel):
     genres: List[TMDBGenre]
     id: int
     imdb_id: Optional[str] = Field(None, alias="imdbId")
-    imdb_rating_count: Optional[int] = None
-    imdb_rating_value: Optional[float] = None
     origin_country: List[str] = Field(..., alias="originCountry")
     original_language: str = Field(..., alias="originalLanguage")
     overview: str
