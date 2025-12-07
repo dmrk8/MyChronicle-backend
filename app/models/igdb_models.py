@@ -128,3 +128,16 @@ class IGDBGameDetail(BaseModel):
     game_type: Optional[IGDBGameType] = Field(alias="gameType")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class IGDBGameMinimal(BaseModel):
+    id: int
+    aggregated_rating: Optional[float] = Field(alias="aggregatedRating")
+    cover: Optional[IGDBCover] = None
+    first_release_date: Optional[int] = Field(alias="firstReleaseDate")
+    genres: List[IGDBGenre]
+    involved_companies: List[IGDBInvolvedCompany] = Field(alias="involvedCompanies")
+    name: str
+    game_type: Optional[IGDBGameType] = Field(alias="gameType")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
