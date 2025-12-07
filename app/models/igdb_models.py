@@ -141,3 +141,28 @@ class IGDBGameMinimal(BaseModel):
     game_type: Optional[IGDBGameType] = Field(alias="gameType")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    
+class IGDBGameMinimalResponse(BaseModel):
+    id: int
+    aggregated_rating: Optional[float] = Field(alias="aggregatedRating")
+    cover: Optional[IGDBCover] = None
+    first_release_date: Optional[int] = Field(alias="firstReleaseDate")
+    genres: List[IGDBGenre]
+    developer_company: Optional[str] = Field(alias="developerCompany")
+    name: str
+    game_type: Optional[IGDBGameType] = Field(alias="gameType")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class IGDBPageInfo(BaseModel):
+    offset: int
+    limit: int
+    
+class IGDBPagination(BaseModel):
+    results: List[IGDBGameMinimalResponse]
+    current_page: int = Field(..., alias="currentPage")
+    per_page: int = Field(..., alias="perPage")
+    has_next_page: bool = Field(..., alias="hasNextPage")
+    
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    
