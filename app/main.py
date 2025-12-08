@@ -8,6 +8,7 @@ from app.routes.review_router import review_router
 from app.routes.discover_router import discover_router
 from app.routes.media_router import media_router
 from app.routes.imdb_router import imdb_router
+from app.routes.igdb_router import igdb_router
 
 app = FastAPI()
 
@@ -31,6 +32,7 @@ app.include_router(review_router)
 app.include_router(discover_router)
 app.include_router(media_router)
 app.include_router(imdb_router)
+app.include_router(igdb_router)
 
 @app.get("/")
 async def root(q : str):

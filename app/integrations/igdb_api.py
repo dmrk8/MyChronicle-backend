@@ -1,7 +1,8 @@
 import os
 import logging
+import time  # Add this import
 from typing import List, Optional, Dict, Any
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 import httpx
 from app.models.igdb_models import IGDBGameDetail, IGDBToken
 
@@ -15,11 +16,13 @@ class IGDBApi:
     TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 
     def __init__(self):
+        load_dotenv()
         self.client_id = os.getenv("TWITCH_CLIENT_ID")
         self.client_secret = os.getenv("TWITCH_CLIENT_SECRET")
-        self.access_token = None
-        self.token_expires_in = None
-        self.client = httpx.AsyncClient(timeout=10.0) 
+        self.access_token = os.getenv("IGDB_ACCESS_TOKEN")
+        self.token_expires_in = int(os.getenv("IGDB_EXPIRES_IN") or 0)
+        self.expires_at = time.time() + self.token_expires_in if self.token_expires_in else 0
+        self.client = httpx.AsyncClient(timeout=10.0)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -53,9 +56,18 @@ class IGDBApi:
                 response.raise_for_status()
                 data = response.json()
 
-                result = IGDBToken.model_validate(data)
-                logger.info("Successfully fetched IGDB access token")
-                return result
+            token = IGDBToken.model_validate(data)
+            self.access_token = token.access_token
+            self.token_expires_in = token.expires_in
+            self.expires_at = time.time() + self.token_expires_in  # Set expiry time
+
+            # Save to .env
+            env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
+            set_key(env_path, "IGDB_ACCESS_TOKEN", self.access_token, quote_mode='never')
+            set_key(env_path, "IGDB_EXPIRES_IN", str(self.token_expires_in), quote_mode='never')
+
+            logger.info("Successfully fetched and saved IGDB access token")
+            return token
 
         except httpx.HTTPStatusError as e:
             logger.error(
@@ -72,13 +84,16 @@ class IGDBApi:
             logger.error(f"Unexpected error fetching IGDB token: {str(e)}")
             raise
 
+    async def _ensure_token(self):
+        """Ensure the access token is valid and fetch a new one if expired or missing."""
+        if not self.access_token or time.time() > self.expires_at:
+            await self.get_access_token()
+
     async def get_game_detail(self, game_id: int) -> IGDBGameDetail:
         """
         Fetches detailed information for a specific game from IGDB.
         """
-        # Ensure access token is available
-        if not self.access_token:
-            await self.get_access_token()
+        await self._ensure_token()  
 
         url = f"{self.BASE_URL}/games"
         body = f"""

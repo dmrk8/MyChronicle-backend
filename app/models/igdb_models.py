@@ -169,4 +169,9 @@ class IGDBPagination(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class IGDBToken(BaseModel):
+    access_token: str = Field(alias="accessToken")
+    expires_in: int = Field(alias="expiresIn")
+    token_type: str = Field(alias="tokenType")
 
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
