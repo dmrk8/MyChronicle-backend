@@ -1,7 +1,7 @@
 from typing import List, Optional
 from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, AnilistMediaMinimal
 from app.integrations.anilistApi import AnilistApi
-from app.enums.anilist_enums import MediaType, SortOption
+from app.enums.anilist_enums import AnilistMediaType, SortOption
 
 import logging
 
@@ -38,7 +38,7 @@ class AnilistService:
         page: int,
         per_page: int,
         search: Optional[str] = None,
-        media_type: str = MediaType.ANIME,
+        media_type: str = AnilistMediaType.ANIME,
         sort: str = SortOption.POPULARITY_DESC,
         season: Optional[str] = None,
         season_year: Optional[int] = None,

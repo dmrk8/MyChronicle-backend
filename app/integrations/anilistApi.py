@@ -3,7 +3,7 @@ import httpx
 import logging
 
 from app.models.anilist_models import AnilistMediaDetailed, AnilistMediaMinimal, AnilistPageInfo
-from app.enums.anilist_enums import MediaType, SortOption
+from app.enums.anilist_enums import AnilistMediaType, SortOption
 
 ANILIST_URL = "https://graphql.anilist.co"
 
@@ -46,7 +46,7 @@ class AnilistApi:
 
         graphql_query = {
             "query": """ 
-            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int) {
+            query($page: Int, $perPage: Int, $type: AnilistMediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int) {
               Page(page: $page, perPage: $perPage) {
                 media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear) {
                   id
@@ -178,7 +178,7 @@ class AnilistApi:
 
         graphql_query = {
             "query": """ 
-            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
+            query($page: Int, $perPage: Int, $type: AnilistMediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
               Page(page: $page, perPage: $perPage) {
                 pageInfo {
                   currentPage

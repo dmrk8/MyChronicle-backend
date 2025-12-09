@@ -7,7 +7,7 @@ import httpx
 
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
-from app.enums.anilist_enums import MediaType, SortOption
+from app.enums.anilist_enums import AnilistMediaType, SortOption
 from app.enums.tmdb_enums import TMDBSortOption
 
 search_router = APIRouter(prefix="/search")
