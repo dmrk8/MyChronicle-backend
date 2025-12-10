@@ -15,10 +15,10 @@ class ReviewCreate(BaseModel):
         alias="reviewProgress",
         description="The chapter or episode progress at the time the review was written",
     )
-    original_created_at: Optional[datetime] = Field(
+    written_at: Optional[datetime] = Field(
         None,
-        alias="originalCreatedAt",
-        description="The original date when the user wrote the review",
+        alias="writtenAt",
+        description="The date when the user wrote the review",
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -43,11 +43,17 @@ class ReviewUpdate(BaseModel):
     review_progress: Optional[int] = Field(
         None, alias="reviewProgress", description="Updated progress"
     )
+    written_at: Optional[datetime] = Field(
+        None,
+        alias="writtenAt",
+        description="The date when the user wrote the review",
+    )
     updated_at: Optional[datetime] = Field(
         None, alias="updatedAt", description="Timestamp of the update"
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 
 class ReviewResponse(BaseModel):
     message: str = Field(description="Response message")
@@ -77,4 +83,3 @@ class ReviewResponse(BaseModel):
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
