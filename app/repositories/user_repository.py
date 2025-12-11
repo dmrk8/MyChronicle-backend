@@ -1,16 +1,22 @@
+import logging
 from typing import List, Optional
 from bson import ObjectId
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from app.models.user_models import UserData
+from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
+from pymongo.errors import PyMongoError
+from app.models.user_models import UserDB, UserUpdate
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Load .env
+load_dotenv()
+
+logger = logging.getLogger("user_repository")
+logging.basicConfig(level=logging.INFO)
+
 
 class UserRepository:
     def __init__(self):
-        # Validate environment variables
         mongodb_uri = os.getenv("MONGODB_URI")
         database_name = os.getenv("DATABASE_NAME")
         user_collection = os.getenv("USER_COLLECTION")
@@ -22,100 +28,114 @@ class UserRepository:
         if not user_collection:
             raise ValueError("USER_COLLECTION environment variable is not set.")
 
-        # Initialize MongoDB client and collection
-        self.client = MongoClient(mongodb_uri, server_api=ServerApi("1"))
-        self.db = self.client[database_name]
-        self.collection = self.db[user_collection]
+        try:
+            self.client = MongoClient(mongodb_uri, server_api=ServerApi("1"))
+            self.db = self.client[database_name]
+            self.collection = self.db[user_collection]
+        except PyMongoError as e:
+            logger.error(f"MongoDB connection error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error initializing UserRepository: {e}")
+            raise
 
-    def create(self, user: UserData):
+    def map_to_model(self, mongo_doc: dict) -> UserDB:
+        mongo_doc["id"] = str(mongo_doc["_id"])
+        mongo_doc.pop("_id", None)
+        return UserDB(**mongo_doc)
+
+    def create(self, user: UserDB) -> InsertOneResult:
         try:
             data = user.model_dump()
             data.pop("id", None)
 
             result = self.collection.insert_one(data)
+            logger.info(f"User created with id {result.inserted_id}")
             return result
 
+        except PyMongoError as e:
+            logger.error(f"MongoDB error creating user: {e}")
+            raise
         except Exception as e:
-            print(f"Error creating user: {e}")
+            logger.error(f"Unexpected error creating user: {e}")
             raise
 
-    def get_by_id(self, id: str) -> Optional[UserData]:
+    def update(self, user_update: UserUpdate) -> UpdateResult:
+        try:
+            data_dict = user_update.model_dump()
+            user_id = data_dict.pop("id", None)
+
+            update_data = {k: v for k, v in data_dict.items() if v is not None}
+
+            result = self.collection.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
+            logger.info(
+                f"Updated user with id {user_id}, matched count: {result.matched_count}, modified count: {result.modified_count}"
+            )
+            return result
+        except PyMongoError as e:
+            logger.error(f"MongoDB error updating user: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error updating user: {e}")
+            raise
+
+    def delete(self, user_id: str) -> DeleteResult:
+        try:
+            result = self.collection.delete_one({"_id": ObjectId(user_id)})
+            logger.info(f"Deleted user with id {user_id}, deleted count: {result.deleted_count}")
+            return result
+
+        except PyMongoError as e:
+            logger.error(f"MongoDB error deleting user: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error deleting user: {e}")
+            raise
+
+    def get_by_id(self, id: str) -> Optional[UserDB]:
         try:
             user_doc = self.collection.find_one({"_id": ObjectId(id)})
 
             if user_doc:
+                logger.info(f"Found user with id {id}")
                 return self.map_to_model(user_doc)
-
+            logger.info(f"No user found with id {id}")
             return None
 
-        except Exception as e:
-            print(f"Error getting user by id: {e}")
+        except PyMongoError as e:
+            logger.error(f"MongoDB error getting user by id {id}: {e}")
             raise
-    
-    def get_all(self) -> List[UserData]:
-        try:
-            cursor = self.collection.find()
-
-            results = [self.map_to_model(doc) for doc in cursor] #convert each doc 
-                 
-            return results
-        
-        except Exception:
-            print("error at getting all users")
-            raise            
-    
-    def update(self, updated_user : UserData):
-        try:
-            user_dict = updated_user.model_dump()
-             
-            user_id = user_dict.pop("id", None)
-           
-            if not user_id:
-                raise ValueError("Cannot update user without an id")
-             
-            result = self.collection.update_one(
-                {"_id": ObjectId(user_id)},
-                {"$set": user_dict}
-            )
-            return result
         except Exception as e:
-            print(f"Error updating user: {e}")
-            raise
-    
-    def delete(self, user_id : str):
-        try: 
-            result = self.collection.delete_one({"_id" : ObjectId(user_id)})
-            return result
-        
-        except Exception as e:
-            print("error handling deleting user:", e)
-            raise
-    
-    def is_username_exists(self, username : str) -> bool:
-        try:
-            user_doc = self.collection.find_one({"username" : username})
-            return user_doc is not None
-        
-        except Exception as e:
-            print(f"Error checking username existence: {e}")
+            logger.error(f"Unexpected error getting user by id {id}: {e}")
             raise
 
-    def get_by_username(self, username: str) -> Optional[UserData]:
+    def is_username_exists(self, username: str) -> bool:
         try:
-            user_doc = self.collection.find_one({"username" : username})
+            user_doc = self.collection.find_one({"username": username})
+            exists = user_doc is not None
+            logger.info(f"Username {username} exists: {exists}")
+            return exists
+
+        except PyMongoError as e:
+            logger.error(f"MongoDB error checking username existence: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error checking username existence: {e}")
+            raise
+
+    def get_by_username(self, username: str) -> Optional[UserDB]:
+        try:
+            user_doc = self.collection.find_one({"username": username})
 
             if user_doc:
+                logger.info(f"Found user with username {username}")
                 return self.map_to_model(user_doc)
-            
+            logger.info(f"No user found with username {username}")
             return None
 
+        except PyMongoError as e:
+            logger.error(f"MongoDB error finding user by username {username}: {e}")
+            raise
         except Exception as e:
-            print(f"Error finding user by username {username}: {e}")
-            raise             
-    
-    def map_to_model(self, mongo_doc : dict) -> UserData:
-        mongo_doc["id"] = str(mongo_doc["_id"])
-        mongo_doc.pop("_id", None)
-        return UserData(**mongo_doc) #unpack the dictionary into keyword arguments
-
-
+            logger.error(f"Unexpected error finding user by username {username}: {e}")
+            raise
