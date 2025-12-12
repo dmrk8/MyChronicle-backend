@@ -3,7 +3,7 @@ import httpx
 import logging
 
 from app.models.anilist_models import AnilistMediaDetailed, AnilistMediaMinimal, AnilistPageInfo
-from app.enums.anilist_enums import AnilistMediaType, SortOption
+from app.enums.anilist_enums import SortOption
 
 ANILIST_URL = "https://graphql.anilist.co"
 
@@ -46,7 +46,7 @@ class AnilistApi:
 
         graphql_query = {
             "query": """ 
-            query($page: Int, $perPage: Int, $type: AnilistMediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int) {
+            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int) {
               Page(page: $page, perPage: $perPage) {
                 media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear) {
                   id
@@ -97,7 +97,6 @@ class AnilistApi:
                     logger.error("AniList GraphQL error: %s", data["errors"])
                     raise Exception(f"AniList error: {data['errors']}")
 
-                # Extract media data from the response
                 media_list = data.get("data", {}).get("Page", {}).get("media", [])
 
                 # Map each media item to AnilistMedia model using model_validate
@@ -178,7 +177,7 @@ class AnilistApi:
 
         graphql_query = {
             "query": """ 
-            query($page: Int, $perPage: Int, $type: AnilistMediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
+            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
               Page(page: $page, perPage: $perPage) {
                 pageInfo {
                   currentPage
@@ -246,16 +245,13 @@ class AnilistApi:
                     logger.error("AniList GraphQL error: %s", data["errors"])
                     raise Exception(f"AniList error: {data['errors']}")
 
-                # Extract media data and page info from the response
                 page_data = data.get("data", {}).get("Page", {})
                 media_list = page_data.get("media", [])
 
                 page_info = AnilistPageInfo.model_validate(page_data.get("pageInfo", {}))
 
-                # Map each media item to AnilistMediaMinimal model using model_validate
                 search_media = []
                 for media in media_list:
-                    # Extract main studio
                     media["main_studio"] = self.extract_main_studio(media.get("studios"))
 
                     search_media.append(AnilistMediaMinimal.model_validate(media))
@@ -378,10 +374,8 @@ class AnilistApi:
                     logger.error("AniList GraphQL error: %s", data["errors"])
                     raise Exception(f"AniList error: {data['errors']}")
 
-                # Extract media data from the response
                 media = data.get("data", {}).get("Media", {})
 
-                # Validate and return the detailed media model
                 detailed_media = AnilistMediaDetailed.model_validate(media)
 
                 logger.info(f"Successfully fetched detailed media for ID {media_id}")
