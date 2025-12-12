@@ -8,14 +8,12 @@ from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
 from app.enums.anilist_enums import SortOption
 from app.dependencies import get_anilist_service
+from app.dependencies import get_tmdb_service
+
 
 search_router = APIRouter(prefix="/search")
 
 logger = logging.getLogger(__name__)
-
-
-def get_tmdb_service():
-    return TMDBService()
 
 
 @search_router.get("/anilist/{media_type}")

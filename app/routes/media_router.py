@@ -5,14 +5,12 @@ from fastapi import APIRouter, Path, Query, HTTPException, Depends
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
 from app.dependencies import get_anilist_service
+from app.dependencies import get_tmdb_service
+
 
 media_router = APIRouter(prefix="/media")
 
 logger = logging.getLogger(__name__)
-
-
-def get_tmdb_service():
-    return TMDBService()
 
 
 @media_router.get("/anilist/{media_id}")

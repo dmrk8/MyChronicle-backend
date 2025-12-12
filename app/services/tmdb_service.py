@@ -10,15 +10,13 @@ from app.models.tmdb_models import (
     TMDBMediaMinimal,
     TMDBPageInfo,
 )
-from app.services.imdb_service import IMDBService
 
 logger = logging.getLogger(__name__)
 
 
 class TMDBService:
-    def __init__(self):
-        self.api = TMDBApi()
-        self.imdb_service = IMDBService()
+    def __init__(self, tmdb_api: TMDBApi):
+        self.tmdb_api = tmdb_api
 
     async def get_trending_media(
         self, media_type: str, time_window: str, language: str, page: int
@@ -31,7 +29,7 @@ class TMDBService:
             logger.info(
                 f"Service: Initiating trending {media_type} fetch for time_window {time_window} on page {page}"
             )
-            results, page_info = await self.api.get_trending_media(
+            results, page_info = await self.tmdb_api.get_trending_media(
                 media_type=media_type, time_window=time_window, language=language, page=page
             )
             result = TMDBPagination(
@@ -65,7 +63,7 @@ class TMDBService:
             logger.info(
                 f"Service: Initiating popular season {media_type} fetch for start_date {start_date}, end_date {end_date} on page {page}"
             )
-            results, page_info = await self.api.get_popular_season(
+            results, page_info = await self.tmdb_api.get_popular_season(
                 media_type=media_type,
                 start_date=start_date,
                 end_date=end_date,
@@ -111,7 +109,7 @@ class TMDBService:
         try:
             if search:
                 logger.info(f"Service: Initiating movie search for query '{search}' on page {page}")
-                results, page_info = await self.api.get_search_movie(
+                results, page_info = await self.tmdb_api.get_search_movie(
                     query=search, page=page, language=language
                 )
                 
@@ -133,7 +131,7 @@ class TMDBService:
                 else:
                     without_keywords = "210024"
 
-                results, page_info = await self.api.get_discover_movie(
+                results, page_info = await self.tmdb_api.get_discover_movie(
                     page=page,
                     language=language,
                     sort_by=sort_by,
@@ -186,7 +184,7 @@ class TMDBService:
         try:
             if search:
                 logger.info(f"Service: Initiating TV search for search '{search}' on page {page}")
-                results, page_info = await self.api.get_search_tv(
+                results, page_info = await self.tmdb_api.get_search_tv(
                     query=search, page=page, language=language
                 )
                 
@@ -208,7 +206,7 @@ class TMDBService:
                 else:
                     without_keywords = "210024"
 
-                results, page_info = await self.api.get_discover_tv(
+                results, page_info = await self.tmdb_api.get_discover_tv(
                     page=page,
                     language=language,
                     sort_by=sort_by,
@@ -248,7 +246,7 @@ class TMDBService:
         """
         try:
             logger.info(f"Service: Initiating movie detail fetch for {movie_id}")
-            result = await self.api.get_movie_detail(movie_id, language)
+            result = await self.tmdb_api.get_movie_detail(movie_id, language)
 
             logger.info(f"Service: Successfully retrieved movie detail for {movie_id}")
             return result
@@ -267,7 +265,7 @@ class TMDBService:
         """
         try:
             logger.info(f"Service: Initiating TV detail fetch for {tv_id}")
-            result = await self.api.get_tv_detail(tv_id, language)
+            result = await self.tmdb_api.get_tv_detail(tv_id, language)
 
             logger.info(f"Service: Successfully retrieved TV detail for {tv_id}")
             return result
@@ -296,7 +294,7 @@ class TMDBService:
             logger.info(f"Service: Initiating movie search for search '{search}' on page {page}")
 
             if search:
-                results, page_info = await self.api.get_search_movie(
+                results, page_info = await self.tmdb_api.get_search_movie(
                     query=search, page=page, language=language
                 )
 
@@ -389,7 +387,7 @@ class TMDBService:
         """
         try:
             logger.info(f"Service: Initiating bulk movie details fetch for {len(movie_ids)} movies")
-            results = await self.api.get_bulk_movie_details(movie_ids, language)
+            results = await self.tmdb_api.get_bulk_movie_details(movie_ids, language)
 
             # Concurrently fetch IMDB ratings
             imdb_tasks = []
@@ -430,7 +428,7 @@ class TMDBService:
         """
         try:
             logger.info(f"Service: Initiating bulk TV details fetch for {len(tv_ids)} TV shows")
-            results = await self.api.get_bulk_tv_details(tv_ids, language)
+            results = await self.tmdb_api.get_bulk_tv_details(tv_ids, language)
 
             # Concurrently fetch IMDB ratings
             imdb_tasks = []
@@ -471,7 +469,7 @@ class TMDBService:
         """
         try:
             logger.info(f"Service: Initiating collection detail fetch for {collection_id}")
-            result = await self.api.get_collection_detail(collection_id, language)
+            result = await self.tmdb_api.get_collection_detail(collection_id, language)
 
             logger.info(f"Service: Successfully retrieved collection detail for {collection_id}")
             return result

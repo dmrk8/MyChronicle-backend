@@ -68,57 +68,6 @@ async def delete_review(
         logger.error(f"Unexpected error in delete_review: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@review_router.get("/library")
-async def get_library(
-    media_type: str,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50),
-    sort_by: str = Query("created_at"),
-    sort_order: int = Query(1, description="1 for ascending, -1 for descending"),
-    title: Optional[str] = Query(None),
-    current_user: UserData = Depends(get_current_user)):
-    try:
-        library_service = LibraryService(media_type)
-        response = await library_service.get_user_reviews(
-            current_user,
-            page,
-            per_page,
-            title,
-            sort_by,
-            sort_order
-        )
-        logger.info(f"Fetched library for user {current_user.id} with media_type {media_type}")
-        return response
-    except ValueError as ve:
-        logger.warning(f"Validation error in get_library: {ve}")
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        logger.error(f"Unexpected error in get_library: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@review_router.get("/id")
-async def get_review_id(
-    media_id: int = Query(..., alias="mediaId", description="ID of the media"),
-    current_user: UserData = Depends(get_current_user),
-    review_service: ReviewService = Depends(get_review_service)
-):
-    """
-    Get the review ID for the current user and a specific media.
-    """
-    try:
-        if current_user.id is None:
-            logger.warning("User ID is None in get_review_id")
-            raise HTTPException(status_code=401, detail="User ID is missing")
-        response = review_service.get_review_id_by_media_id(current_user.id, media_id)
-        logger.info(f"Fetched review ID for user {current_user.id} and media {media_id} :  {response}")
-        return response.data
-    except ValueError as ve:
-        logger.warning(f"Validation error in get_review_id: {ve}")
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception as e:
-        logger.error(f"Unexpected error in get_review_id: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-    
 @review_router.get("/{review_id}")
 async def get_review_by_id(
     review_id: str = Path(..., description="ID of the review"),

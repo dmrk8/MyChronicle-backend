@@ -7,14 +7,12 @@ from fastapi import APIRouter, Path, Query, HTTPException, Depends
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
 
+from app.dependencies import get_tmdb_service
 from app.dependencies import get_anilist_service
+
 discover_router = APIRouter(prefix="/discover")
 
 logger = logging.getLogger(__name__)
-
-
-def get_tmdb_service():
-    return TMDBService()
 
 
 @discover_router.get("/anilist/featured")
