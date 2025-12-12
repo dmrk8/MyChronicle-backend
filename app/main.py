@@ -2,13 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.search_router import search_router
-from app.routes.auth_router import auth_router
-from app.routes.user_router import user_router
-from app.routes.review_router import review_router
+#from app.routes.auth_router import auth_router
+#from app.routes.user_router import user_router
+#from app.routes.review_router import review_router
 from app.routes.discover_router import discover_router
 from app.routes.media_router import media_router
 from app.routes.imdb_router import imdb_router
 from app.routes.igdb_router import igdb_router
+from app.routes.anilist_router import anilist_router
+from app.routes.tmdb_router import tmdb_router
 
 app = FastAPI()
 
@@ -26,13 +28,15 @@ app.add_middleware(
 )
 
 app.include_router(search_router)
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(review_router)
+#app.include_router(auth_router)
+#app.include_router(user_router)
+#app.include_router(review_router)
 app.include_router(discover_router)
 app.include_router(media_router)
 app.include_router(imdb_router)
 app.include_router(igdb_router)
+app.include_router(anilist_router)
+app.include_router(tmdb_router)
 
 @app.get("/")
 async def root(q : str):

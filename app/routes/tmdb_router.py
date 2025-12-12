@@ -1,80 +1,18 @@
+from datetime import datetime, timedelta
 import logging
 import traceback
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Path, Query, HTTPException, Depends
-import httpx
 
-from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
-from app.enums.anilist_enums import SortOption
-from app.dependencies import get_anilist_service
 from app.dependencies import get_tmdb_service
 
-
-search_router = APIRouter(prefix="/search")
+tmdb_router = APIRouter(prefix="/tmdb")
 
 logger = logging.getLogger(__name__)
 
 
-@search_router.get("/anilist/{media_type}")
-async def search_anilist(
-    media_type: str = Path(..., regex="^(anime|manga)$"),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50, alias="perPage"),
-    search: Optional[str] = Query(None, min_length=1),
-    sort: str = Query(SortOption.POPULARITY_DESC),
-    season: Optional[str] = Query(None, regex="^(SPRING|SUMMER|FALL|WINTER)$"),
-    season_year: Optional[int] = Query(None, alias="seasonYear"),
-    format: Optional[str] = Query(
-        None, regex="^(TV|TV_SHORT|MOVIE|SPECIAL|OVA|ONA|MUSIC|MANGA|NOVEL|ONE_SHOT)$"
-    ),
-    status: Optional[str] = Query(None),
-    genre_in: Optional[List[str]] = Query(None, alias="genreIn"),
-    tag_in: Optional[List[str]] = Query(None, alias="tagIn"),
-    is_adult: Optional[bool] = Query(None, alias="isAdult"),
-    country_of_origin: Optional[str] = Query(None, regex="^(JP|KR|CN)$", alias="countryOfOrigin"),
-    service: AnilistService = Depends(get_anilist_service),
-):
-    logger.info(
-        f"Received request for search media: "
-        f"page={page}, per_page={per_page}, search={search}, "
-        f"media_type={media_type}, sort={sort}, season={season}, "
-        f"season_year={season_year}, format={format}, status={status}, "
-        f"genre_in={genre_in}, tag_in={tag_in}, is_adult={is_adult}, "
-        f"country_of_origin={country_of_origin}"
-    )
-    try:
-        result = await service.search_media(
-            page,
-            per_page,
-            search,
-            media_type.upper(),
-            sort,
-            season,
-            season_year,
-            format,
-            status,
-            genre_in,
-            tag_in,
-            is_adult,
-            country_of_origin,
-        )
-        logger.info(f"Successfully returned {len(result.results)} search media items")
-        return result
-    except httpx.HTTPStatusError as e:
-        logger.error(f"HTTP error searching media: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(
-            status_code=e.response.status_code, detail=f"AniList API error: {e.response.text}"
-        )
-    except ValueError as e:
-        logger.error(f"Validation error searching media: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
-    except Exception as e:
-        logger.error(f"Error searching media: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@search_router.get("/tmdb/movie")
+@tmdb_router.get("/search/movie")
 async def search_tmdb_movie(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -143,7 +81,7 @@ async def search_tmdb_movie(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@search_router.get("/tmdb/tv")
+@tmdb_router.get("/search/tv")
 async def search_tmdb_tv(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -218,4 +156,116 @@ async def search_tmdb_tv(
         return result
     except Exception as e:
         logger.error(f"Error fetching discover TV: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@tmdb_router.get("/media/movie/{movie_id}")
+async def get_tmdb_movie_detail(
+    movie_id: int = Path(..., ge=1, description="Movie ID"),
+    language: str = Query("en-US", description="Language for results"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(f"Received request for TMDB movie detail: movie_id={movie_id}, language={language}")
+    try:
+        result = await service.get_movie_detail(
+            movie_id=movie_id,
+            language=language,
+        )
+        logger.info(f"Successfully returned movie detail for {movie_id}")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching TMDB movie detail: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@tmdb_router.get("/media/tv/{tv_id}")
+async def get_tmdb_tv_detail(
+    tv_id: int = Path(..., ge=1, description="TV Show ID"),
+    language: str = Query("en-US", description="Language for results"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(f"Received request for TMDB TV detail: tv_id={tv_id}, language={language}")
+    try:
+        result = await service.get_tv_detail(
+            tv_id=tv_id,
+            language=language,
+        )
+        logger.info(f"Successfully returned TV detail for {tv_id}")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching TMDB TV detail: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@tmdb_router.get("/collection/{collection_id}")
+async def get_tmdb_collection_detail(
+    collection_id: int = Path(..., ge=1, description="Collection ID"),
+    language: str = Query("en-US", description="Language for results"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for TMDB collection detail: collection_id={collection_id}, language={language}")
+    try:
+        result = await service.get_collection_detail(
+            collection_id=collection_id,
+            language=language,
+        )
+        logger.info(f"Successfully returned collection detail for {collection_id}")
+        return result
+    except Exception as e:
+        logger.error(
+            f"Error fetching TMDB collection detail: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+
+@tmdb_router.get("/trending/{media_type}")
+async def get_tmdb_trending_media(
+    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
+    time_window: str = Query("week", regex="^(day|week)$", description="Time window: day or week"),
+    language: str = Query("en-US", description="Language for results"),
+    page: int = Query(1, ge=1, description="Page number"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for trending media: media_type={media_type}, time_window={time_window}, language={language}, page={page}"
+    )
+    try:
+        result = await service.get_trending_media(media_type, time_window, language, page)
+        if result is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch trending media")
+        logger.info(f"Successfully returned {len(result.results)} trending media items")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching trending media: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@tmdb_router.get("/popular-season/{media_type}")
+async def get_tmdb_popular_season(
+    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
+    start_date: str = Query(
+        (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
+        description="Start date (default: 3 months ago)",
+    ),
+    end_date: str = Query(
+        datetime.now().strftime("%Y-%m-%d"), description="End date (default: today)"
+    ),
+    page: int = Query(1, ge=1, description="Page number"),
+    language: str = Query("en-US", description="Language for results"),
+    sort_by: str = Query("popularity.desc", description="Sort by"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    logger.info(
+        f"Received request for popular season media: media_type={media_type}, start_date={start_date}, end_date={end_date}, page={page}, language={language}, sort_by={sort_by}"
+    )
+    try:
+        result = await service.get_popular_season(
+            media_type, start_date, end_date, page, language, sort_by
+        )
+        if result is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch popular season media")
+        logger.info(f"Successfully returned {len(result.results)} popular season media items")
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching popular season media: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
