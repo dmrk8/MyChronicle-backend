@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 import logging
 import traceback
 from typing import List, Optional
@@ -7,16 +6,12 @@ import httpx
 
 from app.services.anilist_service import AnilistService
 from app.services.tmdb_service import TMDBService
-from app.enums.anilist_enums import AnilistMediaType, SortOption
-from app.enums.tmdb_enums import TMDBSortOption
+from app.enums.anilist_enums import SortOption
+from app.dependencies import get_anilist_service
 
 search_router = APIRouter(prefix="/search")
 
 logger = logging.getLogger(__name__)
-
-
-def get_anilist_service():
-    return AnilistService()
 
 
 def get_tmdb_service():

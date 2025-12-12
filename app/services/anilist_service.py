@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class AnilistService:
-    def __init__(self):
-        self.anilist_api = AnilistApi()
+    def __init__(self, anilist_api: AnilistApi):
+        self.anilist_api = anilist_api
 
     async def get_featured_media(
         self,
