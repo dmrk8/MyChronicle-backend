@@ -1,43 +1,19 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 from bson import ObjectId
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from pymongo.errors import PyMongoError
+from pymongo.database import Database
 from app.models.user_models import UserDB, UserUpdate
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 logger = logging.getLogger("user_repository")
 logging.basicConfig(level=logging.INFO)
 
 
 class UserRepository:
-    def __init__(self):
-        mongodb_uri = os.getenv("MONGODB_URI")
-        database_name = os.getenv("DATABASE_NAME")
-        user_collection = os.getenv("USER_COLLECTION")
-
-        if not mongodb_uri:
-            raise ValueError("MONGODB_URI environment variable is not set.")
-        if not database_name:
-            raise ValueError("DATABASE_NAME environment variable is not set.")
-        if not user_collection:
-            raise ValueError("USER_COLLECTION environment variable is not set.")
-
-        try:
-            self.client = MongoClient(mongodb_uri, server_api=ServerApi("1"))
-            self.db = self.client[database_name]
-            self.collection = self.db[user_collection]
-        except PyMongoError as e:
-            logger.error(f"MongoDB connection error: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error initializing UserRepository: {e}")
-            raise
+    def __init__(self, db: Database, collection_name: str):
+        self.db = db
+        self.collection = db[collection_name]
 
     def map_to_model(self, mongo_doc: dict) -> UserDB:
         mongo_doc["id"] = str(mongo_doc["_id"])

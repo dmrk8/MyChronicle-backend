@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Path, Query, HTTPException, Depends
 
 from app.services.tmdb_service import TMDBService
-from app.dependencies import get_tmdb_service
+from app.core.dependencies import get_tmdb_service
 
 tmdb_router = APIRouter(prefix="/tmdb")
 

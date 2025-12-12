@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional, Union, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 
@@ -19,18 +19,6 @@ class UserDB(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class UserLogin(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(
-        ...,
-        min_length=8,
-        description="Password must contain at least one lowercase letter, one uppercase letter, and one digit",
-    )
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(
@@ -38,7 +26,6 @@ class UserCreate(BaseModel):
         min_length=8,
         description="Password must contain at least one lowercase letter, one uppercase letter, and one digit",
     )
-    role: UserRole = UserRole.USER
 
     @field_validator("password")
     @classmethod
@@ -56,14 +43,13 @@ class UserCreate(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class UserUpdate(BaseModel):
+class UserUpdateRequest(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     password: Optional[str] = Field(
         None,
         min_length=8,
         description="Password must contain at least one lowercase letter, one uppercase letter, one digit, and one symbol",
     )
-    role: Optional[UserRole] = None
 
     @field_validator("password")
     @classmethod
@@ -79,5 +65,24 @@ class UserUpdate(BaseModel):
         if not any(not c.isalnum() for c in v):
             raise ValueError("Password must contain at least one symbol")
         return v
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    hash_password: Optional[str] = Field(None, description="Hashed password")
+    role: Optional[UserRole] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    
+class UserResponse(BaseModel):
+    message: str = Field(..., description="Response message")
+    data: Optional[Union[UserDB, List[UserDB], str]] = Field(
+        None, description="User data, list of users, or response string (e.g., token)"
+    )
+    user_id: Optional[str] = Field(None, alias="userId", description="User ID if applicable")
+    acknowledged: Optional[bool] = Field(
+        None, description="Whether the operation was acknowledged by the database"
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

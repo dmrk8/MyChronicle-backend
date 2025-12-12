@@ -6,7 +6,7 @@ import httpx
 
 from app.services.anilist_service import AnilistService
 from app.enums.anilist_enums import SortOption
-from app.dependencies import get_anilist_service
+from app.core.dependencies import get_anilist_service
 
 
 anilist_router = APIRouter(prefix="/anilist")
