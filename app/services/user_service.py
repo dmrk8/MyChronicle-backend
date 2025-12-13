@@ -13,12 +13,6 @@ class UserService:
 
     def create_user(self, user_data: UserDB) -> UserResponse:
         try:
-            user = UserDB(
-                username=user_data.username,
-                hash_password=hashed_password,  # type: ignore
-                role=user_data.role,
-            )
-
             result = self.user_repository.create(user_data)
             logger.info(f"User created with id {result.inserted_id}")
 
