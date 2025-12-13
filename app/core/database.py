@@ -29,3 +29,7 @@ def get_database(client, db_name=None) -> Database:
     if not db_name:
         raise ValueError("DATABASE_NAME is required")
     return client[db_name]
+
+def get_db() -> Database:
+    client = create_mongo_client()
+    return get_database(client=client)
