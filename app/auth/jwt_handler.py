@@ -1,51 +1,42 @@
+from datetime import datetime, timedelta, timezone
 import logging
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
 from typing import Optional
-import os
 from dotenv import load_dotenv
+from app.models.auth_models import Claims
 
 load_dotenv()
 
 logger = logging.getLogger("jwt_handler")
 logging.basicConfig(level=logging.INFO)
 
+
 class JWTHandler:
-    def __init__(self):
-        self.secret_key = os.getenv("SECRET_KEY")
-        self.algorithm = os.getenv("ALGORITHM")
-        access_token_expire_str = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-        self.issuer = os.getenv("ISSUER")
-        self.audience = os.getenv("AUDIENCE")
+    def __init__(self, secret: str, algorithm: str, issuer: str, audience: str, expire_minutes : int):
+        self.secret_key = secret
+        self.algorithm = algorithm
+        self.issuer = issuer
+        self.audience = audience
+        self.expire_minutes = expire_minutes
 
         if not self.secret_key:
-            raise ValueError("SECRET_KEY environment variable is not set")
+            raise ValueError("SECRET_KEY is required")
         if not self.algorithm:
-            raise ValueError("ALGORITHM environment variable is not set")
-        if not access_token_expire_str:
-            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES environment variable is not set")
-        try:
-            self.access_token_expire_minutes = int(access_token_expire_str)
-            if self.access_token_expire_minutes <= 0:
-                raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be a positive integer")
-        except ValueError:
-            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be a valid integer")
+            raise ValueError("ALGORITHM is required")
         if not self.issuer:
-            raise ValueError("ISSUER environment variable is not set")
+            raise ValueError("ISSUER is required")
         if not self.audience:
-            raise ValueError("AUDIENCE environment variable is not set")
+            raise ValueError("AUDIENCE is required")
+        if not self.expire_minutes:
+            raise ValueError("expire minutes is required")
 
-    def create_access_token(self, sub: str, expires_delta: Optional[timedelta] = None) -> str:
+
+    def create_access_token(self, claims: Claims) -> str:
         try:
-            if expires_delta:
-                expire = datetime.now() + expires_delta
-            else:
-                expire = datetime.now() + timedelta(minutes=self.access_token_expire_minutes)
-
-            to_encode = {"sub": sub, "exp": expire, "iss": self.issuer, "aud": self.audience}
+            to_encode = {"sub": claims.sub, "exp": claims.exp, "iss": claims.iss, "aud": claims.aud}
 
             encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)  # type: ignore
-            logger.info(f"Access token created for subject {sub}")
+            logger.info(f"Access token created for subject {claims.sub}")
             return encoded_jwt
 
         except ValueError as ve:
@@ -90,3 +81,18 @@ class JWTHandler:
         except Exception as e:
             logger.error(f"Unexpected error in verify_token: {e}")
             raise
+    
+    def generate_claims(self, username: str, expires_delta: Optional[timedelta] = None) -> Claims:
+        if expires_delta:
+            expire = datetime.now(timezone.utc) + expires_delta
+        else:
+            expire = datetime.now(timezone.utc) + timedelta(
+                minutes=self.expire_minutes
+            )
+
+        return Claims(
+            sub=username,
+            exp=int(expire.timestamp()),
+            iss=self.issuer,
+            aud=self.audience,
+        )       

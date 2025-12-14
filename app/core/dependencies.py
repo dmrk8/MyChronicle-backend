@@ -1,5 +1,7 @@
 from fastapi import Depends
-import os
+
+from app.core.config import Settings, get_settings
+
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.database import get_db
 
@@ -33,8 +35,10 @@ def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
     return TMDBService(tmdb_api=tmdb_api)
 
 
-def get_user_repository(db: AsyncIOMotorDatabase = Depends(get_db)) -> UserRepository:
-    collection_name = os.getenv("USER_COLLECTION_NAME", "Users")
+def get_user_repository(
+    db: AsyncIOMotorDatabase = Depends(get_db), settings: Settings = Depends(get_settings)
+) -> UserRepository:
+    collection_name = settings.user_collection
     return UserRepository(db=db, collection_name=collection_name)
 
 
@@ -45,8 +49,14 @@ def get_user_service(
     return UserService(user_repository=user_repository, password_handler=password_handler)
 
 
-def get_jwt_handler() -> JWTHandler:
-    return JWTHandler()
+def get_jwt_handler(settings: Settings = Depends(get_settings)) -> JWTHandler:
+    return JWTHandler(
+        secret=settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+        issuer=settings.jwt_issuer,
+        audience=settings.jwt_audience,
+        expire_minutes=settings.jwt_expire_minutes
+    )
 
 
 def get_auth_service(
