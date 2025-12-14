@@ -13,14 +13,21 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(description="Secret key used for signing JWT tokens")
     jwt_algorithm: str = Field(description="Algorithm used for JWT encoding and decoding")
     jwt_expire_minutes: int = Field(description="Expiration time for JWT tokens in minutes")
+    jwt_expire_days: int = Field(description="Expiration time for JWT refresh tokens in days")
     jwt_issuer: str = Field(description="Issuer claim for JWT tokens")
     jwt_audience: str = Field(description="Audience claim for JWT tokens")
+    jwt_refresh_token_expire_days_default: int = Field(
+        description="Default expiration for refresh tokens in days (non-remember me)"
+    )
+    jwt_refresh_token_expire_days_remember: int = Field(
+        description="Expiration for refresh tokens in days (with remember me)"
+    )
 
     redis_host: str = Field(description="Hostname for the Redis server")
     redis_port: int = Field(description="Port number for the Redis server")
     redis_username: str = Field(description="Username for Redis authentication")
     redis_password: str = Field(description="Password for Redis authentication")
-    
+
     api_url: str = Field(description="Base URL for the API endpoints")
     tmdb_api_key: str = Field(description="API key for The Movie Database (TMDB)")
     tmdb_access_token: str = Field(description="Access token for TMDB API")
@@ -33,5 +40,4 @@ class Settings(BaseSettings):
 
 
 def get_settings() -> Settings:
-    return Settings()
-
+    return Settings()  # type: ignore

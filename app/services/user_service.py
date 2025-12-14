@@ -1,6 +1,5 @@
 import logging
-from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from app.repositories.user_repository import UserRepository
 from app.models.user_models import UserDB, UserUpdateRequest, UserResponse, UserCreate
 from app.auth.password_handler import PasswordHandler
