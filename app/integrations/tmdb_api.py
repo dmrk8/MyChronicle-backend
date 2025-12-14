@@ -1,7 +1,5 @@
 from typing import List, Optional
 import httpx
-from dotenv import load_dotenv
-import os
 import logging
 import asyncio
 from app.models.tmdb_models import (
@@ -13,18 +11,18 @@ from app.models.tmdb_models import (
     TMDBExternalIds,
 )
 
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
 class TMDBApi:
-    BASE_URL = "https://api.themoviedb.org/3"
+    def __init__(self, tmdb_access_token: str):
+        self.tmdb_access_token=tmdb_access_token
+        self.BASE_URL =  "https://api.themoviedb.org/3" 
 
     @property
     def HEADERS(self):
-        token = os.getenv("TMDB_ACCESS_TOKEN")
-        return {"accept": "application/json", "Authorization": f"Bearer {token}"}
+        return {"accept": "application/json", "Authorization": f"Bearer {self.tmdb_access_token}"}
 
     async def get_trending_media(
         self,

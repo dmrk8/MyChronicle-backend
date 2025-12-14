@@ -27,8 +27,8 @@ def get_anilist_service(anilist_api: AnilistApi = Depends(get_anilist_api)) -> A
     return AnilistService(anilist_api=anilist_api)
 
 
-def get_tmdb_api() -> TMDBApi:
-    return TMDBApi()
+def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
+    return TMDBApi(settings.tmdb_access_token)
 
 
 def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
