@@ -4,6 +4,7 @@ from app.models.user_models import UserDB, UserRole
 from app.auth.jwt_handler import JWTHandler
 from app.core.dependencies import get_user_service, get_jwt_handler
 
+
 async def get_current_user(
     request: Request,
     user_service: UserService = Depends(get_user_service),
@@ -25,7 +26,7 @@ async def get_current_user(
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = user_service.get_by_username(username)
+    user = await user_service.get_by_username(username)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

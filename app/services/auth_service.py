@@ -1,7 +1,10 @@
+import logging
 from app.models.auth_models import LoginRequest, AuthResponse
 from app.auth.jwt_handler import JWTHandler
 from app.services.user_service import UserService
 from app.models.user_models import UserCreate, UserDB
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -9,39 +12,28 @@ class AuthService:
         self.jwt_handler = jwt_handler
         self.user_service = user_service
 
-    def authenticate_user(self, user_login: LoginRequest) -> str:
+    async def login(self, user_login: LoginRequest) -> AuthResponse:
         try:
-            user = self.user_service.get_by_username(user_login.username)
+            user = await self.user_service.verify_credentials(
+                user_login.username, user_login.password
+            )
 
-            if not user or not self.jwt_handler.verify_password(
-                user_login.password, user.hash_password
-            ):
+            if not user:
                 raise ValueError("Invalid username or password")
 
-            return self.jwt_handler.create_access_token(user.username)
+            logger.info(f"User {user.username} logged in successfully")
 
-        except Exception as e:
-            raise ValueError(f"Authentication failed: {str(e)}")
-
-    def create_user(self, user_create: UserCreate) -> AuthResponse:
-        try:
-            existing_user = self.user_service.get_by_username(user_create.username)
-            if existing_user:
-                raise ValueError("Username already exists")
-
-            hash_password = self.jwt_handler.hash_password(user_create.password)
-
-            user_db = UserDB(
-                username=user_create.username,
-                hash_password=hash_password,  # type: ignore
-            )
-
-            result = self.user_service.create_user(user_db)
-
+            access_token = self.jwt_handler.create_access_token(user.username)
             return AuthResponse(
-                message="User created successfully",
-                data={"user_id": result.user_id},
+                message="Login successful",
+                access_token=access_token,
             )
 
+        except ValueError as ve:
+            logger.error(f"Login failed: {ve}")
+            raise
         except Exception as e:
-            raise ValueError(f"User creation failed: {str(e)}")
+            logger.error(f"Unexpected error during login: {e}")
+            raise ValueError(f"Authentication failed: {str(e)}")
+    
+    

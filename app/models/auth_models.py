@@ -13,6 +13,6 @@ class LoginRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     message: str = Field(..., description="Response message")
-    data: Optional[Any] = Field(None, description="Optional data payload (e.g., token, user ID)")
+    access_token: str = Field(..., description="token")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
