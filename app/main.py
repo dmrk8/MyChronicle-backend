@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.auth_router import auth_router
-#from app.routes.user_router import user_router
+from app.routes.user_router import user_router
 #from app.routes.review_router import review_router
 from app.routes.imdb_router import imdb_router
 from app.routes.igdb_router import igdb_router
@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
-#app.include_router(user_router)
+app.include_router(user_router)
 #app.include_router(review_router)
 app.include_router(imdb_router)
 app.include_router(igdb_router)

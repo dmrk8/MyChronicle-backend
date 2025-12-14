@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Optional, Union, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class UserRole(str, Enum):
@@ -13,11 +13,16 @@ class UserDB(BaseModel):
     id: Optional[str] = None
     username: str = Field(..., min_length=3, max_length=50)
     hash_password: str = Field(..., min_length=8, alias="hashPassword")
-    created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
-    updated_at: datetime = Field(default_factory=datetime.now, alias="updatedAt")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
+    )
     role: UserRole = UserRole.USER
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -51,6 +56,10 @@ class UserUpdateRequest(BaseModel):
         description="Password must contain at least one lowercase letter, one uppercase letter, one digit, and one symbol",
     )
 
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
+    )
+
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, v):
@@ -68,19 +77,34 @@ class UserUpdateRequest(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     hash_password: Optional[str] = Field(None, description="Hashed password")
     role: Optional[UserRole] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-    
+
+
 class UserResponse(BaseModel):
     message: str = Field(..., description="Response message")
-    data: Optional[Union[UserDB, List[UserDB], str]] = Field(
-        None, description="User data, list of users, or response string (e.g., token)"
-    )
+
     user_id: Optional[str] = Field(None, alias="userId", description="User ID if applicable")
+    matched_count: Optional[int] = Field(
+        None, alias="matchedCount", description="Number of documents matched in the operation"
+    )
+    modified_count: Optional[int] = Field(
+        None, alias="modifiedCount", description="Number of documents modified"
+    )
+    deleted_count: Optional[int] = Field(
+        None, alias="deletedCount", description="Number of documents deleted"
+    )
+    updated_at: Optional[Any] = Field(
+        None, alias="updatedAt", description="Timestamp of the last update"
+    )
+    data: Optional[Any] = Field(
+        None, description="Additional data, such as review lists or details"
+    )
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"
     )

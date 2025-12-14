@@ -1,4 +1,68 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from app.services.user_service import UserService
+from app.models.user_models import UserCreate, UserUpdateRequest, UserResponse, UserDB
+from app.core.dependencies import get_user_service
+from app.auth.auth_dependencies import get_current_user, require_admin
+from typing import Optional
 
-user_router = APIRouter(prefix="/users")
+user_router = APIRouter(prefix="/users", tags=["users"])
+
+
+@user_router.post("/", response_model=UserResponse)
+async def create_user(
+    user_create: UserCreate,
+    user_service: UserService = Depends(get_user_service),
+):
+    try:
+        return await user_service.create_user(user_create)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@user_router.patch("/{user_id}", response_model=UserResponse)
+async def update_user(
+    update_request: UserUpdateRequest,
+    user_id: str = Path(..., description="The ID of the user to update"),
+    user_service: UserService = Depends(get_user_service),
+    current_user: UserDB = Depends(get_current_user),
+):
+    try:
+        return await user_service.update_user(user_id, update_request)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@user_router.delete("/{user_id}", response_model=UserResponse)
+async def delete_user(
+    user_id: str = Path(..., description="The ID of the user to delete"),
+    user_service: UserService = Depends(get_user_service),
+    current_user: UserDB = Depends(get_current_user),
+):
+    try:
+        return await user_service.delete_user(user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@user_router.get("/{user_id}", response_model=Optional[UserDB])
+async def get_user_by_id(
+    user_id: str = Path(..., description="The ID of the user to retrieve"),
+    user_service: UserService = Depends(get_user_service),
+    current_user: UserDB = Depends(get_current_user),
+):
+    try:
+        user = await user_service.get_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
