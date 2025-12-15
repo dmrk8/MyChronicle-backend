@@ -1,6 +1,7 @@
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import Settings, get_settings
+from app.core.logging import setup_logging
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
 
@@ -12,7 +13,6 @@ class AppState:
     settings: Settings | None = None
     mongo_client: AsyncIOMotorClient | None = None
     redis_client: Redis | None = None
-
 
 state = AppState()
 
@@ -27,7 +27,9 @@ async def lifespan(app):
         
     except Exception as e:
         raise  # Stop startup if config is invalid
-
+    
+    setup_logging(state.settings)
+    
     state.mongo_client = AsyncIOMotorClient(
         state.settings.mongodb_uri, maxPoolSize=10, minPoolSize=2
     )
