@@ -5,6 +5,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    env: str = Field(description="Environment (e.g., DEV, PROD)")
+    log_level: str = Field(description="Logging level (e.g., DEBUG, INFO)")
+    service_name: str = Field(description="Name of the service/application")
+
     mongodb_uri: str = Field(description="MongoDB connection URI for the database cluster")
     database_name: str = Field(description="Name of the MongoDB database to use")
     review_collection: str = Field(description="Name of the MongoDB collection for storing reviews")
@@ -12,8 +16,7 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = Field(description="Secret key used for signing JWT tokens")
     jwt_algorithm: str = Field(description="Algorithm used for JWT encoding and decoding")
-    jwt_expire_minutes: int = Field(description="Expiration time for JWT tokens in minutes")
-    jwt_expire_days: int = Field(description="Expiration time for JWT refresh tokens in days")
+    jwt_access_token_expire_minutes: int = Field(description="Expiration time for JWT tokens in minutes")
     jwt_issuer: str = Field(description="Issuer claim for JWT tokens")
     jwt_audience: str = Field(description="Audience claim for JWT tokens")
     jwt_refresh_token_expire_days_default: int = Field(
@@ -39,5 +42,10 @@ class Settings(BaseSettings):
     omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
 
 
+_settings: Settings | None = None
+
 def get_settings() -> Settings:
-    return Settings()  # type: ignore
+    global _settings
+    if _settings is None:
+        _settings = Settings()  # type: ignore
+    return _settings

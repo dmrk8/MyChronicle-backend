@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.request_context import request_context_middleware
+import structlog
+
+from app.core.infrastructure import lifespan
+from app.core.config import get_settings
 
 from app.routes.auth_router import auth_router
 from app.routes.user_router import user_router
@@ -9,7 +14,22 @@ from app.routes.igdb_router import igdb_router
 from app.routes.anilist_router import anilist_router
 from app.routes.tmdb_router import tmdb_router
 
-app = FastAPI()
+app = FastAPI(
+    title=get_settings().service_name,
+    lifespan=lifespan
+)
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": get_settings().service_name,
+        "environment": get_settings().env
+    }
+
+
+app.middleware("http")(request_context_middleware)
+
 
 origins = [
     "http://localhost:5173"
@@ -31,6 +51,8 @@ app.include_router(imdb_router)
 app.include_router(igdb_router)
 app.include_router(anilist_router)
 app.include_router(tmdb_router)
+
+
 
 @app.get("/")
 async def root(q : str):

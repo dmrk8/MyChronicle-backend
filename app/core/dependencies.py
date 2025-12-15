@@ -1,9 +1,9 @@
 from fastapi import Depends
+from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.core.database import get_db
 
 from app.services.anilist_service import AnilistService
 from app.integrations.anilistApi import AnilistApi
@@ -19,16 +19,44 @@ from app.services.auth_service import AuthService
 from app.auth.password_handler import PasswordHandler
 
 
+_anilist_api = None
+_tmdb_api = None
+_password_handler = None
+_jwt_handler = None
+
+
 def get_anilist_api() -> AnilistApi:
-    return AnilistApi()
+    global _anilist_api
+    if _anilist_api is None:
+        _anilist_api = AnilistApi()
+    return _anilist_api
+
+
+def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
+    global _tmdb_api
+    if _tmdb_api is None:
+        _tmdb_api = TMDBApi(settings.tmdb_access_token)
+    return _tmdb_api
+
+
+def get_password_handler() -> PasswordHandler:
+    global _password_handler
+    if _password_handler is None:
+        _password_handler = PasswordHandler()
+    return _password_handler
+
+
+def get_mongo() -> AsyncIOMotorDatabase:
+    settings = get_settings()
+    return state.mongo_client[settings.database_name]  # type: ignore
+
+
+def get_redis() -> Redis:
+    return state.redis_client  # type: ignore
 
 
 def get_anilist_service(anilist_api: AnilistApi = Depends(get_anilist_api)) -> AnilistService:
     return AnilistService(anilist_api=anilist_api)
-
-
-def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
-    return TMDBApi(settings.tmdb_access_token)
 
 
 def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
@@ -36,27 +64,35 @@ def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
 
 
 def get_user_repository(
-    db: AsyncIOMotorDatabase = Depends(get_db), settings: Settings = Depends(get_settings)
+    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
 ) -> UserRepository:
     collection_name = settings.user_collection
     return UserRepository(db=db, collection_name=collection_name)
 
 
+def get_jwt_handler(
+    settings: Settings = Depends(get_settings), redis_client: Redis = Depends(get_redis)
+) -> JWTHandler:
+    global _jwt_handler
+    if _jwt_handler is None:
+        _jwt_handler = JWTHandler(
+            secret=settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+            issuer=settings.jwt_issuer,
+            audience=settings.jwt_audience,
+            expire_minutes=settings.jwt_access_token_expire_minutes,
+            default_expire_days=settings.jwt_refresh_token_expire_days_default,
+            remember_expire_days=settings.jwt_refresh_token_expire_days_remember,
+            redis_client=redis_client,
+        )
+    return _jwt_handler
+
+
 def get_user_service(
     user_repository: UserRepository = Depends(get_user_repository),
-    password_handler: PasswordHandler = Depends(PasswordHandler),
+    password_handler: PasswordHandler = Depends(get_password_handler),
 ) -> UserService:
     return UserService(user_repository=user_repository, password_handler=password_handler)
-
-
-def get_jwt_handler(settings: Settings = Depends(get_settings)) -> JWTHandler:
-    return JWTHandler(
-        secret=settings.jwt_secret_key,
-        algorithm=settings.jwt_algorithm,
-        issuer=settings.jwt_issuer,
-        audience=settings.jwt_audience,
-        expire_minutes=settings.jwt_expire_minutes
-    )
 
 
 def get_auth_service(
@@ -64,7 +100,3 @@ def get_auth_service(
     user_service: UserService = Depends(get_user_service),
 ) -> AuthService:
     return AuthService(jwt_handler=jwt_handler, user_service=user_service)
-
-
-def get_password_handler() -> PasswordHandler:
-    return PasswordHandler()
