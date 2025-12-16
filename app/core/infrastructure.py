@@ -25,27 +25,39 @@ async def lifespan(app):
         state.settings = get_settings()
 
     except Exception:
+        logger.critical("failed_to_load_settings", exc_info=True)
         raise
 
-    logger.info("loading ENV configs")
     setup_logging(state.settings)
+    logger.info("logging_initialized", env=state.settings.env)
 
-    logger.info("connecting_to_databases")
-    state.mongo_client = AsyncIOMotorClient(
-        state.settings.mongodb_uri, maxPoolSize=10, minPoolSize=2
-    )
-    logger.info("mongodb_connected")
+    logger.info("connecting_to_mongodb")
+    try:
+        state.mongo_client = AsyncIOMotorClient(
+            state.settings.mongodb_uri,
+            maxPoolSize=10,
+            minPoolSize=2,
+        )
+        logger.info("mongodb_connected")
+    except Exception:
+        logger.critical("mongodb_connection_failed", exc_info=True)
+        raise
 
-    state.redis_client = Redis(
-        host=state.settings.redis_host,
-        port=state.settings.redis_port,
-        username=state.settings.redis_username,
-        password=state.settings.redis_password,
-        decode_responses=True,
-        max_connections=10,
-    )
-    await state.redis_client.ping()  # Test connection
-    logger.info("redis_connected")
+    logger.info("connecting_to_redis")
+    try:
+        state.redis_client = Redis(
+            host=state.settings.redis_host,
+            port=state.settings.redis_port,
+            username=state.settings.redis_username,
+            password=state.settings.redis_password,
+            decode_responses=True,
+            max_connections=10,
+        )
+        await state.redis_client.ping()
+        logger.info("redis_connected")
+    except Exception:
+        logger.critical("redis_connection_failed", exc_info=True)
+        raise
 
     yield
 
