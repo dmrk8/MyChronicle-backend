@@ -1,9 +1,8 @@
-import logging
-import traceback
 from typing import List, Optional
-from fastapi import APIRouter, Path, Query, HTTPException, Depends
+from fastapi import APIRouter, Path, Query, HTTPException, Depends, status as http_status
 import httpx
 
+from app.models.anilist_models import AnilistPagination
 from app.services.anilist_service import AnilistService
 from app.enums.anilist_enums import SortOption
 from app.core.dependencies import get_anilist_service
@@ -11,10 +10,8 @@ from app.core.dependencies import get_anilist_service
 
 anilist_router = APIRouter(prefix="/anilist")
 
-logger = logging.getLogger(__name__)
 
-
-@anilist_router.get("/search/{media_type}")
+@anilist_router.get("/search/{media_type}", response_model=AnilistPagination)
 async def search_anilist(
     media_type: str = Path(..., regex="^(anime|manga)$"),
     page: int = Query(1, ge=1),
@@ -33,14 +30,6 @@ async def search_anilist(
     country_of_origin: Optional[str] = Query(None, regex="^(JP|KR|CN)$", alias="countryOfOrigin"),
     service: AnilistService = Depends(get_anilist_service),
 ):
-    logger.info(
-        f"Received request for search media: "
-        f"page={page}, per_page={per_page}, search={search}, "
-        f"media_type={media_type}, sort={sort}, season={season}, "
-        f"season_year={season_year}, format={format}, status={status}, "
-        f"genre_in={genre_in}, tag_in={tag_in}, is_adult={is_adult}, "
-        f"country_of_origin={country_of_origin}"
-    )
     try:
         result = await service.search_media(
             page,
@@ -57,37 +46,38 @@ async def search_anilist(
             is_adult,
             country_of_origin,
         )
-        logger.info(f"Successfully returned {len(result.results)} search media items")
+
         return result
     except httpx.HTTPStatusError as e:
-        logger.error(f"HTTP error searching media: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(
-            status_code=e.response.status_code, detail=f"AniList API error: {e.response.text}"
-        )
-    except ValueError as e:
-        logger.error(f"Validation error searching media: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
+        raise HTTPException(status_code=e.response.status_code, detail="AniList API error")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error searching media: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+        )
+
 
 @anilist_router.get("/media/{media_id}")
 async def get_media_detail(
     media_id: int = Path(..., ge=1, description="Media ID"),
     service: AnilistService = Depends(get_anilist_service),
 ):
-    logger.info(f"Received request for media detail: media_id={media_id}")
     try:
         result = await service.get_media_detail(media_id)
         if not result:
-            raise HTTPException(status_code=404, detail="Media not found")
-        logger.info(f"Successfully returned media detail for ID {media_id}")
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="Media not found"
+            )
         return result
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="AniList API error")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching media detail for ID {media_id}: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+        )
 
 
 @anilist_router.get("/featured")
@@ -100,15 +90,16 @@ async def get_anilist_featured_media(
     media_type: str = Query(None, alias="mediaType"),
     service: AnilistService = Depends(get_anilist_service),
 ):
-    logger.info(
-        f"Received request for featured media: page={page}, per_page={per_page}, season={season}, season_year={season_year}, sort={sort}, media_type={media_type}"
-    )
     try:
         result = await service.get_featured_media(
             page, per_page, season, season_year, sort, media_type
         )
-        logger.info(f"Successfully returned {len(result)} featured media items")
         return result
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="AniList API error")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error fetching featured media: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+        )

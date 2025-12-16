@@ -3,10 +3,6 @@ from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, A
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 class AnilistService:
     def __init__(self, anilist_api: AnilistApi):
@@ -21,17 +17,10 @@ class AnilistService:
         sort: str = "POPULARITY_DESC",
         media_type: str = "ANIME",
     ) -> List[AnilistMediaMinimal]:
-        try:
-            logger.info(
-                f"Fetching featured media: page={page}, per_page={per_page}, season={season}, season_year={season_year}, sort={sort}, media_type={media_type}"
-            )
-            return await self.anilist_api.get_featured_media(
-                page, per_page, season, season_year, sort, media_type
-            )
 
-        except Exception as e:
-            logger.error(f"Error fetching featured media: {str(e)}")
-            raise
+        return await self.anilist_api.get_featured_media(
+            page, per_page, season, season_year, sort, media_type
+        )
 
     async def search_media(
         self,
@@ -49,40 +38,30 @@ class AnilistService:
         is_adult: Optional[bool] = None,
         country_of_origin: Optional[str] = None,
     ) -> AnilistPagination:
-        try:
-            logger.info(
-                f"Searching media: page={page}, per_page={per_page}, media_type={media_type}, sort={sort}, season={season}, season_year={season_year}, format={format}, status={status}, genre_in={genre_in}, tag_in={tag_in}, is_adult={is_adult}, country_of_origin={country_of_origin}"
-            )
-            media_list, page_info = await self.anilist_api.search_media(
-                page,
-                per_page,
-                search,
-                media_type,
-                sort,
-                season,
-                season_year,
-                format,
-                status,
-                genre_in,
-                tag_in,
-                is_adult,
-                country_of_origin,
-            )
-            return AnilistPagination(
-                results=media_list,
-                current_page=page_info.current_page,  # type: ignore
-                per_page=page_info.per_page,  # type: ignore
-                has_next_page=page_info.has_next_page,  # type: ignore
-                total=page_info.total,
-            )
-        except Exception as e:
-            logger.error(f"Error searching media: {str(e)}")
-            raise
+
+        media_list, page_info = await self.anilist_api.search_media(
+            page,
+            per_page,
+            search,
+            media_type,
+            sort,
+            season,
+            season_year,
+            format,
+            status,
+            genre_in,
+            tag_in,
+            is_adult,
+            country_of_origin,
+        )
+        return AnilistPagination(
+            results=media_list,
+            current_page=page_info.current_page,  # type: ignore
+            per_page=page_info.per_page,  # type: ignore
+            has_next_page=page_info.has_next_page,  # type: ignore
+            total=page_info.total,
+        )
 
     async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
-        try:
-            logger.info(f"Fetching media detail for ID: {media_id}")
-            return await self.anilist_api.get_media_detail(media_id)
-        except Exception as e:
-            logger.error(f"Error fetching media detail for ID {media_id}: {str(e)}")
-            raise
+
+        return await self.anilist_api.get_media_detail(media_id)
