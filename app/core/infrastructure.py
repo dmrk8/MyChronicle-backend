@@ -1,12 +1,11 @@
-import logging
+import structlog
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import Settings, get_settings
 from app.core.logging import setup_logging
 from contextlib import asynccontextmanager
 from redis.asyncio import Redis
 
-logger = logging.getLogger("mongo_client")
-logging.basicConfig(level=logging.INFO)
+logger = structlog.get_logger()
 
 
 class AppState:
@@ -14,22 +13,24 @@ class AppState:
     mongo_client: AsyncIOMotorClient | None = None
     redis_client: Redis | None = None
 
+
 state = AppState()
 
 
 @asynccontextmanager
 async def lifespan(app):
     logger.info("loading_configuration")
-    logger.info("connecting_to_databases")
 
     try:
         state.settings = get_settings()
-        
-    except Exception as e:
-        raise  # Stop startup if config is invalid
-    
+
+    except Exception:
+        raise
+
+    logger.info("loading ENV configs")
     setup_logging(state.settings)
-    
+
+    logger.info("connecting_to_databases")
     state.mongo_client = AsyncIOMotorClient(
         state.settings.mongodb_uri, maxPoolSize=10, minPoolSize=2
     )

@@ -1,3 +1,4 @@
+import structlog
 from fastapi import Depends
 from redis.asyncio import Redis
 
@@ -19,6 +20,7 @@ from app.auth.jwt_handler import JWTHandler
 from app.services.auth_service import AuthService
 from app.auth.password_handler import PasswordHandler
 
+logger = structlog.get_logger()
 
 _anilist_api = None
 _tmdb_api = None
@@ -29,6 +31,7 @@ _jwt_handler = None
 def get_anilist_api() -> AnilistApi:
     global _anilist_api
     if _anilist_api is None:
+        logger.info("Creating new AnilistApi singleton instance")
         _anilist_api = AnilistApi()
     return _anilist_api
 
@@ -36,6 +39,7 @@ def get_anilist_api() -> AnilistApi:
 def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
     global _tmdb_api
     if _tmdb_api is None:
+        logger.info("Creating new TMDBApi singleton instance")
         _tmdb_api = TMDBApi(settings.tmdb_access_token)
     return _tmdb_api
 
@@ -43,6 +47,7 @@ def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
 def get_password_handler() -> PasswordHandler:
     global _password_handler
     if _password_handler is None:
+        logger.info("Creating new PasswordHandler singleton instance")
         _password_handler = PasswordHandler()
     return _password_handler
 
@@ -76,6 +81,7 @@ def get_jwt_handler(
 ) -> JWTHandler:
     global _jwt_handler
     if _jwt_handler is None:
+        logger.info("Creating new JWTHandler singleton instance")
         _jwt_handler = JWTHandler(
             secret=settings.jwt_secret_key,
             algorithm=settings.jwt_algorithm,
