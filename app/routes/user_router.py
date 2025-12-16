@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from app.services.user_service import UserService
 from app.models.user_models import UserCreate, UserUpdateRequest, UserResponse, UserDB
 from app.core.dependencies import get_user_service
@@ -16,34 +16,34 @@ async def create_user(
     try:
         return await user_service.create_user(user_create)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+        )
 
 
-@user_router.patch("/{user_id}", response_model=UserResponse)
+@user_router.patch("/", response_model=UserResponse)
 async def update_user(
     update_request: UserUpdateRequest,
-    user_id: str = Path(..., description="The ID of the user to update"),
     user_service: UserService = Depends(get_user_service),
     current_user: UserDB = Depends(get_current_user),
 ):
     try:
-        return await user_service.update_user(user_id, update_request)
+        return await user_service.update_user(current_user.id, update_request) # type: ignore
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@user_router.delete("/{user_id}", response_model=UserResponse)
+@user_router.delete("/", response_model=UserResponse)
 async def delete_user(
-    user_id: str = Path(..., description="The ID of the user to delete"),
     user_service: UserService = Depends(get_user_service),
     current_user: UserDB = Depends(get_current_user),
 ):
     try:
-        return await user_service.delete_user(user_id)
+        return await user_service.delete_user(current_user.id) # type: ignore
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -65,4 +65,3 @@ async def get_user_by_id(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
-

@@ -90,18 +90,7 @@ class UserResponse(BaseModel):
     message: str = Field(..., description="Response message")
 
     user_id: Optional[str] = Field(None, alias="userId", description="User ID if applicable")
-    matched_count: Optional[int] = Field(
-        None, alias="matchedCount", description="Number of documents matched in the operation"
-    )
-    modified_count: Optional[int] = Field(
-        None, alias="modifiedCount", description="Number of documents modified"
-    )
-    deleted_count: Optional[int] = Field(
-        None, alias="deletedCount", description="Number of documents deleted"
-    )
-    updated_at: Optional[Any] = Field(
-        None, alias="updatedAt", description="Timestamp of the last update"
-    )
+   
     data: Optional[Any] = Field(
         None, description="Additional data, such as review lists or details"
     )
