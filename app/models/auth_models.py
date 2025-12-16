@@ -20,7 +20,12 @@ class LoginRequest(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str = Field(..., description="Refresh token to generate new access token", alias="refreshToken")
+    refresh_token: str = Field(
+        ..., description="Refresh token to generate new access token", alias="refreshToken"
+    )
+    user_id: str = Field(
+        ..., description="User ID associated with the refresh token", alias="userId"
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

@@ -3,6 +3,7 @@ from app.services.user_service import UserService
 from app.models.user_models import UserDB, UserRole
 from app.auth.jwt_handler import JWTHandler
 from app.core.dependencies import get_user_service, get_jwt_handler
+from structlog.contextvars import bind_contextvars
 
 
 async def get_current_user(
@@ -21,15 +22,20 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    username = jwt_handler.verify_token(token)
+    user_id = jwt_handler.verify_token(token)
 
-    if username is None:
+    if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = await user_service.get_by_username(username)
+    user = await user_service.get_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
+    bind_contextvars(
+        user_id=user.id,
+        role=user.role
+    )
+    
     return user
 
 

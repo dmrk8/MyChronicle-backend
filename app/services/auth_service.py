@@ -1,10 +1,11 @@
-import logging
+import structlog
 from app.models.auth_models import LoginRequest, AuthResponse, RefreshTokenRequest
 from app.auth.jwt_handler import JWTHandler
 from app.services.user_service import UserService
+from app.exceptions import AuthenticationError, TokenError
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 class AuthService:
@@ -19,36 +20,39 @@ class AuthService:
             )
 
             if not user:
-                raise ValueError("Invalid username or password")
+                raise AuthenticationError("Invalid username or password")
 
-            logger.info(f"User {user.username} logged in successfully")
+            logger.info("User logged in successfully", username=user.username)
 
-            access_token = self.jwt_handler.create_access_token(user.username)
+            access_token = self.jwt_handler.create_access_token(user.id) # type: ignore
             refresh_token = self.jwt_handler.create_refresh_token(
                 user.username, user_login.is_remember_me
             )
 
+            await self.jwt_handler.store_refresh_token(user.id, refresh_token, user_login.is_remember_me)  # type: ignore
             return AuthResponse(
                 message="Login successful",
                 access_token=access_token,  # type: ignore
                 refresh_token=refresh_token,  # type: ignore
             )
 
-        except ValueError as ve:
-            logger.error(f"Login failed: {ve}")
+        except AuthenticationError as ae:
+            logger.error("Login failed", error=str(ae), user_id=user_login.username)
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during login: {e}")
+            logger.error("Unexpected error during login", error=str(e), username=user_login.username)
             raise ValueError(f"Authentication failed: {str(e)}")
-
+    
+    
+    #HANDLE THIS
     async def refresh_access_token(self, refresh_request: RefreshTokenRequest) -> AuthResponse:
-        username = self.jwt_handler.verify_token(
+        user_id = self.jwt_handler.verify_token(
             refresh_request.refresh_token, expected_type="refresh"
         )
-        if not username:
+        if not user_id:
             raise ValueError("Invalid or expired refresh token")
 
-        access_token = self.jwt_handler.create_access_token(username)
+        access_token = self.jwt_handler.create_access_token(user_id)
 
         return AuthResponse(
             message="Token refreshed",
@@ -56,4 +60,5 @@ class AuthService:
             refresh_token=refresh_request.refresh_token,  # type: ignore
         )
         
-    
+    async def logout(self, user_id: str):
+        await self.jwt_handler.revoke_refresh_token(user_id)

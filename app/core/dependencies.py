@@ -2,6 +2,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
+from app.core.infrastructure import state
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
