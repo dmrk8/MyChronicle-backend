@@ -36,7 +36,7 @@ def get_anilist_api() -> AnilistApi:
 def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
     global _tmdb_api
     if _tmdb_api is None:
-        _tmdb_api = TMDBApi(settings.tmdb_access_token)
+        _tmdb_api = TMDBApi(settings.tmdb_access_token, state.tmdb_client) # type: ignore
     return _tmdb_api
 
 
