@@ -1,17 +1,16 @@
 from typing import Any, List, Optional, Tuple, Dict
-import httpx
-import structlog
-import time
+from httpx import AsyncClient
 
 from app.models.anilist_models import AnilistMediaDetailed, AnilistMediaMinimal, AnilistPageInfo
 from app.enums.anilist_enums import SortOption
+from app.integrations.http_helpers import perform_request
 
 ANILIST_URL = "https://graphql.anilist.co"
 
 
 class AnilistApi:
-    def __init__(self):
-        self.logger = structlog.get_logger().bind(api="AnilistApi")
+    def __init__(self, client: AsyncClient):
+        self.client = client
 
     @staticmethod
     def extract_main_studio(studios_data: dict) -> Optional[str]:
@@ -85,65 +84,30 @@ class AnilistApi:
             "variables": variables,
         }
 
-        start = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(ANILIST_URL, json=graphql_query)
-                response.raise_for_status()
-                data = response.json()
+        data = await perform_request(
+            client=self.client,
+            method="POST",
+            url=ANILIST_URL,
+            headers=None,
+            params=None,
+            graphql_query=graphql_query,
+            action="get_featured_media",
+        )
 
-                if "errors" in data:
-                    self.logger.error("AniList GraphQL error", errors=data["errors"])
-                    raise Exception(f"AniList error: {data['errors']}")
+        media_list = data.get("data", {}).get("Page", {}).get("media", [])
 
-                media_list = data.get("data", {}).get("Page", {}).get("media", [])
+        # Map each media item to AnilistMedia model using model_validate
+        featured_media = []
+        for media in media_list:
+            # Extract main studio
+            media["main_studio"] = self.extract_main_studio(media.get("studios"))
+            # Get the large cover image
+            media["coverImageLarge"] = media.get("coverImage", {}).get("large")
 
-                # Map each media item to AnilistMedia model using model_validate
-                featured_media = []
-                for media in media_list:
-                    # Extract main studio
-                    media["main_studio"] = self.extract_main_studio(media.get("studios"))
-                    # Get the large cover image
-                    media["coverImageLarge"] = media.get("coverImage", {}).get("large")
+            featured_media.append(AnilistMediaMinimal.model_validate(media))
 
-                    featured_media.append(AnilistMediaMinimal.model_validate(media))
-
-                self.logger.info(
-                    "anilist_fetched_featured_media",
-                    count=len(featured_media),
-                    elapsed_ms=int((time.perf_counter() - start) * 1000)
-                )
-                return featured_media
-
-        except httpx.HTTPStatusError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "HTTP error while fetching featured media",
-                status_code=e.response.status_code,
-                response_text=e.response.text,
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except httpx.RequestError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "Request error while fetching featured media",
-                error=str(e),
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except ValueError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "JSON parsing or validation error while fetching featured media",
-                error=str(e),
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except Exception as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception("Error fetching featured media", elapsed_ms=elapsed_ms)
-            raise
+        
+        return featured_media
 
     async def search_media(
         self,
@@ -250,65 +214,29 @@ class AnilistApi:
             "variables": variables,
         }
 
-        start = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(ANILIST_URL, json=graphql_query)
-                response.raise_for_status()
-                data = response.json()
+        data = await perform_request(
+            client=self.client,
+            method="POST",
+            url=ANILIST_URL,
+            headers=None,
+            params=None,
+            graphql_query=graphql_query,
+            action="search_media",
+        )
 
-                if "errors" in data:
-                    self.logger.error("AniList GraphQL error", errors=data["errors"])
-                    raise Exception(f"AniList error: {data['errors']}")
+        page_data = data.get("data", {}).get("Page", {})
+        media_list = page_data.get("media", [])
 
-                page_data = data.get("data", {}).get("Page", {})
-                media_list = page_data.get("media", [])
+        page_info = AnilistPageInfo.model_validate(page_data.get("pageInfo", {}))
 
-                page_info = AnilistPageInfo.model_validate(page_data.get("pageInfo", {}))
+        search_media = []
+        for media in media_list:
+            media["main_studio"] = self.extract_main_studio(media.get("studios"))
+            search_media.append(AnilistMediaMinimal.model_validate(media))
 
-                search_media = []
-                for media in media_list:
-                    media["main_studio"] = self.extract_main_studio(media.get("studios"))
+       
 
-                    search_media.append(AnilistMediaMinimal.model_validate(media))
-
-                self.logger.info(
-                    "anilist_fetched_search_media",
-                    count=len(search_media),
-                    elapsed_ms=int((time.perf_counter() - start) * 1000)
-                )
-
-                return search_media, page_info
-
-        except httpx.HTTPStatusError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "HTTP error while searching media",
-                status_code=e.response.status_code,
-                response_text=e.response.text,
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except httpx.RequestError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "Request error while searching media",
-                error=str(e),
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except ValueError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "JSON parsing or validation error while searching media",
-                error=str(e),
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except Exception as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception("Error searching media", elapsed_ms=elapsed_ms)
-            raise
+        return search_media, page_info
 
     async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
         """
@@ -399,58 +327,20 @@ class AnilistApi:
             "variables": variables,
         }
 
-        start = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(ANILIST_URL, json=graphql_query)
-                response.raise_for_status()
-                data = response.json()
+       
+        data = await perform_request(
+            client=self.client,
+            method="POST",
+            url=ANILIST_URL,
+            headers=None,
+            params=None,
+            graphql_query=graphql_query,
+            action="get_media_detail",
+        )
 
-                if "errors" in data:
-                    self.logger.error("AniList GraphQL error", errors=data["errors"])
-                    raise Exception(f"AniList error: {data['errors']}")
+        media = data.get("data", {}).get("Media", {})
 
-                media = data.get("data", {}).get("Media", {})
+        detailed_media = AnilistMediaDetailed.model_validate(media)
 
-                detailed_media = AnilistMediaDetailed.model_validate(media)
 
-                self.logger.info(
-                    "anilist_fetched_media_detail",
-                    media_id=media_id,
-                    elapsed_ms=int((time.perf_counter() - start) * 1000)
-                )
-
-                return detailed_media
-
-        except httpx.HTTPStatusError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "HTTP error while fetching media detail",
-                status_code=e.response.status_code,
-                response_text=e.response.text,
-                media_id=media_id,
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except httpx.RequestError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "Request error while fetching media detail",
-                error=str(e),
-                media_id=media_id,
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except ValueError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "JSON parsing or validation error while fetching media detail",
-                error=str(e),
-                media_id=media_id,
-                elapsed_ms=elapsed_ms
-            )
-            raise
-        except Exception as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception("Error fetching media detail", media_id=media_id, elapsed_ms=elapsed_ms)
-            raise
+        return detailed_media

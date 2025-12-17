@@ -29,7 +29,7 @@ _jwt_handler = None
 def get_anilist_api() -> AnilistApi:
     global _anilist_api
     if _anilist_api is None:
-        _anilist_api = AnilistApi()
+        _anilist_api = AnilistApi(state.anilist_client) # type: ignore
     return _anilist_api
 
 

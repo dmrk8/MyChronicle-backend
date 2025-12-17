@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 import httpx
 import structlog
 
@@ -9,20 +10,26 @@ async def perform_request(
     *,
     client: httpx.AsyncClient,
     method: str,
+    graphql_query: Optional[dict] = None,
     url: str,
-    headers: dict,
-    params: dict | None = None,
+    headers: Optional[dict],
+    params: Optional[dict] = None,
     action: str,
 ):
-    
+
     start = time.perf_counter()
     try:
-        response = await client.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=params,
-        )
+        if graphql_query:
+            response = await client.post(url=url, json=graphql_query)
+
+        else:
+            response = await client.request(
+                method=method,
+                url=url,
+                headers=headers,
+                params=params,
+            )
+
         response.raise_for_status()
         logger.info(
             "upstream_request",
@@ -31,7 +38,7 @@ async def perform_request(
             method=method,
             url=str(url),
             status_code=response.status_code,
-            elapsed_ms=int((time.perf_counter() - start) * 1000)
+            elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
 
         return response.json()
@@ -60,7 +67,6 @@ async def perform_request(
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
         raise
-
     except Exception:
         logger.exception(
             "upstream_request",

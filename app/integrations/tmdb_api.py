@@ -2,7 +2,6 @@ from typing import List, Optional
 import httpx
 import structlog
 import asyncio
-import time
 from app.models.tmdb_models import (
     TMDBCollection,
     TMDBMediaMinimal,
