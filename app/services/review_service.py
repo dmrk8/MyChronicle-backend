@@ -75,10 +75,9 @@ class ReviewService:
                 raise ValueError("Written at date cannot be in the future")
 
         try:
-            data_dict = update_request.model_dump()
-            data_dict["updated_at"] = datetime.now()
-            update_data = {k: v for k, v in data_dict.items() if v is not None}
-            result: UpdateResult = await self.repository.update_review(review_id, update_data)
+            update_dict = update_request.model_dump(exclude_unset=True)
+            update_dict["updated_at"] = datetime.now()
+            result: UpdateResult = await self.repository.update_review(review_id, update_dict)
             logger.info("Review updated", review_id=review_id)
             return ReviewResponse(
                 message="Review updated successfully",

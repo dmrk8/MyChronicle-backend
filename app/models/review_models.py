@@ -37,7 +37,6 @@ class ReviewDB(ReviewCreate):
 
 
 class ReviewUpdate(BaseModel):
-    id: str = Field(description="The ID of the review to update")
     review: Optional[str] = Field(None, description="Updated review text")
     rating: Optional[float] = Field(None, description="Updated rating")
     review_progress: Optional[int] = Field(
@@ -47,9 +46,6 @@ class ReviewUpdate(BaseModel):
         None,
         alias="writtenAt",
         description="The date when the user wrote the review",
-    )
-    updated_at: Optional[datetime] = Field(
-        None, alias="updatedAt", description="Timestamp of the update"
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -63,23 +59,8 @@ class ReviewResponse(BaseModel):
     user_media_entry_id: Optional[str] = Field(
         None, alias="userMediaEntryId", description="ID of the associated user-media entry"
     )
-    matched_count: Optional[int] = Field(
-        None, alias="matchedCount", description="Number of documents matched in the operation"
-    )
-    modified_count: Optional[int] = Field(
-        None, alias="modifiedCount", description="Number of documents modified"
-    )
-    deleted_count: Optional[int] = Field(
-        None, alias="deletedCount", description="Number of documents deleted"
-    )
-    updated_at: Optional[Any] = Field(
-        None, alias="updatedAt", description="Timestamp of the last update"
-    )
-    data: Optional[Any] = Field(
-        None, description="Additional data, such as review lists or details"
-    )
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"
     )
-
+    data: Optional[ReviewDB | List[ReviewDB]] = None
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
