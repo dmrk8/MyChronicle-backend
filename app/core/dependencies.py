@@ -19,6 +19,8 @@ from app.auth.jwt_handler import JWTHandler
 from app.services.auth_service import AuthService
 from app.auth.password_handler import PasswordHandler
 
+from app.repositories.review_repository import ReviewRepository
+from app.services.review_service import ReviewService
 
 _anilist_api = None
 _tmdb_api = None
@@ -29,14 +31,14 @@ _jwt_handler = None
 def get_anilist_api() -> AnilistApi:
     global _anilist_api
     if _anilist_api is None:
-        _anilist_api = AnilistApi(state.anilist_client) # type: ignore
+        _anilist_api = AnilistApi(state.anilist_client)  # type: ignore
     return _anilist_api
 
 
 def get_tmdb_api(settings: Settings = Depends(get_settings)) -> TMDBApi:
     global _tmdb_api
     if _tmdb_api is None:
-        _tmdb_api = TMDBApi(settings.tmdb_access_token, state.tmdb_client) # type: ignore
+        _tmdb_api = TMDBApi(settings.tmdb_access_token, state.tmdb_client)  # type: ignore
     return _tmdb_api
 
 
@@ -101,3 +103,15 @@ def get_auth_service(
     user_service: UserService = Depends(get_user_service),
 ) -> AuthService:
     return AuthService(jwt_handler=jwt_handler, user_service=user_service)
+
+
+def get_review_repository(
+    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
+) -> ReviewRepository:
+    return ReviewRepository(db=db, collection_name=settings.review_collection)
+
+
+def get_review_service(
+    review_repository: ReviewRepository = Depends(get_review_repository),
+) -> ReviewService:
+    return ReviewService(review_repository=review_repository)

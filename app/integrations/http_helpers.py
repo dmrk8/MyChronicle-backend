@@ -14,7 +14,7 @@ async def perform_request(
     url: str,
     headers: Optional[dict],
     params: Optional[dict] = None,
-    action: str,
+    action: str
 ):
 
     start = time.perf_counter()
