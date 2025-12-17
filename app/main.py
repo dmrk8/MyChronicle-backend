@@ -15,6 +15,7 @@ from app.routes.imdb_router import imdb_router
 from app.routes.igdb_router import igdb_router
 from app.routes.anilist_router import anilist_router
 from app.routes.tmdb_router import tmdb_router
+from app.routes.user_media_entry_router import user_media_entry_router
 
 log = structlog.get_logger()
 
@@ -51,7 +52,7 @@ app.include_router(imdb_router)
 app.include_router(igdb_router)
 app.include_router(anilist_router)
 app.include_router(tmdb_router)
-
+app.include_router(user_media_entry_router)
 
 @app.get("/")
 async def root(q: str):

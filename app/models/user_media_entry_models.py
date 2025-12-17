@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Any, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, List, Optional
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.enums.review_enums import ReviewMediaType, ReviewMediaSource, ReviewStatus
 
 
-# Per-media model (shared fields, one per user-media)
 class UserMediaEntryCreate(BaseModel):
     external_id: int = Field(
         ..., alias="externalId", description="The external ID of the media from the source API"
@@ -25,7 +24,7 @@ class UserMediaEntryCreate(BaseModel):
         description="The user's consumption status for the media",
     )
     repeat_count: Optional[int] = Field(
-        None, alias="repeatCount", description="How many times the user has consumed the media"
+        0, alias="repeatCount", description="How many times the user has consumed the media"
     )
     is_favorite: bool = Field(
         False,
@@ -35,6 +34,13 @@ class UserMediaEntryCreate(BaseModel):
     in_library: bool = Field(
         False, alias="inLibrary", description="Whether the media is in the user's personal library"
     )
+
+    @field_validator("repeat_count")
+    @classmethod
+    def repeat_count_non_negative(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("repeat_count must be non-negative")
+        return v
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -55,7 +61,6 @@ class UserMediaEntryDB(UserMediaEntryCreate):
 
 
 class UserMediaEntryUpdate(BaseModel):
-    id: str = Field(description="The ID of the user-media entry to update")
     status: Optional[ReviewStatus] = Field(
         None, alias="status", description="Updated consumption status"
     )
@@ -72,6 +77,13 @@ class UserMediaEntryUpdate(BaseModel):
         None, alias="updatedAt", description="Timestamp of the update"
     )
 
+    @field_validator("repeat_count")
+    @classmethod
+    def repeat_count_non_negative(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("repeat_count must be non-negative")
+        return v
+
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
@@ -80,21 +92,22 @@ class UserMediaEntryResponse(BaseModel):
     user_media_entry_id: Optional[str] = Field(
         None, alias="userMediaEntryId", description="ID of the created or updated user-media entry"
     )
-    matched_count: Optional[int] = Field(
-        None, alias="matchedCount", description="Number of documents matched in the operation"
+    user_id: Optional[str] = Field(None, alias="userId")
+    data: Optional[UserMediaEntryDB | List[UserMediaEntryDB]] = Field(
+        None, description="Additional data, such as media details"
     )
-    modified_count: Optional[int] = Field(
-        None, alias="modifiedCount", description="Number of documents modified"
-    )
-    deleted_count: Optional[int] = Field(
-        None, alias="deletedCount", description="Number of documents deleted"
-    )
-    updated_at: Optional[Any] = Field(
-        None, alias="updatedAt", description="Timestamp of the last update"
-    )
-    data: Optional[Any] = Field(None, description="Additional data, such as media details")
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"
     )
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class UserMediaEntryPagination(BaseModel):
+    results: List[UserMediaEntryDB] = Field(..., alias="results")
+    page: int = Field(..., alias="page", description="Current page number")
+    per_page: int = Field(..., alias="perPage", description="Number of items per page")
+    has_next_page: bool = Field(..., alias="hasNextPage", description="Is there a next page?")
+    total: int = Field(..., alias="total", description="Total number of items")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

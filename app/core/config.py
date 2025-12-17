@@ -13,10 +13,15 @@ class Settings(BaseSettings):
     database_name: str = Field(description="Name of the MongoDB database to use")
     review_collection: str = Field(description="Name of the MongoDB collection for storing reviews")
     user_collection: str = Field(description="Name of the MongoDB collection for storing user data")
+    user_media_entry_collection: str = Field(
+        description="Name of the MongoDB collection for storing user media entries"
+    )
 
     jwt_secret_key: str = Field(description="Secret key used for signing JWT tokens")
     jwt_algorithm: str = Field(description="Algorithm used for JWT encoding and decoding")
-    jwt_access_token_expire_minutes: int = Field(description="Expiration time for JWT tokens in minutes")
+    jwt_access_token_expire_minutes: int = Field(
+        description="Expiration time for JWT tokens in minutes"
+    )
     jwt_issuer: str = Field(description="Issuer claim for JWT tokens")
     jwt_audience: str = Field(description="Audience claim for JWT tokens")
     jwt_refresh_token_expire_days_default: int = Field(
@@ -43,6 +48,7 @@ class Settings(BaseSettings):
 
 
 _settings: Settings | None = None
+
 
 def get_settings() -> Settings:
     global _settings

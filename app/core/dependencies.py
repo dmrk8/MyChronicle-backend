@@ -22,6 +22,9 @@ from app.auth.password_handler import PasswordHandler
 from app.repositories.review_repository import ReviewRepository
 from app.services.review_service import ReviewService
 
+from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.services.user_media_entry_service import UserMediaEntryService
+
 _anilist_api = None
 _tmdb_api = None
 _password_handler = None
@@ -115,3 +118,15 @@ def get_review_service(
     review_repository: ReviewRepository = Depends(get_review_repository),
 ) -> ReviewService:
     return ReviewService(review_repository=review_repository)
+
+
+def get_user_media_entry_repository(
+    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
+) -> UserMediaEntryRepository:
+    return UserMediaEntryRepository(db=db, collection_name=settings.user_media_entry_collection)
+
+
+def get_user_media_entry_service(
+    repository: UserMediaEntryRepository = Depends(get_user_media_entry_repository),
+) -> UserMediaEntryService:
+    return UserMediaEntryService(repository=repository)

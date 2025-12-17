@@ -1,0 +1,137 @@
+from typing import List, Optional
+from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.models.user_media_entry_models import (
+    UserMediaEntryCreate,
+    UserMediaEntryUpdate,
+    UserMediaEntryDB,
+    UserMediaEntryPagination,
+    UserMediaEntryResponse,
+)
+from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
+from datetime import datetime, timezone
+
+import structlog
+
+logger = structlog.get_logger().bind(service="UserMediaEntryService")
+
+
+class UserMediaEntryService:
+    def __init__(self, repository: UserMediaEntryRepository):
+        self.repository = repository
+
+    async def create_entry(
+        self, entry_request: UserMediaEntryCreate, user_id: str
+    ) -> UserMediaEntryResponse:
+
+        entry_data = UserMediaEntryDB(
+            **entry_request.model_dump(),
+            user_id=user_id,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        result: InsertOneResult = await self.repository.create_entry(entry_data)
+        return UserMediaEntryResponse(
+            message="User media entry created successfully",
+            user_media_entry_id=str(result.inserted_id),  # type: ignore
+            acknowledged=result.acknowledged,
+            user_id=user_id,  # type: ignore
+        )
+
+    async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
+        entry = await self._verify_ownership(entry_id, user_id)
+        return UserMediaEntryResponse(
+            message="User media entry fetched successfully",
+            data=entry,
+            user_id=entry.user_id,  # type: ignore
+        )
+
+    async def update_entry(
+        self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
+    ) -> UserMediaEntryResponse:
+        await self._verify_ownership(entry_id, user_id)
+
+        update_dict = update_data.model_dump(exclude_unset=True)
+        update_dict["updated_at"] = datetime.now(timezone.utc)
+        result: UpdateResult = await self.repository.update_entry(entry_id, update_dict)
+        return UserMediaEntryResponse(
+            message="User media entry updated successfully",
+            user_media_entry_id=entry_id,  # type: ignore
+            acknowledged=result.acknowledged,
+        )
+
+    async def delete_entry(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
+        await self._verify_ownership(entry_id, user_id)
+        result: DeleteResult = await self.repository.delete_entry(entry_id)
+        return UserMediaEntryResponse(
+            message="User media entry deleted successfully",
+            user_media_entry_id=entry_id,  # type: ignore
+            acknowledged=result.acknowledged,
+        )
+
+    async def get_entries_by_user_id(self, user_id: str) -> UserMediaEntryResponse:
+        entries = await self.repository.get_entries_by_user_id(user_id)
+        return UserMediaEntryResponse(
+            message="User media entries fetched successfully", data=entries, user_id=user_id  # type: ignore
+        )
+
+    async def get_entry_by_external_id(self, external_id: int, user_id: str) -> UserMediaEntryResponse:
+        entry = await self.repository.get_entry_by_external_id_and_user_id(external_id, user_id)
+        return UserMediaEntryResponse(
+            message="User media entries fetched successfully",
+            data=entry,
+            user_id=user_id,  # type: ignore
+        )
+
+    async def get_entries(
+        self,
+        user_id: str,
+        in_library: Optional[bool],
+        is_favorite: Optional[bool],
+        status: Optional[str],
+        media_type: Optional[str],
+        page: int = 1,
+        per_page: int = 20,
+        sort_by: str = "created_at",
+        sort_order: int = -1,
+    ) -> UserMediaEntryPagination:
+        filters = {"user_id": user_id}
+        if in_library is not None:
+            filters["in_library"] = in_library
+        if is_favorite is not None:
+            filters["is_favorite"] = is_favorite
+        if status is not None:
+            filters["status"] = status
+        if media_type is not None:
+            filters["media_type"] = media_type
+
+        entries = await self.repository.get_entries(
+            filters=filters,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        total = await self.repository.collection.count_documents(filters)
+        has_next_page = (page * per_page) < total
+        return UserMediaEntryPagination(
+            results=entries,
+            page=page,
+            per_page=per_page,  # type: ignore
+            has_next_page=has_next_page,  # type: ignore
+            total=total,
+        )
+
+    async def count_entries_by_user_id(self, user_id: str) -> UserMediaEntryResponse:
+        count = await self.repository.count_entries_by_user_id(user_id)
+        return UserMediaEntryResponse(
+            message="User media entry count fetched successfully", data=count, user_id=user_id  # type: ignore
+        )
+
+    async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
+        entry = await self.repository.get_entry_by_id(entry_id)
+        if not entry:
+            raise ValueError(f"Entry {entry_id} not found")
+        if entry.user_id != user_id:
+            logger.warning("Unauthorized access attempt", user_id=user_id, entry_id=entry_id)
+            raise ValueError("User not authorized for this entry")
+        return entry
