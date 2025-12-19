@@ -21,6 +21,12 @@ class TMDBService:
         results, page_info = await self.tmdb_api.get_trending_media(
             media_type=media_type, time_window=time_window, language=language, page=page
         )
+        filtered_results = [
+                media
+                for media in results
+                if not (16 in media.genre_ids and media.original_language == "ja")
+            ]
+        results = filtered_results
         return TMDBPagination(
             results=results,
             page=page_info.page,
