@@ -3,7 +3,7 @@ from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, A
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
 from app.services.media_normalizer import MediaNormalizer
-from app.models.media_models import MediaMinimal, MediaPagination
+from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
 
 
 class AnilistService:
@@ -59,6 +59,7 @@ class AnilistService:
         )
         return MediaNormalizer.normalize_anilist_minimal_pagination(media_list, page_info)
 
-    async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
+    async def get_media_detail(self, media_id: int) -> MediaDetailed:
 
-        return await self.anilist_api.get_media_detail(media_id)
+        res = await self.anilist_api.get_media_detail(media_id)
+        return MediaNormalizer.normalize_anilist_detailed(res)
