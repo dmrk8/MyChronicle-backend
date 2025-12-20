@@ -11,7 +11,7 @@ from app.core.dependencies import get_anilist_service
 anilist_router = APIRouter(prefix="/anilist")
 
 
-@anilist_router.get("/search/{media_type}", response_model=AnilistPagination)
+@anilist_router.get("/search/{media_type}")
 async def search_anilist(
     media_type: str = Path(..., regex="^(anime|manga)$"),
     page: int = Query(1, ge=1),

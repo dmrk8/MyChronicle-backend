@@ -80,6 +80,7 @@ class Studios(BaseModel):
 
 class AnilistMediaMinimal(BaseModel):
     id: int = Field(..., alias="id")
+    type: str
     title: Title
     format: Optional[str] = None
     genres: Optional[List[str]] = None

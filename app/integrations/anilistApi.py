@@ -48,6 +48,7 @@ class AnilistApi:
               Page(page: $page, perPage: $perPage) {
                 media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear) {
                   id
+                  type
                   title {
                     english
                     romaji
@@ -167,6 +168,7 @@ class AnilistApi:
                 }
                 media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear, format: $format, status: $status, genre_in: $genreIn, tag_in: $tagIn, search: $search, isAdult: $isAdult, countryOfOrigin: $countryOfOrigin) {
                   id
+                  type
                   title {
                     english
                     romaji

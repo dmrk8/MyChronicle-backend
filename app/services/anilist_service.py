@@ -2,6 +2,8 @@ from typing import List, Optional
 from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, AnilistMediaMinimal
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
+from app.services.media_normalizer import MediaNormalizer
+from app.models.media_models import MediaMinimal, MediaPagination
 
 
 class AnilistService:
@@ -16,11 +18,12 @@ class AnilistService:
         season_year: Optional[int] = None,
         sort: str = "POPULARITY_DESC",
         media_type: str = "ANIME",
-    ) -> List[AnilistMediaMinimal]:
+    ) -> List[MediaMinimal]:
 
-        return await self.anilist_api.get_featured_media(
+        res = await self.anilist_api.get_featured_media(
             page, per_page, season, season_year, sort, media_type
         )
+        return MediaNormalizer.normalize_anilist_minimal(res)
 
     async def search_media(
         self,
@@ -37,7 +40,7 @@ class AnilistService:
         tag_in: Optional[List[str]] = None,
         is_adult: Optional[bool] = None,
         country_of_origin: Optional[str] = None,
-    ) -> AnilistPagination:
+    ) -> MediaPagination:
 
         media_list, page_info = await self.anilist_api.search_media(
             page,
@@ -54,13 +57,7 @@ class AnilistService:
             is_adult,
             country_of_origin,
         )
-        return AnilistPagination(
-            results=media_list,
-            current_page=page_info.current_page,  # type: ignore
-            per_page=page_info.per_page,  # type: ignore
-            has_next_page=page_info.has_next_page,  # type: ignore
-            total=page_info.total,
-        )
+        return MediaNormalizer.normalize_anilist_minimal_pagination(media_list, page_info)
 
     async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
 
