@@ -49,7 +49,8 @@ class MediaDetailed(BaseModel):
     genres: Optional[List[str]] = None
     status: Optional[str] = None
     average_score: Optional[float] = Field(None, alias="averageScore")
-
+    description: Optional[str] = None
+    
     is_adult: Optional[bool] = Field(None, alias="isAdult")
     source: Optional[str] = None
     format: Optional[str] = None

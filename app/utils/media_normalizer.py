@@ -110,3 +110,44 @@ class MediaNormalizer:
             media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
             media_list.append(MediaMinimal.model_validate(media_dict))
         return media_list
+
+    @staticmethod
+    def normalize_tmdb_movie_detailed(media: TMDBMovieDetail) -> MediaDetailed:
+
+        media_dict = media.model_dump()
+        media_dict["media_source"] = "tmdb"
+        media_dict["media_type"] = "movie"
+        media_dict["is_adult"] = media.adult
+        media_dict["title"] = media.title or media.original_title
+        media_dict["genres"] = [m.name for m in media.genres]
+        media_dict["average_score"] = media.vote_average
+        media_dict["format"] = "movie"
+        media_dict["tags"] = [k.name for k in media.keywords.keywords]
+        media_dict["duration"] = media.runtime
+        media_dict["description"] = media.overview
+        media_dict["country_of_origin"] = media.origin_country[0]
+        media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
+        media_dict["banner_image"] = f"https://image.tmdb.org/t/p/original/{media.backdrop_path}"
+        media_dict["studios"] = [co.name for co in media.production_companies]
+        return MediaDetailed.model_validate(media_dict)
+
+    @staticmethod
+    def normalize_tmdb_tv_detailed(media: TMDBTVDetail) -> MediaDetailed:
+        media_dict = media.model_dump()
+        media_dict["media_source"] = "tmdb"
+        media_dict["media_type"] = "tv"
+        media_dict["is_adult"] = media.adult
+        media_dict["title"] = media.name or media.original_name
+        media_dict["genres"] = [m.name for m in media.genres]
+        media_dict["average_score"] = media.vote_average
+        media_dict["format"] = "movie"
+        media_dict["tags"] = [k.name for k in media.keywords.results]
+        media_dict["duration"] = media.episode_run_time or None
+        media_dict["description"] = media.overview
+        media_dict["country_of_origin"] = media.origin_country[0]
+        media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
+        media_dict["banner_image"] = f"https://image.tmdb.org/t/p/original/{media.backdrop_path}"
+        media_dict["studios"] = [co.name for co in media.production_companies]
+        media_dict["episodes"] = media.number_of_episodes
+        media_dict["seasons"] = media.number_of_seasons
+        return MediaDetailed.model_validate(media_dict)
