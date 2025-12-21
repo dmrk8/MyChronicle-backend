@@ -2,7 +2,7 @@ from typing import List, Optional
 from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, AnilistMediaMinimal
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
-from app.services.media_normalizer import MediaNormalizer
+from app.utils.media_normalizer import MediaNormalizer
 from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
 
 
