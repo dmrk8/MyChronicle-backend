@@ -10,6 +10,9 @@ from app.models.tmdb_models import (
     TMDBPageInfo,
 )
 
+from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
+from app.utils.media_normalizer import MediaNormalizer
+
 
 class TMDBService:
     def __init__(self, tmdb_api: TMDBApi):
@@ -17,21 +20,22 @@ class TMDBService:
 
     async def get_trending_media(
         self, media_type: str, time_window: str, language: str, page: int
-    ) -> TMDBPagination:
+    ) -> MediaPagination:
         results, page_info = await self.tmdb_api.get_trending_media(
             media_type=media_type, time_window=time_window, language=language, page=page
         )
+
+        per_page = len(results)
+
         filtered_results = [
-                media
-                for media in results
-                if not (16 in media.genre_ids and media.original_language == "ja")
-            ]
-        results = filtered_results
-        return TMDBPagination(
-            results=results,
-            page=page_info.page,
-            total_pages=page_info.total_pages,  # type: ignore
-            total_results=page_info.total_results,  # type: ignore
+            media
+            for media in results
+            if not (16 in media.genre_ids and media.original_language == "ja")
+        ]
+        results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, media_type)
+
+        return MediaPagination(
+            results=results, currentPage=page, perPage=per_page, hasNextPage=per_page == 20
         )
 
     async def get_popular_season(
@@ -42,7 +46,7 @@ class TMDBService:
         page: int,
         language: str,
         sort_by: str,
-    ) -> TMDBPagination:
+    ) -> MediaPagination:
         results, page_info = await self.tmdb_api.get_popular_season(
             media_type=media_type,
             start_date=start_date,
@@ -51,11 +55,11 @@ class TMDBService:
             language=language,
             sort_by=sort_by,
         )
-        return TMDBPagination(
-            results=results,
-            page=page_info.page,
-            total_pages=page_info.total_pages,  # type: ignore
-            total_results=page_info.total_results,  # type: ignore
+        per_page = len(results)
+        results = MediaNormalizer.normalize_tmdb_minimal(results, media_type)
+
+        return MediaPagination(
+            results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
 
     async def search_movie(
@@ -73,17 +77,19 @@ class TMDBService:
         with_original_language: Optional[str] = None,
         without_genres: Optional[str] = None,
         without_keywords: Optional[str] = None,
-    ) -> TMDBPagination:
+    ) -> MediaPagination:
         if search:
             results, page_info = await self.tmdb_api.get_search_movie(
                 query=search, page=page, language=language
             )
+            per_page = len(results)
+
             filtered_results = [
                 media
                 for media in results
                 if not (16 in media.genre_ids and media.original_language == "ja")
             ]
-            results = filtered_results
+            results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, "movie")
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
@@ -107,11 +113,10 @@ class TMDBService:
                 without_genres=without_genres,
                 without_keywords=without_keywords,
             )
-        return TMDBPagination(
-            results=results,
-            page=page_info.page,
-            total_pages=page_info.total_pages,  # type: ignore
-            total_results=page_info.total_results,  # type: ignore
+            per_page = len(results)
+            results = MediaNormalizer.normalize_tmdb_minimal(results, "movie")
+        return MediaPagination(
+            results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
 
     async def search_tv(
@@ -132,17 +137,18 @@ class TMDBService:
         with_status: Optional[str] = None,
         without_genres: Optional[str] = None,
         without_keywords: Optional[str] = None,
-    ) -> TMDBPagination:
+    ) -> MediaPagination:
         if search:
             results, page_info = await self.tmdb_api.get_search_tv(
                 query=search, page=page, language=language
             )
+            per_page = len(results)
             filtered_results = [
                 media
                 for media in results
                 if not (16 in media.genre_ids and media.original_language == "ja")
             ]
-            results = filtered_results
+            results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, "tv")
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
@@ -169,11 +175,10 @@ class TMDBService:
                 without_genres=without_genres,
                 without_keywords=without_keywords,
             )
-        return TMDBPagination(
-            results=results,
-            page=page_info.page,
-            total_pages=page_info.total_pages,  # type: ignore
-            total_results=page_info.total_results,  # type: ignore
+            per_page = len(results)
+            results = MediaNormalizer.normalize_tmdb_minimal(results, "tv")
+        return MediaPagination(
+            results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
 
     async def get_movie_detail(

@@ -31,7 +31,7 @@ class TMDBApi:
         media_type: str,  # "movie" or "tv"
         time_window: str,  # "day" or "week"
         language: str,
-        page: int = 1,
+        page: int,
     ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
         """
         Fetches trending media (movie or TV) from TMDB.

@@ -118,6 +118,7 @@ class TMDBExternalIds(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class TMDBCollectionPart(BaseModel):
     adult: bool
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
@@ -132,6 +133,7 @@ class TMDBCollectionPart(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class TMDBCollection(BaseModel):
     id: int
     name: str
@@ -142,9 +144,10 @@ class TMDBCollection(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class TMDBMediaMinimal(BaseModel):
     adult: bool
-    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
+    poster_path: Optional[str] = Field(None, alias="posterPath")
     genre_ids: List[int] = Field(..., alias="genreIds")
     id: int
     original_language: str = Field(..., alias="originalLanguage")

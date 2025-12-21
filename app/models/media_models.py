@@ -5,7 +5,7 @@ from typing import List, Optional
 class MediaMinimal(BaseModel):
 
     id: int
-    source: str
+    media_source: str = Field(alias="mediaSource")
     media_type: str = Field(alias="mediaType")
 
     title: Optional[str] = None
@@ -33,17 +33,17 @@ class MediaMinimal(BaseModel):
 class MediaPagination(BaseModel):
     results: List[MediaMinimal]
     current_page: int = Field(..., alias="currentPage")
-    per_page: int = Field(..., alias="perPage")
+    per_page: Optional[int] = Field(None, alias="perPage")
     has_next_page: bool = Field(..., alias="hasNextPage")
-    total: int
+    total: Optional[int] = None
 
     model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
 
 
 class MediaDetailed(BaseModel):
     id: int
-    media_source: str
-    media_type: Optional[str] = None 
+    media_source: str = Field(alias="mediaSource")
+    media_type: Optional[str] = None
 
     title: Optional[str] = None
     genres: Optional[List[str]] = None
@@ -55,7 +55,7 @@ class MediaDetailed(BaseModel):
     format: Optional[str] = None
     episodes: Optional[int] = None
     seasons: Optional[int] = None
-    duration: Optional[int] = None 
+    duration: Optional[int] = None
     volumes: Optional[int] = None
     chapters: Optional[int] = None
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
@@ -63,7 +63,7 @@ class MediaDetailed(BaseModel):
     synonyms: Optional[List[str]] = None
     tags: Optional[List[str]] = None
 
-    #relations: Relations = Relations(edges=[])
+    # relations: Relations = Relations(edges=[])
 
     release_date: Optional[str] = Field(None, alias="releaseDate")
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
