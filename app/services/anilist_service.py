@@ -4,6 +4,7 @@ from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
 from app.utils.media_normalizer import MediaNormalizer
 from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
+from app.context.anilist_season_info import get_season_context
 
 
 class AnilistService:
@@ -18,9 +19,9 @@ class AnilistService:
         season_year: Optional[int] = None,
         sort: str = "POPULARITY_DESC",
         media_type: str = "ANIME",
-    ) -> List[MediaMinimal]:
+    ) -> List[AnilistMediaMinimal]:
 
-        res = await self.anilist_api.get_featured_media(
+        return await self.anilist_api.get_featured_media(
             page, per_page, season, season_year, sort, media_type
         )
         return MediaNormalizer.normalize_anilist_minimal(res)
@@ -40,7 +41,7 @@ class AnilistService:
         tag_in: Optional[List[str]] = None,
         is_adult: Optional[bool] = None,
         country_of_origin: Optional[str] = None,
-    ) -> MediaPagination:
+    ) -> AnilistPagination:
 
         media_list, page_info = await self.anilist_api.search_media(
             page,
@@ -57,9 +58,35 @@ class AnilistService:
             is_adult,
             country_of_origin,
         )
+        return AnilistPagination(
+            results=media_list,
+            currentPage=page_info.current_page,
+            perPage=per_page,
+            hasNextPage=page_info.has_next_page,
+            total=page_info.total,
+        )
         return MediaNormalizer.normalize_anilist_minimal_pagination(media_list, page_info)
 
-    async def get_media_detail(self, media_id: int) -> MediaDetailed:
+    async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
 
-        res = await self.anilist_api.get_media_detail(media_id)
+        return await self.anilist_api.get_media_detail(media_id)
         return MediaNormalizer.normalize_anilist_detailed(res)
+
+    async def get_featured_media_bulk(
+        self,
+        media_type: str,
+    ):
+        """
+        Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
+        """
+        seasont_ctx = get_season_context()
+
+        return await self.anilist_api.get_featured_media_bulk(
+            page=1,
+            per_page=6,
+            media_type=media_type,
+            current_season=seasont_ctx["currentSeason"],
+            current_season_year=seasont_ctx["currentSeasonYear"],
+            next_season=seasont_ctx["nextSeason"],
+            next_season_year=seasont_ctx["nextSeasonYear"],
+        )

@@ -1,7 +1,12 @@
 from typing import Any, List, Optional, Tuple, Dict
 from httpx import AsyncClient
 
-from app.models.anilist_models import AnilistMediaDetailed, AnilistMediaMinimal, AnilistPageInfo
+from app.models.anilist_models import (
+    AnilistMediaDetailed,
+    AnilistMediaMinimal,
+    AnilistPageInfo,
+    AnilistFeaturedMediaResponse,
+)
 from app.enums.anilist_enums import SortOption
 from app.integrations.http_helpers import perform_request
 
@@ -74,6 +79,7 @@ class AnilistApi:
                   }
                   coverImage {
                     large
+                    medium
                   }
                   season
                   seasonYear
@@ -102,12 +108,9 @@ class AnilistApi:
         for media in media_list:
             # Extract main studio
             media["main_studio"] = self.extract_main_studio(media.get("studios"))
-            # Get the large cover image
-            media["coverImageLarge"] = media.get("coverImage", {}).get("large")
 
             featured_media.append(AnilistMediaMinimal.model_validate(media))
 
-        
         return featured_media
 
     async def search_media(
@@ -194,6 +197,7 @@ class AnilistApi:
                   }
                   coverImage {
                     large
+                    medium
                   }
                   season
                   seasonYear
@@ -235,8 +239,6 @@ class AnilistApi:
         for media in media_list:
             media["main_studio"] = self.extract_main_studio(media.get("studios"))
             search_media.append(AnilistMediaMinimal.model_validate(media))
-
-       
 
         return search_media, page_info
 
@@ -329,7 +331,6 @@ class AnilistApi:
             "variables": variables,
         }
 
-       
         data = await perform_request(
             client=self.client,
             method="POST",
@@ -344,5 +345,148 @@ class AnilistApi:
 
         detailed_media = AnilistMediaDetailed.model_validate(media)
 
-
         return detailed_media
+
+    async def get_featured_media_bulk(
+        self,
+        page: int,
+        per_page: int,
+        current_season: str,
+        current_season_year: int,
+        next_season: str,
+        next_season_year: int,
+        media_type: str,
+    ):
+        """
+        Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
+        Uses the provided GraphQL query with different parameters for each category.
+        """
+
+        variables = {
+            "page": page,
+            "perPage": per_page,
+            "type": media_type,
+            "currentSeason": current_season,
+            "currentSeasonYear": current_season_year,
+            "nextSeason": next_season,
+            "nextSeasonYear": next_season_year,
+        }
+
+        graphql_query = {
+            "query": """
+                query FeaturedAnime(
+                  $page: Int
+                  $perPage: Int
+                  $type: MediaType
+                  $currentSeason: MediaSeason
+                  $currentSeasonYear: Int
+                  $nextSeason: MediaSeason
+                  $nextSeasonYear: Int
+                ) {
+                  trending: Page(page: $page, perPage: $perPage) {
+                    media(type: $type, sort: TRENDING_DESC) {
+                      ...mediaFields
+                    }
+                  }
+
+                  popularSeason: Page(page: $page, perPage: $perPage) {
+                    media(
+                      type: $type
+                      sort: POPULARITY_DESC
+                      season: $currentSeason
+                      seasonYear: $currentSeasonYear
+                    ) {
+                      ...mediaFields
+                    }
+                  }
+
+                  upcoming: Page(page: $page, perPage: $perPage) {
+                    media(
+                      type: $type
+                      sort: POPULARITY_DESC
+                      season: $nextSeason
+                      seasonYear: $nextSeasonYear
+                    ) {
+                      ...mediaFields
+                    }
+                  }
+
+                  allTime: Page(page: $page, perPage: $perPage) {
+                    media(type: $type, sort: POPULARITY_DESC) {
+                      ...mediaFields
+                    }
+                  }
+                }
+
+                fragment mediaFields on Media {
+                  id
+                  type
+                  title {
+                    english
+                    romaji
+                  }
+                  format
+                  genres
+                  episodes
+                  duration
+                  status
+                  nextAiringEpisode {
+                    episode
+                    airingAt
+                    timeUntilAiring
+                  }
+                  studios {
+                    edges {
+                      isMain
+                      node {
+                        id
+                        name
+                      }
+                    }
+                  }
+                  coverImage {
+                    large
+                    medium
+                  }
+                  season
+                  seasonYear
+                  averageScore
+                }
+                """,
+            "variables": variables,
+        }
+
+        data = await perform_request(
+            client=self.client,
+            method="POST",
+            url=ANILIST_URL,
+            headers=None,
+            params=None,
+            graphql_query=graphql_query,
+            action="get_featured_media_bulk",
+        )
+
+        trending_results = data.get("data", {}).get("trending").get("media", [])
+        popular_season_results = data.get("data", {}).get("popularSeason").get("media", [])
+        upcoming_results = data.get("data", {}).get("upcoming").get("media", [])
+        alltime_results = data.get("data", {}).get("allTime").get("media", [])
+
+        trending = []
+        for media in trending_results:
+            trending.append(AnilistMediaMinimal.model_validate(media))
+
+        popular_season = []
+        for media in popular_season_results:
+            popular_season.append(AnilistMediaMinimal.model_validate(media))
+
+        upcoming = []
+        for media in upcoming_results:
+            upcoming.append(AnilistMediaMinimal.model_validate(media))
+
+        all_time = []
+        for media in alltime_results:
+            all_time.append(AnilistMediaMinimal.model_validate(media))
+
+        return AnilistFeaturedMediaResponse(
+            allTime=all_time, popularSeason=popular_season, trending=trending, upcoming=upcoming
+        )

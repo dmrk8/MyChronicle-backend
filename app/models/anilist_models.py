@@ -148,3 +148,11 @@ class AnilistPagination(BaseModel):
     total: int
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class AnilistFeaturedMediaResponse(BaseModel):
+    trending: List[AnilistMediaMinimal]
+    popular_season: List[AnilistMediaMinimal] = Field(alias="popularSeason")
+    upcoming: List[AnilistMediaMinimal]
+    all_time: List[AnilistMediaMinimal] = Field(alias="allTime")
+    
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

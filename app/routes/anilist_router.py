@@ -4,7 +4,7 @@ import httpx
 
 from app.models.anilist_models import AnilistPagination
 from app.services.anilist_service import AnilistService
-from app.enums.anilist_enums import SortOption
+from app.enums.anilist_enums import SortOption, AnilistMediaType
 from app.core.dependencies import get_anilist_service
 
 
@@ -100,6 +100,27 @@ async def get_anilist_featured_media(
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
+        )
+
+
+@anilist_router.get("/featured/bulk")
+async def get_anilist_featured_media_bulk(
+    media_type: str = Query(AnilistMediaType.ANIME, alias="mediaType"),
+    service: AnilistService = Depends(get_anilist_service),
+):
+    """
+    Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
+    """
+    try:
+        return await service.get_featured_media_bulk(media_type)
+        
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="AniList API error")
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
         )
