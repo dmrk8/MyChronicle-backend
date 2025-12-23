@@ -1,8 +1,12 @@
 from typing import List
+
+import structlog
 from app.models.anilist_models import AnilistMediaMinimal, AnilistMediaDetailed, AnilistPageInfo
 from app.models.tmdb_models import TMDBMediaMinimal, TMDBTVDetail, TMDBMovieDetail
 from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
 from app.utils.genre_utils import get_movie_genre_name_by_id, get_tv_genre_name_by_id
+
+logger = structlog.get_logger("media normalizer")
 
 
 class MediaNormalizer:
@@ -12,30 +16,30 @@ class MediaNormalizer:
         results: List[AnilistMediaMinimal],
     ) -> List[MediaMinimal]:
         media_list = []
+        try:
 
-        for media in results:
-            media_dict = media.model_dump()
-            media_dict["media_source"] = "anilist"
-            media_dict["media_type"] = "anime"
-            media_dict["title"] = media.title.english or media.title.romaji or media.title.native
-            media_dict["cover_image"] = media.cover_image.large
-            media_dict["start_date"] = (
-                f"{media.start_date.year}-{media.start_date.month:02d}-{media.start_date.day:02d}"
-                if media.start_date
-                and media.start_date.year
-                and media.start_date.month
-                and media.start_date.day
-                else None
-            )
-            media_dict["end_date"] = (
-                f"{media.end_date.year}-{media.end_date.month:02d}-{media.end_date.day:02d}"
-                if media.end_date
-                and media.end_date.year
-                and media.end_date.month
-                and media.end_date.day
-                else None
-            )
-            media_list.append(MediaMinimal.model_validate(media_dict))
+            for media in results:
+                mm = MediaMinimal(
+                    id=media.id,
+                    mediaType=media.type,
+                    mediaSource="anilist",
+                    title=media.title.english or media.title.romaji or media.title.native,
+                    format=media.format,
+                    genres=media.genres,
+                    status=media.status,
+                    coverImage=media.cover_image.large,
+                    averageScore=media.average_score,
+                    episodes=media.episodes,
+                    mainStudio=next(
+                        (studio.node.name for studio in media.studios.edges if studio.is_main),
+                        None,
+                    ),
+                    chapters=media.chapters,
+                )  # type: ignore
+
+                media_list.append(mm)
+        except Exception as e:
+            logger.info("normalize_anilist_minimal", error=str(e))
         return media_list
 
     @staticmethod
@@ -88,27 +92,32 @@ class MediaNormalizer:
         results: List[TMDBMediaMinimal], media_type: str
     ) -> List[MediaMinimal]:
         media_list = []
+        try:
 
-        for media in results:
-            media_dict = media.model_dump()
-            media_dict["media_source"] = "tmdb"
-            media_dict["media_type"] = "movie" if media_type == "movie" else "tv"
-            media_dict["title"] = (
-                media.title or media.original_title or media.name or media.original_name
-            )
-            media_dict["genres"] = [
-                (
-                    get_movie_genre_name_by_id(genre_id)
-                    if media_type == "movie"
-                    else get_tv_genre_name_by_id(genre_id)
-                )
-                for genre_id in media.genre_ids
-            ]
-            media_dict["average_score"] = media.vote_average
-            media_dict["format"] = None
+            for media in results:
+                mm = MediaMinimal(
+                    id=media.id,
+                    mediaType=media.media_type,
+                    mediaSource="tmdb",
+                    title=media.title or media.original_title or media.name or media.original_name,
+                    genres=[
+                        (
+                            get_movie_genre_name_by_id(genre_id)
+                            if media_type == "movie"
+                            else get_tv_genre_name_by_id(genre_id)
+                        )
+                        for genre_id in media.genre_ids
+                    ],
+                    averageScore=media.vote_average,
+                    format=media.media_type,
+                    coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
+                    releaseDate=media.release_date,
+                    firstAirDate=media.first_air_date,
+                ) # type: ignore
 
-            media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
-            media_list.append(MediaMinimal.model_validate(media_dict))
+                media_list.append(mm)
+        except Exception as e:
+            logger.info("normalize_anilist_minimal", error=str(e))
         return media_list
 
     @staticmethod

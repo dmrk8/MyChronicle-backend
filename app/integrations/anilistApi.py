@@ -17,15 +17,6 @@ class AnilistApi:
     def __init__(self, client: AsyncClient):
         self.client = client
 
-    @staticmethod
-    def extract_main_studio(studios_data: dict) -> Optional[str]:
-        """Extract main studio name from studios edges"""
-        if studios_data and studios_data.get("edges"):
-            for edge in studios_data["edges"]:
-                if edge.get("isMain"):
-                    return edge["node"]["name"]
-        return None
-
     async def get_featured_media(
         self,
         page: int,
@@ -106,8 +97,6 @@ class AnilistApi:
         # Map each media item to AnilistMedia model using model_validate
         featured_media = []
         for media in media_list:
-            # Extract main studio
-            media["main_studio"] = self.extract_main_studio(media.get("studios"))
 
             featured_media.append(AnilistMediaMinimal.model_validate(media))
 
@@ -237,7 +226,6 @@ class AnilistApi:
 
         search_media = []
         for media in media_list:
-            media["main_studio"] = self.extract_main_studio(media.get("studios"))
             search_media.append(AnilistMediaMinimal.model_validate(media))
 
         return search_media, page_info
@@ -356,7 +344,7 @@ class AnilistApi:
         next_season: str,
         next_season_year: int,
         media_type: str,
-    ):
+    ) -> AnilistFeaturedMediaResponse:
         """
         Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
         Uses the provided GraphQL query with different parameters for each category.

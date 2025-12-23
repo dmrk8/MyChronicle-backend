@@ -81,7 +81,7 @@ class AnilistService:
         """
         seasont_ctx = get_season_context()
 
-        return await self.anilist_api.get_featured_media_bulk(
+        res = await self.anilist_api.get_featured_media_bulk(
             page=1,
             per_page=6,
             media_type=media_type,
@@ -90,3 +90,9 @@ class AnilistService:
             next_season=seasont_ctx["nextSeason"],
             next_season_year=seasont_ctx["nextSeasonYear"],
         )
+        return {
+            "trending":  MediaNormalizer.normalize_anilist_minimal(res.trending),
+            "popularSeason": MediaNormalizer.normalize_anilist_minimal(res.popular_season),
+            "upcoming": MediaNormalizer.normalize_anilist_minimal(res.upcoming),
+            "allTime": MediaNormalizer.normalize_anilist_minimal(res.all_time)
+        }

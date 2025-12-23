@@ -91,7 +91,7 @@ class AnilistMediaMinimal(BaseModel):
     start_date: Optional[MediaDate] = Field(None, alias="startDate")
     end_date: Optional[MediaDate] = Field(None, alias="endDate")
     next_airing_episode: Optional[NextAiringEpisode] = Field(None, alias="nextAiringEpisode")
-    main_studio: Optional[str] = Field(None, alias="mainStudio")
+    studios: Studios = Studios(edges=[])
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")

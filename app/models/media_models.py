@@ -8,24 +8,26 @@ class MediaMinimal(BaseModel):
     media_source: str = Field(alias="mediaSource")
     media_type: str = Field(alias="mediaType")
 
-    title: Optional[str] = None
+    # shared
+    title: str
+    format: Optional[str] = None
     genres: Optional[List[str]] = None
     status: Optional[str] = None
+    cover_image: Optional[str] = Field(None, alias="coverImage")
     average_score: Optional[float] = Field(None, alias="averageScore")
 
-    release_date: Optional[str] = Field(None, alias="releaseDate")
-    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
-
-    format: Optional[str] = None
+    # anime
     episodes: Optional[int] = None
-    duration: Optional[int] = None
-    chapters: Optional[int] = None
-    start_date: Optional[str] = Field(None, alias="startDate")
-    end_date: Optional[str] = Field(None, alias="endDate")
     main_studio: Optional[str] = Field(None, alias="mainStudio")
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    season: Optional[str] = None
-    season_year: Optional[int] = Field(None, alias="seasonYear")
+
+    # manga
+    chapters: Optional[int] = None
+
+    # movie
+    release_date: Optional[str] = Field(None, alias="releaseDate")
+
+    # tv
+    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -50,7 +52,7 @@ class MediaDetailed(BaseModel):
     status: Optional[str] = None
     average_score: Optional[float] = Field(None, alias="averageScore")
     description: Optional[str] = None
-    
+
     is_adult: Optional[bool] = Field(None, alias="isAdult")
     source: Optional[str] = None
     format: Optional[str] = None
