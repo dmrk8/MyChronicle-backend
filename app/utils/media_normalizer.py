@@ -97,7 +97,7 @@ class MediaNormalizer:
             for media in results:
                 mm = MediaMinimal(
                     id=media.id,
-                    mediaType=media.media_type,
+                    mediaType=media_type,
                     mediaSource="tmdb",
                     title=media.title or media.original_title or media.name or media.original_name,
                     genres=[
