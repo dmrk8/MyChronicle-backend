@@ -484,7 +484,7 @@ class AnilistApi:
         page: int,
         per_page: int,
         media_type: str,
-    ) -> Dict[str, List[AnilistMediaMinimal]]:
+    ) -> AnilistFeaturedMediaResponse:
         """
         Fetches featured manga data: trending, all time popular, and all time popular Manhwa.
         """
@@ -563,4 +563,6 @@ class AnilistApi:
         for media in alltime_manhwa_results:
             all_time_manhwa.append(AnilistMediaMinimal.model_validate(media))
 
-        return {"allTime": all_time, "allTimeManhwa": all_time_manhwa, "trending": trending}
+        return AnilistFeaturedMediaResponse(
+            trending=trending, allTime=all_time, allTimeManhwa=all_time_manhwa
+        )

@@ -105,16 +105,16 @@ async def get_anilist_featured_media(
         )
 
 
-@anilist_router.get("/featured/bulk")
+@anilist_router.get("/featured/bulk/{media_type}")
 async def get_anilist_featured_media_bulk(
-    media_type: str = Query(AnilistMediaType.ANIME, alias="mediaType"),
+    media_type: str,
     service: AnilistService = Depends(get_anilist_service),
 ):
     """
     Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
     """
     try:
-        return await service.get_featured_bulk(media_type)
+        return await service.get_featured_bulk(media_type.upper())
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail="AniList API error")

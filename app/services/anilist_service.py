@@ -3,7 +3,7 @@ from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, A
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
 from app.utils.media_normalizer import MediaNormalizer
-from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
+from app.models.media_models import MediaFeaturedBulk, MediaMinimal, MediaPagination, MediaDetailed
 from app.context.anilist_season_info import get_season_context
 
 
@@ -119,15 +119,13 @@ class AnilistService:
 
     async def get_featured_bulk(
         self,
-        media_type: str,
+        media_type: str = AnilistMediaType.ANIME,
         page: int = 1,
         per_page: int = 6,
-    ):
+    )-> MediaFeaturedBulk:
         """
         Fetches featured anime and/or manga data in bulk.
         """
-        result = {}
-
         if media_type == "ANIME":
             season_ctx = get_season_context()
             anime_res = await self.anilist_api.get_featured_media_bulk(
@@ -139,24 +137,20 @@ class AnilistService:
                 next_season=season_ctx["nextSeason"],
                 next_season_year=season_ctx["nextSeasonYear"],
             )
-            return {
-                "trending": MediaNormalizer.normalize_anilist_minimal(anime_res.trending),
-                "popularSeason": MediaNormalizer.normalize_anilist_minimal(
-                    anime_res.popular_season
-                ),
-                "upcoming": MediaNormalizer.normalize_anilist_minimal(anime_res.upcoming),
-                "allTime": MediaNormalizer.normalize_anilist_minimal(anime_res.all_time),
-            }
-
+            return MediaFeaturedBulk(
+                trending=MediaNormalizer.normalize_anilist_minimal(anime_res.trending),
+                popularSeason=MediaNormalizer.normalize_anilist_minimal(anime_res.popular_season),
+                upcoming=MediaNormalizer.normalize_anilist_minimal(anime_res.upcoming),
+                all_time=MediaNormalizer.normalize_anilist_minimal(anime_res.all_time), # type: ignore
+            )
         else:
             res = await self.anilist_api.get_featured_manga_bulk(
                 page=page,
                 per_page=per_page,
                 media_type=media_type,
             )
-            return {
-                "trending": MediaNormalizer.normalize_anilist_minimal(res["trending"]),
-                "allTime": MediaNormalizer.normalize_anilist_minimal(res["allTime"]),
-                "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(res["allTimeManhwa"]),
-            }
-
+            return MediaFeaturedBulk(
+                trending=MediaNormalizer.normalize_anilist_minimal(res.trending), # type: ignore
+                allTime=MediaNormalizer.normalize_anilist_minimal(res.all_time), # type: ignore
+                allTimeManhwa=MediaNormalizer.normalize_anilist_minimal(res.alL_time_manhwa), # type: ignore
+            )
