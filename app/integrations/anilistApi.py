@@ -478,3 +478,89 @@ class AnilistApi:
         return AnilistFeaturedMediaResponse(
             allTime=all_time, popularSeason=popular_season, trending=trending, upcoming=upcoming
         )
+
+    async def get_featured_manga_bulk(
+        self,
+        page: int,
+        per_page: int,
+        media_type: str,
+    ) -> Dict[str, List[AnilistMediaMinimal]]:
+        """
+        Fetches featured manga data: trending, all time popular, and all time popular Manhwa.
+        """
+        variables = {
+            "page": page,
+            "perPage": per_page,
+            "type": media_type,
+        }
+
+        graphql_query = {
+            "query": """
+                query FeaturedAnime(
+                  $page: Int
+                  $perPage: Int
+                  $type: MediaType
+                ) {
+                  trending: Page(page: $page, perPage: $perPage) {
+                    media(type: $type, sort: TRENDING_DESC) {
+                      ...mediaFields
+                    }
+                  }
+                  Alltime: Page(page: $page, perPage: $perPage) {
+                    media(type: $type, sort: POPULARITY_DESC) {
+                      ...mediaFields
+                    }
+                  }
+                  AlltimeManhwa: Page(page: $page, perPage: $perPage) {
+                    media(type: $type, sort: POPULARITY_DESC, countryOfOrigin: KR) {
+                      ...mediaFields
+                    }
+                  }
+                }
+                fragment mediaFields on Media {
+                  id
+                  type
+                  title {
+                    english
+                    romaji
+                  }
+                  format
+                  genres
+                  status
+                  coverImage {
+                    large
+                    medium
+                  }
+                  averageScore
+                }
+            """,
+            "variables": variables,
+        }
+
+        data = await perform_request(
+            client=self.client,
+            method="POST",
+            url=ANILIST_URL,
+            headers=None,
+            params=None,
+            graphql_query=graphql_query,
+            action="get_featured_manga_bulk",
+        )
+
+        trending_results = data.get("data", {}).get("trending").get("media", [])
+        alltime_results = data.get("data", {}).get("Alltime").get("media", [])
+        alltime_manhwa_results = data.get("data", {}).get("AlltimeManhwa").get("media", [])
+
+        trending = []
+        for media in trending_results:
+            trending.append(AnilistMediaMinimal.model_validate(media))
+
+        all_time = []
+        for media in alltime_results:
+            all_time.append(AnilistMediaMinimal.model_validate(media))
+
+        all_time_manhwa = []
+        for media in alltime_manhwa_results:
+            all_time_manhwa.append(AnilistMediaMinimal.model_validate(media))
+
+        return {"allTime": all_time, "allTimeManhwa": all_time_manhwa, "trending": trending}

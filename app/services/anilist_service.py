@@ -91,8 +91,72 @@ class AnilistService:
             next_season_year=seasont_ctx["nextSeasonYear"],
         )
         return {
-            "trending":  MediaNormalizer.normalize_anilist_minimal(res.trending),
+            "trending": MediaNormalizer.normalize_anilist_minimal(res.trending),
             "popularSeason": MediaNormalizer.normalize_anilist_minimal(res.popular_season),
             "upcoming": MediaNormalizer.normalize_anilist_minimal(res.upcoming),
-            "allTime": MediaNormalizer.normalize_anilist_minimal(res.all_time)
+            "allTime": MediaNormalizer.normalize_anilist_minimal(res.all_time),
         }
+
+    async def get_featured_manga_bulk(
+        self,
+        media_type: str = "MANGA",
+        page: int = 1,
+        per_page: int = 6,
+    ):
+        """
+        Fetches featured manga data: trending, all time popular, and all time popular Manhwa.
+        """
+        res = await self.anilist_api.get_featured_manga_bulk(
+            page=page,
+            per_page=per_page,
+            media_type=media_type,
+        )
+        return {
+            "trending": MediaNormalizer.normalize_anilist_minimal(res["trending"]),
+            "allTime": MediaNormalizer.normalize_anilist_minimal(res["allTime"]),
+            "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(res["allTimeManhwa"]),
+        }
+
+    async def get_featured_bulk(
+        self,
+        media_type: str,
+        page: int = 1,
+        per_page: int = 6,
+    ):
+        """
+        Fetches featured anime and/or manga data in bulk.
+        """
+        result = {}
+
+        if media_type == "ANIME":
+            season_ctx = get_season_context()
+            anime_res = await self.anilist_api.get_featured_media_bulk(
+                page=page,
+                per_page=per_page,
+                media_type=media_type,
+                current_season=season_ctx["currentSeason"],
+                current_season_year=season_ctx["currentSeasonYear"],
+                next_season=season_ctx["nextSeason"],
+                next_season_year=season_ctx["nextSeasonYear"],
+            )
+            return {
+                "trending": MediaNormalizer.normalize_anilist_minimal(anime_res.trending),
+                "popularSeason": MediaNormalizer.normalize_anilist_minimal(
+                    anime_res.popular_season
+                ),
+                "upcoming": MediaNormalizer.normalize_anilist_minimal(anime_res.upcoming),
+                "allTime": MediaNormalizer.normalize_anilist_minimal(anime_res.all_time),
+            }
+
+        else:
+            res = await self.anilist_api.get_featured_manga_bulk(
+                page=page,
+                per_page=per_page,
+                media_type=media_type,
+            )
+            return {
+                "trending": MediaNormalizer.normalize_anilist_minimal(res["trending"]),
+                "allTime": MediaNormalizer.normalize_anilist_minimal(res["allTime"]),
+                "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(res["allTimeManhwa"]),
+            }
+
