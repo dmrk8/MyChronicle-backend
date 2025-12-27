@@ -41,7 +41,6 @@ class MediaPagination(BaseModel):
 
     model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
 
-
 class MediaDetailed(BaseModel):
     id: int
     media_source: str = Field(alias="mediaSource")
@@ -80,7 +79,7 @@ class MediaDetailed(BaseModel):
     volumes: Optional[int] = None
     
     #imdb_id: Optional[str] = Field(None, alias="imdbId")
-    original_language: str = Field(..., alias="originalLanguage")
+    original_language: Optional[str] = Field(None, alias="originalLanguage")
     
     # movie
     release_date: Optional[str] = Field(None, alias="releaseDate")
@@ -95,7 +94,6 @@ class MediaDetailed(BaseModel):
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     created_by: Optional[str] = Field(None, alias="createdBy")
     episode_run_time: Optional[int] = Field(None, alias="episodeRunTime")
-    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
     #next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="nextEpisodeToAir")
     number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
