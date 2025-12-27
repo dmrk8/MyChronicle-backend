@@ -41,7 +41,7 @@ class AnilistService:
         tag_in: Optional[List[str]] = None,
         is_adult: Optional[bool] = None,
         country_of_origin: Optional[str] = None,
-    ) -> AnilistPagination:
+    ) -> MediaPagination:
 
         media_list, page_info = await self.anilist_api.search_media(
             page,
@@ -58,18 +58,17 @@ class AnilistService:
             is_adult,
             country_of_origin,
         )
-        return AnilistPagination(
-            results=media_list,
+        return MediaPagination(
+            results=MediaNormalizer.normalize_anilist_minimal(media_list),
             currentPage=page_info.current_page,
             perPage=per_page,
             hasNextPage=page_info.has_next_page,
             total=page_info.total,
         )
-        return MediaNormalizer.normalize_anilist_minimal_pagination(media_list, page_info)
 
-    async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
+    async def get_media_detail(self, media_id: int) -> MediaDetailed:
 
-        return await self.anilist_api.get_media_detail(media_id)
+        res = await self.anilist_api.get_media_detail(media_id)
         return MediaNormalizer.normalize_anilist_detailed(res)
 
     async def get_featured_media_bulk(

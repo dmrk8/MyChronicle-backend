@@ -187,7 +187,7 @@ class TMDBService:
         language: str,
     ) -> MediaDetailed:
         res = await self.tmdb_api.get_movie_detail(movie_id, language)
-        return MediaNormalizer.normalize_tmdb_movie_detailed(res)
+        return MediaNormalizer.normalize_tmdb_detailed(res)
 
     async def get_tv_detail(
         self,
@@ -195,7 +195,7 @@ class TMDBService:
         language: str,
     ) -> MediaDetailed:
         res = await self.tmdb_api.get_tv_detail(tv_id, language)
-        return MediaNormalizer.normalize_tmdb_tv_detailed(res)
+        return MediaNormalizer.normalize_tmdb_detailed(res)
 
     async def search_movie_test(
         self,

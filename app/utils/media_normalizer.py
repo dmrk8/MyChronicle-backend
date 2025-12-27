@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Union
+import datetime
 
 import structlog
 from app.models.anilist_models import AnilistMediaMinimal, AnilistMediaDetailed, AnilistPageInfo
@@ -43,49 +44,45 @@ class MediaNormalizer:
         return media_list
 
     @staticmethod
-    def normalize_anilist_minimal_pagination(
-        results: List[AnilistMediaMinimal],
-        page_info: AnilistPageInfo,
-    ) -> MediaPagination:
-
-        media_list: List[MediaMinimal] = MediaNormalizer.normalize_anilist_minimal(results)
-
-        return MediaPagination(
-            results=media_list,
-            current_page=page_info.current_page,  # type: ignore
-            per_page=page_info.per_page,  # type: ignore
-            has_next_page=page_info.has_next_page,  # type: ignore
-            total=page_info.total,
-        )
-
-    @staticmethod
     def normalize_anilist_detailed(media: AnilistMediaDetailed) -> MediaDetailed:
-        media_dict = media.model_dump()
-        media_dict["media_source"] = "anilist"
-        media_dict["media_type"] = "anime"
-        media_dict["title"] = media.title.english or media.title.romaji or media.title.native
-        media_dict["cover_image"] = media.cover_image.large
-        media_dict["start_date"] = (
-            f"{media.start_date.year}-{media.start_date.month:02d}-{media.start_date.day:02d}"
-            if media.start_date
-            and media.start_date.year
-            and media.start_date.month
-            and media.start_date.day
-            else None
-        )
-        media_dict["end_date"] = (
-            f"{media.end_date.year}-{media.end_date.month:02d}-{media.end_date.day:02d}"
-            if media.end_date
-            and media.end_date.year
-            and media.end_date.month
-            and media.end_date.day
-            else None
-        )
-        media_dict["tags"] = [tag.name for tag in media.tags]
-        media_dict["studios"] = [
-            studio.name for studio in [edge.node for edge in media.studios.edges]
-        ]
-        return MediaDetailed.model_validate(media_dict)
+        def format_date(date):
+            if date and date.year:
+                dt = datetime.date(date.year, date.month or 1, date.day or 1)
+                return f"{dt.day} {dt.strftime('%B %Y')}"
+            return None
+
+        next_airing_str = None
+        if media.next_airing_episode and media.next_airing_episode.airing_at is not None:
+            dt = datetime.datetime.fromtimestamp(float(media.next_airing_episode.airing_at))
+            next_airing_str = f"Episode {media.next_airing_episode.episode} airs on {dt.day} {dt.strftime('%B %Y')}"
+
+        return MediaDetailed(
+            id=media.id,
+            mediaSource="anilist",
+            mediaType=media.type,
+            title=media.title.english or media.title.romaji or media.title.native,
+            format=media.format,
+            genres=media.genres,
+            status=media.status,
+            coverImage=media.cover_image.large,
+            averageScore=media.average_score,
+            description=media.description,
+            bannerImage=media.banner_image,
+            episodes=media.episodes,
+            studios=[edge.node.name for edge in media.studios.edges],
+            duration=media.duration,
+            season=media.season,
+            seasonYear=media.season_year,
+            startDate=format_date(media.start_date),
+            endDate=format_date(media.end_date),
+            nextAiringEpisode=next_airing_str,
+            countryOfOrigin=media.country_of_origin,
+            isAdult=media.is_adult,
+            source=media.source,
+            synonyms=media.synonyms,
+            chapters=media.chapters,
+            volumes=media.volumes,
+        )  # type: ignore
 
     @staticmethod
     def normalize_tmdb_minimal(
@@ -113,50 +110,52 @@ class MediaNormalizer:
                     coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
                     releaseDate=media.release_date,
                     firstAirDate=media.first_air_date,
-                ) # type: ignore
+                )  # type: ignore
 
                 media_list.append(mm)
         except Exception as e:
-            logger.info("normalize_anilist_minimal", error=str(e))
+            logger.info("normalize_tmdb_minimal", error=str(e))
         return media_list
 
     @staticmethod
-    def normalize_tmdb_movie_detailed(media: TMDBMovieDetail) -> MediaDetailed:
+    def normalize_tmdb_detailed(media: Union[TMDBMovieDetail, TMDBTVDetail]) -> MediaDetailed:
+        media_type = "movie" if isinstance(media, TMDBMovieDetail) else "tv"
 
-        media_dict = media.model_dump()
-        media_dict["media_source"] = "tmdb"
-        media_dict["media_type"] = "movie"
-        media_dict["is_adult"] = media.adult
-        media_dict["title"] = media.title or media.original_title
-        media_dict["genres"] = [m.name for m in media.genres]
-        media_dict["average_score"] = media.vote_average
-        media_dict["format"] = "movie"
-        media_dict["tags"] = [k.name for k in media.keywords.keywords]
-        media_dict["duration"] = media.runtime
-        media_dict["description"] = media.overview
-        media_dict["country_of_origin"] = media.origin_country[0]
-        media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
-        media_dict["banner_image"] = f"https://image.tmdb.org/t/p/original/{media.backdrop_path}"
-        media_dict["studios"] = [co.name for co in media.production_companies]
-        return MediaDetailed.model_validate(media_dict)
-
-    @staticmethod
-    def normalize_tmdb_tv_detailed(media: TMDBTVDetail) -> MediaDetailed:
-        media_dict = media.model_dump()
-        media_dict["media_source"] = "tmdb"
-        media_dict["media_type"] = "tv"
-        media_dict["is_adult"] = media.adult
-        media_dict["title"] = media.name or media.original_name
-        media_dict["genres"] = [m.name for m in media.genres]
-        media_dict["average_score"] = media.vote_average
-        media_dict["format"] = "movie"
-        media_dict["tags"] = [k.name for k in media.keywords.results]
-        media_dict["duration"] = media.episode_run_time or None
-        media_dict["description"] = media.overview
-        media_dict["country_of_origin"] = media.origin_country[0]
-        media_dict["cover_image"] = f"https://image.tmdb.org/t/p/original/{media.poster_path}"
-        media_dict["banner_image"] = f"https://image.tmdb.org/t/p/original/{media.backdrop_path}"
-        media_dict["studios"] = [co.name for co in media.production_companies]
-        media_dict["episodes"] = media.number_of_episodes
-        media_dict["seasons"] = media.number_of_seasons
-        return MediaDetailed.model_validate(media_dict)
+        try:
+            return MediaDetailed(
+                id=media.id,
+                mediaSource="tmdb",
+                mediaType=media_type,
+                title=(
+                    (media.title or media.original_title)
+                    if media_type == "movie"
+                    else (media.name or media.original_name)
+                ),
+                format=media_type,
+                genres=[m.name for m in media.genres],
+                status=media.status,
+                coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
+                averageScore=media.vote_average,
+                description=media.overview,
+                bannerImage=f"https://image.tmdb.org/t/p/original/{media.backdrop_path}",
+                numberOfEpisodes=None if media_type == "movie" else media.number_of_episodes,
+                numberOfSeasons=None if media_type == "movie" else media.number_of_seasons,
+                studios=[s.name for s in media.production_companies],
+                countryOfOrigin=media.origin_country[0] if media.origin_country else None,
+                isAdult=media.adult,
+                originalLanguage=media.original_language,
+                releaseDate=media.release_date if media_type == "movie" else None,
+                budget=media.budget if media_type == "movie" else None,
+                revenue=media.revenue if media_type == "movie" else None,
+                runtime=media.runtime if media_type == "movie" else None,
+                firstAirDate=media.first_air_date if media_type == "tv" else None,
+                episodeRunTime=(
+                    media.episode_run_time[0]
+                    if media_type == "tv" and media.episode_run_time
+                    else None
+                ),
+                lastAirDate=media.last_air_date if media_type == "tv" else None,
+                type=media.type if media_type == "tv" else None,
+            )  # type: ignore
+        except Exception as e:
+            logger.info("normalize_tmdb_detailed", error=str(e))
