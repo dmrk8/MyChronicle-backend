@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 from typing import Optional, List, Union
 from app.integrations.tmdb_api import TMDBApi
 from app.models.tmdb_models import (
@@ -10,7 +11,7 @@ from app.models.tmdb_models import (
     TMDBPageInfo,
 )
 
-from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
+from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed, MediaFeaturedBulk
 from app.utils.media_normalizer import MediaNormalizer
 
 
@@ -61,6 +62,36 @@ class TMDBService:
         return MediaPagination(
             results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
+
+    async def get_featured_bulk(
+        self,
+        media_type: str,
+        language: str,
+    ) -> MediaFeaturedBulk:
+        popular_results, page_info = await self.tmdb_api.get_popular_season(
+            media_type=media_type,
+            start_date=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
+            end_date=datetime.now().strftime("%Y-%m-%d"),
+            page=1,
+            language=language,
+            sort_by="popularity.desc",
+        )
+        popular_results = MediaNormalizer.normalize_tmdb_minimal(popular_results, media_type)
+
+        trending_results, page_info = await self.tmdb_api.get_trending_media(
+            media_type=media_type, time_window="week", language=language, page=1
+        )
+
+        filtered_trending_results = [
+            media
+            for media in trending_results
+            if not (16 in media.genre_ids and media.original_language == "ja")
+        ]
+        trending_results = MediaNormalizer.normalize_tmdb_minimal(
+            filtered_trending_results, media_type
+        )
+
+        return MediaFeaturedBulk(trending=trending_results, popularSeason=popular_results)
 
     async def search_movie(
         self,
