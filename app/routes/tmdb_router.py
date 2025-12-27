@@ -230,10 +230,9 @@ async def get_tmdb_popular_season(
 @tmdb_router.get("/featured-bulk")
 async def get_featured_bulk(
     media_type: str = Query(..., description="Type of media: movie or tv", alias="mediaType"),
-    language: str = Query("en-US", description="Language for results"),
     tmdb_service: TMDBService = Depends(get_tmdb_service),
 ):
     try:
-        return await tmdb_service.get_featured_bulk(media_type, language)
+        return await tmdb_service.get_featured_bulk(media_type)
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to fetch featured bulk")

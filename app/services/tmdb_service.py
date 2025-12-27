@@ -66,8 +66,8 @@ class TMDBService:
     async def get_featured_bulk(
         self,
         media_type: str,
-        language: str,
     ) -> MediaFeaturedBulk:
+        language="en-US"
         popular_results, page_info = await self.tmdb_api.get_popular_season(
             media_type=media_type,
             start_date=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
