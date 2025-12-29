@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.enums.review_enums import ReviewMediaType, ReviewMediaSource, ReviewStatus
@@ -51,10 +51,10 @@ class UserMediaEntryDB(UserMediaEntryCreate):
     )
     user_id: str = Field(..., alias="userId", description="The ID of the user")
     created_at: datetime = Field(
-        alias="createdAt", description="The date when the media entry was added to the system"
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
     )
     updated_at: datetime = Field(
-        alias="updatedAt", description="The date when the media entry was last updated"
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -73,8 +73,8 @@ class UserMediaEntryUpdate(BaseModel):
     in_library: Optional[bool] = Field(
         None, alias="inLibrary", description="Updated library status"
     )
-    updated_at: Optional[datetime] = Field(
-        None, alias="updatedAt", description="Timestamp of the update"
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
     )
 
     @field_validator("repeat_count")

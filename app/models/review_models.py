@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone  
 from typing import Any, Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
 
-# Per-review model (unique fields, linked to UserMediaEntry)
+
 class ReviewCreate(BaseModel):
     user_media_entry_id: str = Field(
         ..., alias="userMediaEntryId", description="The ID of the associated UserMediaEntry"
@@ -27,10 +27,14 @@ class ReviewCreate(BaseModel):
 class ReviewDB(ReviewCreate):
     id: Optional[str] = Field(None, description="The unique ID of the review in the database")
     created_at: datetime = Field(
-        alias="createdAt", description="The date when the review was added to the system"
+        default_factory=lambda: datetime.now(timezone.utc),  
+        alias="createdAt",
+        description="The date when the review was added to the system",
     )
     updated_at: datetime = Field(
-        alias="updatedAt", description="The date when the review was last updated"
+        default_factory=lambda: datetime.now(timezone.utc),  
+        alias="updatedAt",
+        description="The date when the review was last updated",
     )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

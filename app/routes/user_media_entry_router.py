@@ -71,7 +71,7 @@ async def get_entries_by_user_id(
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     try:
-        return await service.get_entries_by_user_id(user.id)
+        return await service.get_entries_by_user_id(user.id) # type: ignore
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

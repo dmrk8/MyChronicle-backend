@@ -51,38 +51,41 @@ class MediaNormalizer:
                 return f"{dt.day} {dt.strftime('%B %Y')}"
             return None
 
-        next_airing_str = None
-        if media.next_airing_episode and media.next_airing_episode.airing_at is not None:
-            dt = datetime.datetime.fromtimestamp(float(media.next_airing_episode.airing_at))
-            next_airing_str = f"Episode {media.next_airing_episode.episode} airs on {dt.day} {dt.strftime('%B %Y')}"
+        try:
+            next_airing_str = None
+            if media.next_airing_episode and media.next_airing_episode.airing_at is not None:
+                dt = datetime.datetime.fromtimestamp(float(media.next_airing_episode.airing_at))
+                next_airing_str = f"Episode {media.next_airing_episode.episode} airs on {dt.day} {dt.strftime('%B %Y')}"
 
-        return MediaDetailed(
-            id=media.id,
-            mediaSource="anilist",
-            mediaType=media.type,
-            title=media.title.english or media.title.romaji or media.title.native,
-            format=media.format,
-            genres=media.genres,
-            status=media.status,
-            coverImage=media.cover_image.large,
-            averageScore=media.average_score,
-            description=media.description,
-            bannerImage=media.banner_image,
-            episodes=media.episodes,
-            studios=[edge.node.name for edge in media.studios.edges],
-            duration=media.duration,
-            season=media.season,
-            seasonYear=media.season_year,
-            startDate=format_date(media.start_date),
-            endDate=format_date(media.end_date),
-            nextAiringEpisode=next_airing_str,
-            countryOfOrigin=media.country_of_origin,
-            isAdult=media.is_adult,
-            source=media.source,
-            synonyms=media.synonyms,
-            chapters=media.chapters,
-            volumes=media.volumes,
-        )  # type: ignore
+            return MediaDetailed(
+                id=media.id,
+                mediaSource="anilist",
+                mediaType=media.type,
+                title=media.title.english or media.title.romaji or media.title.native,
+                format=media.format,
+                genres=media.genres,
+                status=media.status,
+                coverImage=media.cover_image.large,
+                averageScore=media.average_score,
+                description=media.description,
+                bannerImage=media.banner_image,
+                episodes=media.episodes,
+                studios=[edge.node.name for edge in media.studios.edges],
+                duration=media.duration,
+                season=media.season,
+                seasonYear=media.season_year,
+                startDate=format_date(media.start_date),
+                endDate=format_date(media.end_date),
+                nextAiringEpisode=next_airing_str,
+                countryOfOrigin=media.country_of_origin,
+                isAdult=media.is_adult,
+                source=media.source,
+                synonyms=media.synonyms,
+                chapters=media.chapters,
+                volumes=media.volumes,
+            )  # type: ignore
+        except Exception as e:
+            logger.info("normalize_anilist_detail", error=str(e))
 
     @staticmethod
     def normalize_tmdb_minimal(

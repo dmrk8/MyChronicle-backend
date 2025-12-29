@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.models.user_media_entry_models import (
     UserMediaEntryCreate,
@@ -25,9 +25,7 @@ class UserMediaEntryService:
 
         entry_data = UserMediaEntryDB(
             **entry_request.model_dump(),
-            user_id=user_id,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            user_id=user_id,  # type: ignore
         )
         result: InsertOneResult = await self.repository.create_entry(entry_data)
         return UserMediaEntryResponse(
@@ -74,7 +72,9 @@ class UserMediaEntryService:
             message="User media entries fetched successfully", data=entries, user_id=user_id  # type: ignore
         )
 
-    async def get_entry_by_external_id(self, external_id: int, user_id: str) -> UserMediaEntryResponse:
+    async def get_entry_by_external_id(
+        self, external_id: int, user_id: str
+    ) -> UserMediaEntryResponse:
         entry = await self.repository.get_entry_by_external_id_and_user_id(external_id, user_id)
         return UserMediaEntryResponse(
             message="User media entries fetched successfully",
@@ -94,7 +94,8 @@ class UserMediaEntryService:
         sort_by: str = "created_at",
         sort_order: int = -1,
     ) -> UserMediaEntryPagination:
-        filters = {"user_id": user_id}
+        filters: dict[str, Any] = {"user_id": user_id}
+
         if in_library is not None:
             filters["in_library"] = in_library
         if is_favorite is not None:

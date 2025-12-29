@@ -56,7 +56,7 @@ class TMDBLastEpisodeToAir(BaseModel):
     episode_number: int = Field(..., alias="episodeNumber")
     episode_type: str = Field(..., alias="episodeType")
     production_code: str = Field(..., alias="productionCode")
-    runtime: int
+    runtime: Optional[int]
     season_number: int = Field(..., alias="seasonNumber")
     show_id: int = Field(..., alias="showId")
     still_path: Optional[str] = Field(None, alias="stillPath")

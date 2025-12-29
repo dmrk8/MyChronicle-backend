@@ -21,7 +21,7 @@ class ReviewService:
             raise ValueError("Review must be less than 5000 characters")
 
         review_data = ReviewDB(
-            **review_request.model_dump(), created_at=datetime.now(), updated_at=datetime.now()  # type: ignore
+            **review_request.model_dump()  
         )
 
         try:
