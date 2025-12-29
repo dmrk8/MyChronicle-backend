@@ -88,10 +88,8 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     message: str = Field(..., description="Response message")
-
-    user_id: Optional[str] = Field(None, alias="userId", description="User ID if applicable")
    
-    data: Optional[Any] = Field(
+    data: Optional[UserDB] = Field(
         None, description="Additional data, such as review lists or details"
     )
     acknowledged: Optional[bool] = Field(

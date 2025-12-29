@@ -30,17 +30,15 @@ class UserMediaEntryService:
         result: InsertOneResult = await self.repository.create_entry(entry_data)
         return UserMediaEntryResponse(
             message="User media entry created successfully",
-            user_media_entry_id=str(result.inserted_id),  # type: ignore
-            acknowledged=result.acknowledged,
-            user_id=user_id,  # type: ignore
-        )
+            acknowledged=result.acknowledged
+        ) # type: ignore
 
     async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
         entry = await self._verify_ownership(entry_id, user_id)
         return UserMediaEntryResponse(
             message="User media entry fetched successfully",
             data=entry,
-            user_id=entry.user_id,  # type: ignore
+            acknowledged=True
         )
 
     async def update_entry(
@@ -53,7 +51,6 @@ class UserMediaEntryService:
         result: UpdateResult = await self.repository.update_entry(entry_id, update_dict)
         return UserMediaEntryResponse(
             message="User media entry updated successfully",
-            user_media_entry_id=entry_id,  # type: ignore
             acknowledged=result.acknowledged,
         )
 
@@ -62,8 +59,7 @@ class UserMediaEntryService:
         result: DeleteResult = await self.repository.delete_entry(entry_id)
         return UserMediaEntryResponse(
             message="User media entry deleted successfully",
-            user_media_entry_id=entry_id,  # type: ignore
-            acknowledged=result.acknowledged,
+            acknowledged=result.acknowledged
         )
 
     async def get_entries_by_user_id(self, user_id: str) -> UserMediaEntryResponse:
@@ -79,7 +75,7 @@ class UserMediaEntryService:
         return UserMediaEntryResponse(
             message="User media entries fetched successfully",
             data=entry,
-            user_id=user_id,  # type: ignore
+            acknowledged=True
         )
 
     async def get_entries(
@@ -122,11 +118,9 @@ class UserMediaEntryService:
             total=total,
         )
 
-    async def count_entries_by_user_id(self, user_id: str) -> UserMediaEntryResponse:
+    async def count_entries_by_user_id(self, user_id: str) -> int:
         count = await self.repository.count_entries_by_user_id(user_id)
-        return UserMediaEntryResponse(
-            message="User media entry count fetched successfully", data=count, user_id=user_id  # type: ignore
-        )
+        return count
 
     async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
         entry = await self.repository.get_entry_by_id(entry_id)

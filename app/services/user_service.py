@@ -28,9 +28,8 @@ class UserService:
 
             return UserResponse(
                 message="User Registered Successfully",
-                user_id=str(result.inserted_id),  # type: ignore
-                acknowledged=result.acknowledged,
-            )
+                acknowledged=result.acknowledged
+            ) # type: ignore
 
         except ValueError as ve:
             self.logger.error("validation_error_create_user", error=str(ve))
@@ -59,8 +58,7 @@ class UserService:
 
         return UserResponse(
             message="User updated successfully",
-            user_id=user_id,  # type: ignore
-            acknowledged=result.acknowledged,
+            acknowledged=result.acknowledged
         )
 
     async def delete_user(self, user_id: str) -> UserResponse:
@@ -75,8 +73,7 @@ class UserService:
 
             return UserResponse(
                 message="User deleted successfully",
-                user_id=user_id,  # type: ignore
-                acknowledged=result.acknowledged,
+                acknowledged=result.acknowledged
             )
 
         except ValueError as ve:

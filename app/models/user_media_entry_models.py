@@ -89,10 +89,6 @@ class UserMediaEntryUpdate(BaseModel):
 
 class UserMediaEntryResponse(BaseModel):
     message: str = Field(description="Response message")
-    user_media_entry_id: Optional[str] = Field(
-        None, alias="userMediaEntryId", description="ID of the created or updated user-media entry"
-    )
-    user_id: Optional[str] = Field(None, alias="userId")
     data: Optional[UserMediaEntryDB | List[UserMediaEntryDB]] = Field(
         None, description="Additional data, such as media details"
     )

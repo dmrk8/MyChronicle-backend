@@ -18,7 +18,6 @@ class MediaNormalizer:
     ) -> List[MediaMinimal]:
         media_list = []
         try:
-
             for media in results:
                 mm = MediaMinimal(
                     id=media.id,
@@ -37,7 +36,6 @@ class MediaNormalizer:
                     ),
                     chapters=media.chapters,
                 )  # type: ignore
-
                 media_list.append(mm)
         except Exception as e:
             logger.info("normalize_anilist_minimal", error=str(e))
@@ -93,7 +91,6 @@ class MediaNormalizer:
     ) -> List[MediaMinimal]:
         media_list = []
         try:
-
             for media in results:
                 mm = MediaMinimal(
                     id=media.id,
@@ -108,13 +105,12 @@ class MediaNormalizer:
                         )
                         for genre_id in media.genre_ids
                     ],
-                    averageScore=media.vote_average,
+                    averageScore=round(media.vote_average, 1), 
                     format=media.media_type,
                     coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
                     releaseDate=media.release_date,
                     firstAirDate=media.first_air_date,
                 )  # type: ignore
-
                 media_list.append(mm)
         except Exception as e:
             logger.info("normalize_tmdb_minimal", error=str(e))
@@ -138,7 +134,7 @@ class MediaNormalizer:
                 genres=[m.name for m in media.genres],
                 status=media.status,
                 coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
-                averageScore=media.vote_average,
+                averageScore=round(media.vote_average, 1), 
                 description=media.overview,
                 bannerImage=f"https://image.tmdb.org/t/p/original/{media.backdrop_path}",
                 numberOfEpisodes=None if media_type == "movie" else media.number_of_episodes,

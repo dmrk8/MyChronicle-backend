@@ -1,7 +1,6 @@
-from datetime import datetime, timezone  
+from datetime import datetime, timezone
 from typing import Any, Optional, List
 from pydantic import BaseModel, Field, ConfigDict
-
 
 
 class ReviewCreate(BaseModel):
@@ -27,12 +26,12 @@ class ReviewCreate(BaseModel):
 class ReviewDB(ReviewCreate):
     id: Optional[str] = Field(None, description="The unique ID of the review in the database")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),  
+        default_factory=lambda: datetime.now(timezone.utc),
         alias="createdAt",
         description="The date when the review was added to the system",
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),  
+        default_factory=lambda: datetime.now(timezone.utc),
         alias="updatedAt",
         description="The date when the review was last updated",
     )
@@ -57,12 +56,6 @@ class ReviewUpdate(BaseModel):
 
 class ReviewResponse(BaseModel):
     message: str = Field(description="Response message")
-    review_id: Optional[str] = Field(
-        None, alias="reviewId", description="ID of the created or updated review"
-    )
-    user_media_entry_id: Optional[str] = Field(
-        None, alias="userMediaEntryId", description="ID of the associated user-media entry"
-    )
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"
     )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import structlog
 from app.repositories.review_repository import ReviewRepository
 from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate, ReviewResponse
@@ -20,9 +20,7 @@ class ReviewService:
         if review_request.review is not None and len(review_request.review) > 5000:
             raise ValueError("Review must be less than 5000 characters")
 
-        review_data = ReviewDB(
-            **review_request.model_dump()  
-        )
+        review_data = ReviewDB(**review_request.model_dump())
 
         try:
             result: InsertOneResult = await self.repository.create_review(review_data)
@@ -33,8 +31,8 @@ class ReviewService:
             )
             return ReviewResponse(
                 message="Review created successfully",
-                review_id=str(result.inserted_id),  # type: ignore
                 acknowledged=result.acknowledged,
+                data=review_data,
             )
         except Exception as e:
             logger.error(
@@ -76,13 +74,14 @@ class ReviewService:
 
         try:
             update_dict = update_request.model_dump(exclude_unset=True)
-            update_dict["updated_at"] = datetime.now()
+            update_dict["updated_at"] = datetime.now(timezone.utc)
             result: UpdateResult = await self.repository.update_review(review_id, update_dict)
             logger.info("Review updated", review_id=review_id)
+            updated_review = await self.repository.get_review_by_id(review_id)
             return ReviewResponse(
                 message="Review updated successfully",
-                review_id=review_id,  # type: ignore
                 acknowledged=result.acknowledged,
+                data=updated_review,
             )
         except Exception as e:
             logger.error("Error updating review", error=str(e))
@@ -98,7 +97,6 @@ class ReviewService:
             logger.info("Review deleted", review_id=review_id)
             return ReviewResponse(
                 message="Review deleted successfully",
-                review_id=review_id,  # type: ignore
                 acknowledged=result.acknowledged,
             )
         except Exception as e:
@@ -109,9 +107,11 @@ class ReviewService:
         try:
             reviews = await self.repository.get_reviews_by_user_media_entry_id(user_media_entry_id)
             if reviews is None:
-                return ReviewResponse(message="No reviews found", data=None)  # type: ignore
+                return ReviewResponse(message="No reviews found", data=None, acknowledged=False)
             logger.info("Fetched reviews", user_media_entry_id=user_media_entry_id)
-            return ReviewResponse(message="Reviews fetched successfully", data=reviews)  # type: ignore
+            return ReviewResponse(
+                message="Reviews fetched successfully", data=reviews, acknowledged=True
+            )
         except Exception as e:
             logger.error(
                 "Error fetching reviews", user_media_entry_id=user_media_entry_id, error=str(e)
@@ -124,18 +124,18 @@ class ReviewService:
             if not review_data:
                 raise ValueError("Review not found")
             logger.info("Review fetched successfully", review_id=review_id)
-            return ReviewResponse(message="Review fetched successfully", data=review_data)  # type: ignore
+            return ReviewResponse(
+                message="Review fetched successfully", data=review_data, acknowledged=True
+            )
         except Exception as e:
             logger.error("Error finding review by id", review_id=review_id, error=str(e))
             raise
 
-    async def count_reviews_by_user_media_entry_id(
-        self, user_media_entry_id: str
-    ) -> ReviewResponse:
+    async def count_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> int:
         try:
             count = await self.repository.count_reviews_by_user_media_entry_id(user_media_entry_id)
             logger.info("Counted reviews", user_media_entry_id=user_media_entry_id)
-            return ReviewResponse(message="Review count fetched successfully", data=count)  # type: ignore
+            return count
         except Exception as e:
             logger.error(
                 "Error counting reviews", user_media_entry_id=user_media_entry_id, error=str(e)
