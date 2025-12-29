@@ -18,20 +18,20 @@ class UserMediaEntryCreate(BaseModel):
         alias="mediaType",
         description="The type of media (e.g., anime, manga, game, movie, TV)",
     )
-    status: ReviewStatus = Field(
-        ReviewStatus.COMPLETED,
+    status: Optional[ReviewStatus] = Field(
+        ReviewStatus.PLANNING,
         alias="status",
         description="The user's consumption status for the media",
     )
     repeat_count: Optional[int] = Field(
         0, alias="repeatCount", description="How many times the user has consumed the media"
     )
-    is_favorite: bool = Field(
+    is_favorite: Optional[bool] = Field(
         False,
         alias="isFavorite",
         description="Whether the user has marked this media as a favorite",
     )
-    in_library: bool = Field(
+    in_library: Optional[bool] = Field(
         False, alias="inLibrary", description="Whether the media is in the user's personal library"
     )
 

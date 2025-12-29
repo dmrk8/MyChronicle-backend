@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Any, Optional, Literal
 from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Optional, Literal
 
 
 class LoginRequest(BaseModel):
@@ -45,5 +45,19 @@ class Claims(BaseModel):
     iss: Optional[str] = Field(None, description="Issuer")
     aud: Optional[str] = Field(None, description="Audience")
     type: Literal["access", "refresh"] = Field(..., description="Token type: 'access' or 'refresh'")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class UserInfo(BaseModel):
+    id: str = Field(description="The unique ID of the user")
+    username: str = Field(description="The username of the user")
+    role: str = Field(description="The role of the user")
+    created_at: datetime = Field(
+        alias="createdAt", description="The date when the user was created"
+    )
+    updated_at: datetime = Field(
+        alias="updatedAt", description="The date when the user was last updated"
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

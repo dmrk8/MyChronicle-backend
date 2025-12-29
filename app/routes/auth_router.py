@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Response
-from app.models.auth_models import LoginRequest
+from fastapi import APIRouter, Depends, Response, HTTPException
+from app.models.auth_models import LoginRequest, UserInfo
 from app.services.auth_service import AuthService
 from app.models.user_models import UserDB
 from app.auth.auth_dependencies import get_current_user
@@ -14,28 +14,35 @@ async def login(
     response: Response,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    res = await auth_service.login(login_request)
+    try:
+        res = await auth_service.login(login_request)
+        response.set_cookie(
+            key="access_token", value=res.access_token, httponly=True, samesite="lax", secure=True
+        )
+        return {"message": "Login successful"}
 
-    response.set_cookie(
-        key="access_token", value=res.access_token, httponly=True, samesite="lax", secure=True
-    )
-
-
-    return {"message": "Login successfull"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @auth_router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token")
-    return {"message": "Logged out successfully"}
+    try:
+        response.delete_cookie("access_token")
+        return {"message": "Logged out successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @auth_router.get("/me")
 async def get_current_user_info(current_user: UserDB = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "role": current_user.role,
-        "created_at": current_user.created_at,
-        "updated_at": current_user.updated_at,
-    }
+    try:
+        return UserInfo(
+            id=current_user.id,  # type: ignore
+            username=current_user.username,
+            role=current_user.role,
+            createdAt=current_user.created_at,
+            updatedAt=current_user.updated_at,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
