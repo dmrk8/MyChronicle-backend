@@ -394,7 +394,7 @@ class TMDBApi:
         successful_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error("Failed to fetch TV detail", tv_id=tv_ids[i])
+                logger.error("Failed to fetch TV detail api", tv_id=tv_ids[i])
             else:
                 successful_results.append(result)
         logger.info(
@@ -428,3 +428,5 @@ class TMDBApi:
 
         collection_detail = TMDBCollection.model_validate(data)
         return collection_detail
+
+#https://api.themoviedb.org/3/search/keyword

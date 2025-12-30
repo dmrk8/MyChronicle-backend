@@ -25,6 +25,7 @@ class MediaDate(BaseModel):
 class CoverImage(BaseModel):
     medium: Optional[str] = None
     large: Optional[str] = None
+    extra_large: Optional[str] = Field(None, alias="extraLarge")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

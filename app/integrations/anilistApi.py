@@ -71,6 +71,7 @@ class AnilistApi:
                   coverImage {
                     large
                     medium
+                    extraLarge
                   }
                   season
                   seasonYear
@@ -187,6 +188,7 @@ class AnilistApi:
                   coverImage {
                     large
                     medium
+                    extraLarge
                   }
                   season
                   seasonYear
@@ -249,6 +251,7 @@ class AnilistApi:
                 coverImage {
                   medium
                   large
+                  extraLarge
                 }
                 description
                 duration
@@ -435,6 +438,7 @@ class AnilistApi:
                   coverImage {
                     large
                     medium
+                    extraLarge
                   }
                   season
                   seasonYear
@@ -530,6 +534,7 @@ class AnilistApi:
                   coverImage {
                     large
                     medium
+                    extraLarge
                   }
                   averageScore
                 }

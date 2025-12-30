@@ -27,7 +27,7 @@ class MediaNormalizer:
                     format=media.format,
                     genres=media.genres,
                     status=media.status,
-                    coverImage=media.cover_image.large,
+                    coverImage=media.cover_image.extra_large,
                     averageScore=media.average_score,
                     episodes=media.episodes,
                     mainStudio=next(
