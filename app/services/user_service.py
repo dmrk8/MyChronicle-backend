@@ -3,6 +3,7 @@ from typing import Optional
 from app.repositories.user_repository import UserRepository
 from app.models.user_models import UserDB, UserUpdateRequest, UserResponse, UserCreate
 from app.auth.password_handler import PasswordHandler
+from datetime import datetime, timezone
 
 logger = structlog.get_logger()
 
@@ -46,6 +47,7 @@ class UserService:
             raise ValueError("Cannot update nonexisting user")
 
         data_dict = update_request.model_dump()
+        data_dict["updated_at"] = datetime.now(timezone.utc) 
         update_data = {k: v for k, v in data_dict.items() if v is not None}
 
         result = await self.user_repository.update(user_id, update_data)

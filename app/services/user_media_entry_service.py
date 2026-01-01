@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.services.review_service import ReviewService
 from app.models.user_media_entry_models import (
     UserMediaEntryCreate,
     UserMediaEntryUpdate,
@@ -16,8 +17,9 @@ logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
 
 class UserMediaEntryService:
-    def __init__(self, repository: UserMediaEntryRepository):
+    def __init__(self, repository: UserMediaEntryRepository, review_service: ReviewService ):
         self.repository = repository
+        self.review_service = review_service
 
     async def create_entry(
         self, entry_request: UserMediaEntryCreate, user_id: str
@@ -57,6 +59,7 @@ class UserMediaEntryService:
     async def delete_entry(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
         await self._verify_ownership(entry_id, user_id)
         result: DeleteResult = await self.repository.delete_entry(entry_id)
+        await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
         return UserMediaEntryResponse(
             message="User media entry deleted successfully",
             acknowledged=result.acknowledged

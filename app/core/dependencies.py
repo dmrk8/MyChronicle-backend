@@ -128,5 +128,8 @@ def get_user_media_entry_repository(
 
 def get_user_media_entry_service(
     repository: UserMediaEntryRepository = Depends(get_user_media_entry_repository),
+    review_service: ReviewService = Depends(
+        get_review_service
+    ),  
 ) -> UserMediaEntryService:
-    return UserMediaEntryService(repository=repository)
+    return UserMediaEntryService(repository=repository, review_service=review_service)

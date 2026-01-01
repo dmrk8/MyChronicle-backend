@@ -141,3 +141,23 @@ class ReviewService:
                 "Error counting reviews", user_media_entry_id=user_media_entry_id, error=str(e)
             )
             raise
+
+    async def delete_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> ReviewResponse:
+        try:
+            result: DeleteResult = await self.repository.delete_reviews_by_user_media_entry_id(user_media_entry_id)
+            logger.info(
+                "Reviews deleted",
+                user_media_entry_id=user_media_entry_id,
+                deleted_count=result.deleted_count,
+            )
+            return ReviewResponse(
+                message=f"Deleted {result.deleted_count} reviews successfully",
+                acknowledged=result.acknowledged,
+            )
+        except Exception as e:
+            logger.error(
+                "Error deleting reviews",
+                user_media_entry_id=user_media_entry_id,
+                error=str(e),
+            )
+            raise

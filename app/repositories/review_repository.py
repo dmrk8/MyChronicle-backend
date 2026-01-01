@@ -178,3 +178,25 @@ class ReviewRepository:
                 elapsed_ms=elapsed_ms,
             )
             raise
+
+    async def delete_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> DeleteResult:
+        start = time.perf_counter()
+        try:
+            result = await self.collection.delete_many({"user_media_entry_id": user_media_entry_id})
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            self.logger.info(
+                "mongo_review_delete_many_by_user_media_entry_id",
+                user_media_entry_id=user_media_entry_id,
+                deleted_count=result.deleted_count,
+                elapsed_ms=elapsed_ms,
+            )
+            return result
+        except PyMongoError as e:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            self.logger.exception(
+                "mongo_review_delete_many_by_user_media_entry_id_error",
+                error=str(e),
+                user_media_entry_id=user_media_entry_id,
+                elapsed_ms=elapsed_ms,
+            )
+            raise

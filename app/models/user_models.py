@@ -56,9 +56,6 @@ class UserUpdateRequest(BaseModel):
         description="Password must contain at least one lowercase letter, one uppercase letter, one digit, and one symbol",
     )
 
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
-    )
 
     @field_validator("password")
     @classmethod

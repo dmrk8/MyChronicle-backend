@@ -73,9 +73,6 @@ class UserMediaEntryUpdate(BaseModel):
     in_library: Optional[bool] = Field(
         None, alias="inLibrary", description="Updated library status"
     )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
-    )
 
     @field_validator("repeat_count")
     @classmethod
