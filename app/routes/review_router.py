@@ -17,7 +17,7 @@ async def create_review(
 ):
     try:
         response = await review_service.create_review(review_request)
-        return response.message
+        return response
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception:
@@ -33,7 +33,7 @@ async def update_review(
 ):
     try:
         response = await review_service.update_review(review_id, update_request)
-        return response.message
+        return response
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception:
@@ -48,7 +48,7 @@ async def delete_review(
 ):
     try:
         response = await review_service.delete_review(review_id)
-        return response.message
+        return response
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception:
@@ -66,7 +66,7 @@ async def get_review_by_id(
     """
     try:
         response = await review_service.get_review_by_id(review_id)  # type: ignore
-        return response.message
+        return response
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception:

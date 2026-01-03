@@ -59,5 +59,6 @@ class ReviewResponse(BaseModel):
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"
     )
-    data: Optional[ReviewDB | List[ReviewDB]] = None
+    data: Optional[ReviewDB]  = None
+    data_list:  Optional[List[ReviewDB]] = Field(None, alias="dataList")
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

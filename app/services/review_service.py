@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import List, Optional
 import structlog
 from app.repositories.review_repository import ReviewRepository
 from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate, ReviewResponse
@@ -11,7 +12,7 @@ class ReviewService:
     def __init__(self, review_repository: ReviewRepository):
         self.repository = review_repository
 
-    async def create_review(self, review_request: ReviewCreate) -> ReviewResponse:
+    async def create_review(self, review_request: ReviewCreate) -> ReviewDB:
         if review_request.rating is not None and (
             review_request.rating < 0 or review_request.rating > 10
         ):
@@ -29,11 +30,11 @@ class ReviewService:
                 user_media_entry_id=review_request.user_media_entry_id,
                 review_id=str(result.inserted_id),
             )
-            return ReviewResponse(
-                message="Review created successfully",
-                acknowledged=result.acknowledged,
-                data=review_data,
-            )
+    
+            res = await self.repository.get_review_by_id(result.inserted_id)
+            if res is None:
+                raise ValueError("Error returing the newly created review")
+            return res
         except Exception as e:
             logger.error(
                 "Error creating review",
@@ -42,7 +43,7 @@ class ReviewService:
             )
             raise
 
-    async def update_review(self, review_id: str, update_request: ReviewUpdate) -> ReviewResponse:
+    async def update_review(self, review_id: str, update_request: ReviewUpdate) -> Optional[ReviewDB]:
         review_data = await self.repository.get_review_by_id(review_id)
         if not review_data:
             logger.error("Review not found", review_id=review_id)
@@ -75,58 +76,49 @@ class ReviewService:
         try:
             update_dict = update_request.model_dump(exclude_unset=True)
             update_dict["updated_at"] = datetime.now(timezone.utc)
-            result: UpdateResult = await self.repository.update_review(review_id, update_dict)
+            await self.repository.update_review(review_id, update_dict)
             logger.info("Review updated", review_id=review_id)
             updated_review = await self.repository.get_review_by_id(review_id)
-            return ReviewResponse(
-                message="Review updated successfully",
-                acknowledged=result.acknowledged,
-                data=updated_review,
-            )
+            if updated_review is None:
+                raise ValueError("Review not found")
+            return updated_review
         except Exception as e:
             logger.error("Error updating review", error=str(e))
             raise
 
-    async def delete_review(self, review_id: str) -> ReviewResponse:
+    async def delete_review(self, review_id: str) -> bool:
         review_data = await self.repository.get_review_by_id(review_id)
         if not review_data:
             raise ValueError(f"Review with id {review_id} not found")
-
         try:
             result: DeleteResult = await self.repository.delete_review(review_id)
             logger.info("Review deleted", review_id=review_id)
-            return ReviewResponse(
-                message="Review deleted successfully",
-                acknowledged=result.acknowledged,
-            )
+            if result.acknowledged:
+                return True
         except Exception as e:
             logger.error("Error deleting review", error=str(e))
             raise
+        return False
 
-    async def get_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> ReviewResponse:
+    async def get_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> List[ReviewDB]:
         try:
             reviews = await self.repository.get_reviews_by_user_media_entry_id(user_media_entry_id)
-            if reviews is None:
-                return ReviewResponse(message="No reviews found", data=None, acknowledged=False)
+            if not reviews:
+                raise ValueError("Reviews not found")
             logger.info("Fetched reviews", user_media_entry_id=user_media_entry_id)
-            return ReviewResponse(
-                message="Reviews fetched successfully", data=reviews, acknowledged=True
-            )
+            return reviews
         except Exception as e:
             logger.error(
                 "Error fetching reviews", user_media_entry_id=user_media_entry_id, error=str(e)
             )
-            raise
 
-    async def get_review_by_id(self, review_id: str) -> ReviewResponse:
+    async def get_review_by_id(self, review_id: str) -> ReviewDB:
         try:
             review_data = await self.repository.get_review_by_id(review_id)
             if not review_data:
                 raise ValueError("Review not found")
             logger.info("Review fetched successfully", review_id=review_id)
-            return ReviewResponse(
-                message="Review fetched successfully", data=review_data, acknowledged=True
-            )
+            return review_data
         except Exception as e:
             logger.error("Error finding review by id", review_id=review_id, error=str(e))
             raise
@@ -142,18 +134,20 @@ class ReviewService:
             )
             raise
 
-    async def delete_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> ReviewResponse:
+    async def delete_reviews_by_user_media_entry_id(
+        self, user_media_entry_id: str
+    ) -> bool:
         try:
-            result: DeleteResult = await self.repository.delete_reviews_by_user_media_entry_id(user_media_entry_id)
+            result: DeleteResult = await self.repository.delete_reviews_by_user_media_entry_id(
+                user_media_entry_id
+            )
             logger.info(
                 "Reviews deleted",
                 user_media_entry_id=user_media_entry_id,
                 deleted_count=result.deleted_count,
             )
-            return ReviewResponse(
-                message=f"Deleted {result.deleted_count} reviews successfully",
-                acknowledged=result.acknowledged,
-            )
+            if result.acknowledged:
+                return True
         except Exception as e:
             logger.error(
                 "Error deleting reviews",
@@ -161,3 +155,4 @@ class ReviewService:
                 error=str(e),
             )
             raise
+        return False
