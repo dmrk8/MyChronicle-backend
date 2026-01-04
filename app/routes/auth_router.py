@@ -17,8 +17,8 @@ async def login(
     try:
         res = await auth_service.login(login_request)
         response.set_cookie(
-            key="access_token", value=res.access_token, httponly=True, samesite="lax", secure=True
-        )
+            key="access_token", value=res.access_token, httponly=True, samesite=None, secure=True
+        ) #MAKE SAMESITE LAX AGAIN
         return {"message": "Login successful"}
 
     except Exception as e:
@@ -44,5 +44,23 @@ async def get_current_user_info(current_user: UserDB = Depends(get_current_user)
             createdAt=current_user.created_at,
             updatedAt=current_user.updated_at,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@auth_router.post("/refresh")
+async def refresh_access_token(
+    refresh_token: str,
+    response: Response,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    try:
+        res = await auth_service.refresh_access_token(refresh_token)
+        response.set_cookie(
+            key="access_token", value=res.access_token, httponly=True, samesite=None, secure=True
+        )  
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=401, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")

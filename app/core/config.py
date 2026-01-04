@@ -25,10 +25,7 @@ class Settings(BaseSettings):
     jwt_issuer: str = Field(description="Issuer claim for JWT tokens")
     jwt_audience: str = Field(description="Audience claim for JWT tokens")
     jwt_refresh_token_expire_days_default: int = Field(
-        description="Default expiration for refresh tokens in days (non-remember me)"
-    )
-    jwt_refresh_token_expire_days_remember: int = Field(
-        description="Expiration for refresh tokens in days (with remember me)"
+        description="Default expiration for refresh tokens in days"
     )
 
     redis_host: str = Field(description="Hostname for the Redis server")

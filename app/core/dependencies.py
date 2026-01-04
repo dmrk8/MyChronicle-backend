@@ -88,7 +88,6 @@ def get_jwt_handler(
             audience=settings.jwt_audience,
             expire_minutes=settings.jwt_access_token_expire_minutes,
             default_expire_days=settings.jwt_refresh_token_expire_days_default,
-            remember_expire_days=settings.jwt_refresh_token_expire_days_remember,
             redis_client=redis_client,
         )
     return _jwt_handler

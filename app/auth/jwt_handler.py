@@ -21,7 +21,6 @@ class JWTHandler:
         audience: str,
         expire_minutes: int,
         default_expire_days: int,
-        remember_expire_days: int,
     ):
         self.redis_client = redis_client
         self.secret_key = secret
@@ -30,7 +29,6 @@ class JWTHandler:
         self.audience = audience
         self.expire_minutes = expire_minutes
         self.default_expire_days = default_expire_days
-        self.remember_expire_days = remember_expire_days
 
         if not self.secret_key:
             raise ValueError("SECRET_KEY is required")
@@ -151,7 +149,7 @@ class JWTHandler:
                 logger.warning("Token missing subject or invalid type")
                 return None
 
-            logger.info("Token verified for user", sub={sub})
+            logger.info("Token verified for user", sub=sub)
             return sub
 
         except JWTError as je:
@@ -161,7 +159,7 @@ class JWTHandler:
             logger.error("Unexpected error in verify_token", error={e})
             raise
 
-    def create_refresh_token(self, user_id: str, is_remember: bool = False) -> str:
+    def create_refresh_token(self, user_id: str) -> str:
         """
         Generates a long lived refresh token, if is_remember True the token exp date is much longer, else default
 
@@ -172,27 +170,34 @@ class JWTHandler:
         Returns:
             str: Refresh Token
         """
-        if is_remember:
-            expires_delta = timedelta(days=self.remember_expire_days)
-        else:
-            expires_delta = timedelta(days=self.default_expire_days)
+        expires_delta = timedelta(days=self.default_expire_days)
 
         claims = self.generate_claims(user_id, expires_delta, is_refresh=True)
 
         return self._encode_token(claims)
 
-    async def store_refresh_token(self, user_id: str, refresh_token: str, is_remember: bool = False):
-        expire_delta = self.remember_expire_days if is_remember else self.default_expire_days
+    async def store_refresh_token(self, user_id: str, refresh_token: str):
+        claims = self._decode_token(refresh_token)
+        if not claims:
+            raise ValueError("Invalid refresh token")
+
+        ttl = claims.exp - int(datetime.now(timezone.utc).timestamp())
+
+        if ttl <= 0:
+            raise ValueError("Refresh token already expired")
+
         await self.redis_client.setex(
-            f"refresh:{user_id}", expire_delta * self.SECONDS_PER_DAY, refresh_token
+            f"refresh_token:{user_id}",
+            ttl,
+            refresh_token,
         )
         logger.info("Refresh token is stored in Redis", user_id={user_id})
 
     async def revoke_refresh_token(self, user_id: str):
-        await self.redis_client.delete(f"refresh:{user_id}")
+        await self.redis_client.delete(f"refresh_token:{user_id}")
         logger.info("Refresh token is revoked from Redis", user_id={user_id})
 
-    def verify_refresh_token(self, refresh_token: str, user_id: str) -> Optional[str]:
+    async def verify_refresh_token(self, refresh_token: str) -> Optional[str]:
         """Checks the validity of the token by checking the storage,
         if it is valid it returns the sub of the claim, else return None
 
@@ -200,14 +205,14 @@ class JWTHandler:
             str: sub in Claims
         """
 
-        sub = self.verify_token(refresh_token, expected_type="refresh")
+        user_id = self.verify_token(refresh_token, expected_type="refresh")
 
-        if not sub:
+        if not user_id:
             logger.warning("Token sub value is invalid")
             return None
 
         try:
-            stored_token = self.redis_client.get(f"refresh:{user_id}")
+            stored_token = await self.redis_client.get(f"refresh_token:{user_id}")
 
             if not stored_token:
                 logger.warning("No stored refresh token found", user_id={user_id})
@@ -220,14 +225,16 @@ class JWTHandler:
                 stored_token_str = stored_token
             else:
                 logger.warning(
-                    "Unexpected stored_token type",  user_id={user_id}, stored_token_type={type(stored_token)}
+                    "Unexpected stored_token type",
+                    user_id={user_id},
+                    stored_token_type={type(stored_token)},
                 )
                 return None
 
             # Constant-time comparison
             if secrets.compare_digest(stored_token_str, refresh_token):
                 logger.info("Refresh token verified", user_id={user_id})
-                return sub
+                return user_id
             else:
                 logger.warning("Refresh token mismatch", user_id={user_id})
                 return None
@@ -235,27 +242,3 @@ class JWTHandler:
         except RedisError as e:
             logger.error("Redis error verifying refresh token", error={e})
             return None
-
-    async def rotate_refresh_token(
-        self, old_token: str, user_id: str, is_remember: bool = False
-    ) -> Optional[str]:
-        """Rotates a refresh token .
-
-        Args:
-            old_token: Current refresh token
-        user_id: User's immutable ID
-            is_remember: Whether this is a "remember me" token
-
-        Returns:
-            New refresh token if rotation succeeds, None otherwise
-        """
-        username = self.verify_refresh_token(old_token, user_id)
-
-        if not username:
-            return None
-
-        new_token = self.create_refresh_token(username, is_remember)
-        await self.store_refresh_token(user_id, new_token, is_remember)
-
-        logger.info(f"Refresh token rotated for user_id {user_id}")
-        return new_token

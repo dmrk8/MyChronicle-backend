@@ -10,11 +10,6 @@ class LoginRequest(BaseModel):
         min_length=8,
         description="Password must contain at least one lowercase letter, one uppercase letter, and one digit",
     )
-    is_remember_me: bool = Field(
-        default=False,
-        description="Whether to remember the user for extended session",
-        alias="isRememberMe",
-    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
