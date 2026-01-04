@@ -200,3 +200,30 @@ class ReviewRepository:
                 elapsed_ms=elapsed_ms,
             )
             raise
+
+    async def get_reviews_by_user_id_and_media_id(
+        self, user_id: str, media_id: str
+    ) -> Optional[List[ReviewDB]]:
+        start = time.perf_counter()
+        try:
+            cursor = self.collection.find({"user_id": user_id, "media_id": media_id})
+            results = [self.map_to_model(doc) async for doc in cursor]
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            self.logger.info(
+                "mongo_review_find_by_user_id_and_media_id",
+                user_id=user_id,
+                media_id=media_id,
+                count=len(results),
+                elapsed_ms=elapsed_ms,
+            )
+            return results
+        except PyMongoError as e:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            self.logger.exception(
+                "mongo_review_find_by_user_id_and_media_id_error",
+                error=str(e),
+                user_id=user_id,
+                media_id=media_id,
+                elapsed_ms=elapsed_ms,
+            )
+            raise

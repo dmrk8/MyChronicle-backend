@@ -71,3 +71,41 @@ async def get_review_by_id(
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@review_router.get("/entry/{user_media_entry_id}")
+async def get_reviews_by_user_media_entry_id(
+    user_media_entry_id: str = Path(..., description="ID of the user media entry"),
+    current_user: UserDB = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service),
+):
+    """
+    Get all reviews for a specific user media entry.
+    """
+    try:
+        res = await review_service.get_reviews_by_user_media_entry_id(user_media_entry_id)
+        return res
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@review_router.get("/by-user-id")
+async def get_reviews_by_user_id_and_media_id(
+    media_id: str = Path(..., description="ID of the media"),
+    current_user: UserDB = Depends(get_current_user),
+    review_service: ReviewService = Depends(get_review_service),
+):
+    """
+    Get all reviews for a specific user and media.
+    """
+    try:
+        reviews = await review_service.get_reviews_by_user_id_and_media_id(
+            current_user.id, media_id
+        )
+        return reviews
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")

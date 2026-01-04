@@ -86,8 +86,11 @@ class UserMediaEntryUpdate(BaseModel):
 
 class UserMediaEntryResponse(BaseModel):
     message: str = Field(description="Response message")
-    data: Optional[UserMediaEntryDB | List[UserMediaEntryDB]] = Field(
-        None, description="Additional data, such as media details"
+    data: Optional[UserMediaEntryDB] = Field(
+        None, description="Single media entry data"
+    )
+    data_list: Optional[List[UserMediaEntryDB]] = Field(
+        None, description="List of media entry data", alias="dataList"
     )
     acknowledged: Optional[bool] = Field(
         None, description="Whether the operation was acknowledged by the database"

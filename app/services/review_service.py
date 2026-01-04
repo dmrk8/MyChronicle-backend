@@ -30,7 +30,7 @@ class ReviewService:
                 user_media_entry_id=review_request.user_media_entry_id,
                 review_id=str(result.inserted_id),
             )
-    
+
             res = await self.repository.get_review_by_id(result.inserted_id)
             if res is None:
                 raise ValueError("Error returing the newly created review")
@@ -43,7 +43,9 @@ class ReviewService:
             )
             raise
 
-    async def update_review(self, review_id: str, update_request: ReviewUpdate) -> Optional[ReviewDB]:
+    async def update_review(
+        self, review_id: str, update_request: ReviewUpdate
+    ) -> Optional[ReviewDB]:
         review_data = await self.repository.get_review_by_id(review_id)
         if not review_data:
             logger.error("Review not found", review_id=review_id)
@@ -134,9 +136,7 @@ class ReviewService:
             )
             raise
 
-    async def delete_reviews_by_user_media_entry_id(
-        self, user_media_entry_id: str
-    ) -> bool:
+    async def delete_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> bool:
         try:
             result: DeleteResult = await self.repository.delete_reviews_by_user_media_entry_id(
                 user_media_entry_id
@@ -156,3 +156,16 @@ class ReviewService:
             )
             raise
         return False
+
+    async def get_reviews_by_user_id_and_media_id(
+        self, user_id: str, media_id: str
+    ) -> List[ReviewDB]:
+        try:
+            reviews = await self.repository.get_reviews_by_user_id_and_media_id(user_id, media_id)
+            if not reviews:
+                raise ValueError("Reviews not found")
+            logger.info("Fetched reviews", user_id=user_id, media_id=media_id)
+            return reviews
+        except Exception as e:
+            logger.error("Error fetching reviews", user_id=user_id, media_id=media_id, error=str(e))
+            raise
