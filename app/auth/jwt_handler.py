@@ -56,7 +56,6 @@ class JWTHandler:
                 "exp": claims.exp,
                 "iss": claims.iss,
                 "aud": claims.aud,
-                "type": claims.type,
             }
 
             encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
@@ -110,14 +109,13 @@ class JWTHandler:
             exp=int(expire.timestamp()),
             iss=self.issuer,
             aud=self.audience,
-            type="refresh" if is_refresh else "access",
         )
 
     def create_access_token(self, username: str) -> str:
         claims = self.generate_claims(username)
         return self._encode_token(claims)
 
-    def verify_token(self, token: str, expected_type: str = "access") -> Optional[str]:
+    def verify_token(self, token: str) -> Optional[str]:
         """verify token for REFRESH and ACCESS tokens and return the sub if it is valid
 
         Args:
@@ -138,11 +136,6 @@ class JWTHandler:
                 logger.warning("Failed to decode token")
                 return None
 
-            if payload.type != expected_type:
-                logger.warning(
-                    "Token type mismatch", expected_type={expected_type}, given_type={payload.type}
-                )
-                return None
 
             sub = payload.sub
             if sub is None or not isinstance(sub, str):
@@ -205,7 +198,7 @@ class JWTHandler:
             str: sub in Claims
         """
 
-        user_id = self.verify_token(refresh_token, expected_type="refresh")
+        user_id = self.verify_token(refresh_token)
 
         if not user_id:
             logger.warning("Token sub value is invalid")

@@ -22,16 +22,17 @@ class IGDBService:
             # game_type.type not in (1, filter out dlcs/addon
             # 3 -> filter out bundles
             # 5) -> filter out mods
-            for franchise in result.franchises:
-                franchise.games = [
-                    game
-                    for game in franchise.games
-                    if not (
-                        game.version_parent is None
-                        and game.game_type
-                        and game.game_type.type not in (1, 3, 5)
-                    )
-                ]
+            if result.franchises is not None:
+                for franchise in result.franchises:
+                    franchise.games = [
+                        game
+                        for game in franchise.games
+                        if not (
+                            game.version_parent is None
+                            and game.game_type
+                            and game.game_type.type not in (1, 3, 5)
+                        )
+                    ]
 
             logger.info(f"Service: Successfully retrieved and filtered game detail for {game_id}")
             return result

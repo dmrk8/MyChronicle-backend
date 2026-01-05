@@ -1,0 +1,12 @@
+-comic api
+--sort by trending ?? movie/tv
+-sort by imdb	?? movie/tv
+-add ratelimiting to apis
+-maybe log media id in apis
+-global error handling for routers ?
+-custom errors
+-next airing episode?
+-add relations
+-belong to collection 
+-imdb
+-session_id?

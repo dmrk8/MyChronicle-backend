@@ -24,6 +24,7 @@ from app.services.review_service import ReviewService
 
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.user_media_entry_service import UserMediaEntryService
+from app.auth.session_handler import SessionHandler
 
 _anilist_api = None
 _tmdb_api = None
@@ -61,7 +62,9 @@ def get_redis() -> Redis:
     return state.redis_client  # type: ignore
 
 
-def get_anilist_service(anilist_api: AnilistApi = Depends(get_anilist_api)) -> AnilistService:
+def get_anilist_service(
+    anilist_api: AnilistApi = Depends(get_anilist_api),
+) -> AnilistService:
     return AnilistService(anilist_api=anilist_api)
 
 
@@ -70,7 +73,8 @@ def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
 
 
 def get_user_repository(
-    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
+    db: AsyncIOMotorDatabase = Depends(get_mongo),
+    settings: Settings = Depends(get_settings),
 ) -> UserRepository:
     collection_name = settings.user_collection
     return UserRepository(db=db, collection_name=collection_name)
@@ -93,22 +97,38 @@ def get_jwt_handler(
     return _jwt_handler
 
 
+def get_session_handler(
+    redis_client: Redis = Depends(get_redis), settings: Settings = Depends(get_settings)
+) -> SessionHandler:
+    return SessionHandler(
+        redis_client=redis_client,
+        session_expire_days=settings.jwt_refresh_token_expire_days_default,
+    )
+
+
 def get_user_service(
     user_repository: UserRepository = Depends(get_user_repository),
     password_handler: PasswordHandler = Depends(get_password_handler),
 ) -> UserService:
-    return UserService(user_repository=user_repository, password_handler=password_handler)
+    return UserService(
+        user_repository=user_repository, password_handler=password_handler
+    )
 
 
 def get_auth_service(
     jwt_handler: JWTHandler = Depends(get_jwt_handler),
     user_service: UserService = Depends(get_user_service),
+    session_handler: SessionHandler = Depends(get_session_handler),
 ) -> AuthService:
-    return AuthService(jwt_handler=jwt_handler, user_service=user_service)
+    return AuthService(
+        jwt_handler=jwt_handler,
+        user_service=user_service,
+    )
 
 
 def get_review_repository(
-    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
+    db: AsyncIOMotorDatabase = Depends(get_mongo),
+    settings: Settings = Depends(get_settings),
 ) -> ReviewRepository:
     return ReviewRepository(db=db, collection_name=settings.review_collection)
 
@@ -120,15 +140,16 @@ def get_review_service(
 
 
 def get_user_media_entry_repository(
-    db: AsyncIOMotorDatabase = Depends(get_mongo), settings: Settings = Depends(get_settings)
+    db: AsyncIOMotorDatabase = Depends(get_mongo),
+    settings: Settings = Depends(get_settings),
 ) -> UserMediaEntryRepository:
-    return UserMediaEntryRepository(db=db, collection_name=settings.user_media_entry_collection)
+    return UserMediaEntryRepository(
+        db=db, collection_name=settings.user_media_entry_collection
+    )
 
 
 def get_user_media_entry_service(
     repository: UserMediaEntryRepository = Depends(get_user_media_entry_repository),
-    review_service: ReviewService = Depends(
-        get_review_service
-    ),  
+    review_service: ReviewService = Depends(get_review_service),
 ) -> UserMediaEntryService:
     return UserMediaEntryService(repository=repository, review_service=review_service)

@@ -1,0 +1,56 @@
+{
+    "id": 27095,
+    "hid": "71gMd0vF",
+    "slug": "00-solo-leveling",
+    "title": "Solo Leveling",
+    "country": "kr",
+    "rating": "9.3",
+    "bayesian_rating": "9.3",
+    "rating_count": 40861,
+    "follow_count": 213438,
+    "desc": "10 years ago, after “the Gate” that connected the real world with the monster world opened, some of the ordinary, everyday people received the power to hunt monsters within the Gate. They are known as “Hunters”. However, not all Hunters are powerful. My name is Sung Jin-Woo, an E-rank Hunter. I’m someone who has to risk his life in the lowliest of dungeons, the “World’s Weakest”. Having no skills whatsoever to display, I barely earned the required money by fighting in low-leveled dungeons… at least until I found a hidden dungeon with the hardest difficulty within the D-rank dungeons! In the end, as I was accepting death, I suddenly received a strange power, a quest log that only I could see, a secret to leveling up that only I know about! If I trained in accordance with my quests and hunted monsters, my level would rise. Changing from the weakest Hunter to the strongest S-rank Hunter!\n\n---\n**Links:**\n\n- Official English Translation [<Pocket Comics>](https://www.pocketcomics.com/comic/320) | [<WebNovel>](https://www.webnovel.com/comic/only-i-level-up-(solo-leveling)_15227640605485101) | [<Tapas>](https://tapas.io/series/solo-leveling-comic/info)\n- Alternate Official Raw - [Kakao Webtoon](https://webtoon.kakao.com/content/나-혼자만-레벨업/2320)",
+    "status": 2,
+    "last_chapter": 200.5,
+    "translation_completed": true,
+    "view_count": 15523140,
+    "content_rating": "safe",
+    "demographic": null,
+    "uploaded_at": "2024-07-13T03:26:03.493Z",
+    "genres": [
+      246,
+      305,
+      244,
+      274,
+      245,
+      303,
+      250,
+      252,
+      281,
+      272,
+      279,
+      282
+    ],
+    "created_at": "2019-02-16T06:20:40.135Z",
+    "user_follow_count": 190128,
+    "year": 2018,
+    "mu_comics": {
+      "year": 2018
+    },
+    "is_english_title": null,
+    "md_titles": [
+      {
+        "title": "I Alone Level-Up"
+      },
+      {
+        "title": "I am the only the one who levels up"
+      }
+    ],
+    "md_covers": [
+      {
+        "w": 800,
+        "h": 1080,
+        "b2key": "0GRgd.jpg"
+      }
+    ],
+    "highlight": "<mark>Solo</mark> <mark>Leveling</mark>"
+  }

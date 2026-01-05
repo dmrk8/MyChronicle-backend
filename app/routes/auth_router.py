@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Response, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Cookie, Depends, Response, HTTPException
 from app.models.auth_models import LoginRequest, UserInfo
 from app.services.auth_service import AuthService
 from app.models.user_models import UserDB
@@ -17,25 +18,40 @@ async def login(
     try:
         res = await auth_service.login(login_request)
         response.set_cookie(
-            key="access_token", value=res.access_token, httponly=True, samesite=None, secure=True
-        ) #MAKE SAMESITE LAX AGAIN
-        return {"message": "Login successful"}
+            key="access_token",
+            value=res.access_token,
+            httponly=True,
+            samesite="lax",
+            secure=True,
+            max_age=30 * 24 * 60 * 60,
+        )
+
+        return {"message": "login succesfull"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @auth_router.post("/logout")
-async def logout(response: Response):
-    try:
-        response.delete_cookie("access_token")
-        return {"message": "Logged out successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+async def logout(
+    response: Response,
+    session_id: Optional[str] = Cookie(None),
+):
+    if session_id:
+
+        try:
+            response.delete_cookie(
+                key="access_token", httponly=True, secure=True, samesite="lax"
+            )
+            return {"message": "Logged out successfully"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @auth_router.get("/me")
-async def get_current_user_info(current_user: UserDB = Depends(get_current_user)):
+async def get_current_user_info(
+    current_user: UserDB = Depends(get_current_user),
+):
     try:
         return UserInfo(
             id=current_user.id,  # type: ignore
@@ -50,16 +66,15 @@ async def get_current_user_info(current_user: UserDB = Depends(get_current_user)
 
 @auth_router.post("/refresh")
 async def refresh_access_token(
-    refresh_token: str,
-    response: Response,
+    session_id: Optional[str] = Cookie(None),
     auth_service: AuthService = Depends(get_auth_service),
 ):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="No session found")
+
     try:
-        res = await auth_service.refresh_access_token(refresh_token)
-        response.set_cookie(
-            key="access_token", value=res.access_token, httponly=True, samesite=None, secure=True
-        )  
-        return res
+        res = await auth_service.refresh_access_token(session_id)
+        return res.model_dump(exclude="session_id")
     except ValueError as ve:
         raise HTTPException(status_code=401, detail=str(ve))
     except Exception as e:
