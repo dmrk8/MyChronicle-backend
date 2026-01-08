@@ -1,9 +1,9 @@
-from typing import List, Optional
+from typing import List
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from pymongo.errors import PyMongoError
 from bson import ObjectId
-from app.models.user_media_entry_models import UserMediaEntryDB, UserMediaEntryCreate
+from app.models.user_media_entry_models import UserMediaEntryDB
 import structlog
 import time
 
@@ -41,7 +41,7 @@ class UserMediaEntryRepository:
             )
             raise
 
-    async def get_entry_by_id(self, entry_id: str) -> Optional[UserMediaEntryDB]:
+    async def get_entry_by_id(self, entry_id: str) -> UserMediaEntryDB:
         start = time.perf_counter()
         try:
             data = await self.collection.find_one({"_id": ObjectId(entry_id)})
@@ -58,7 +58,7 @@ class UserMediaEntryRepository:
                 entry_id=entry_id,
                 elapsed_ms=elapsed_ms,
             )
-            return None
+            raise
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
@@ -160,7 +160,7 @@ class UserMediaEntryRepository:
 
     async def get_entry_by_external_id_and_user_id(
         self, external_id: int, user_id: str
-    ) -> Optional[UserMediaEntryDB]:
+    ) -> UserMediaEntryDB:
         start = time.perf_counter()
         try:
             data = await self.collection.find_one({"external_id": external_id, "user_id": user_id})
@@ -179,7 +179,7 @@ class UserMediaEntryRepository:
                 user_id=user_id,
                 elapsed_ms=elapsed_ms,
             )
-            return None
+            raise
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(

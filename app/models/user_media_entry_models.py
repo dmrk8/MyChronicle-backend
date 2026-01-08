@@ -84,21 +84,6 @@ class UserMediaEntryUpdate(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class UserMediaEntryResponse(BaseModel):
-    message: str = Field(description="Response message")
-    data: Optional[UserMediaEntryDB] = Field(
-        None, description="Single media entry data"
-    )
-    data_list: Optional[List[UserMediaEntryDB]] = Field(
-        None, description="List of media entry data", alias="dataList"
-    )
-    acknowledged: Optional[bool] = Field(
-        None, description="Whether the operation was acknowledged by the database"
-    )
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
 class UserMediaEntryPagination(BaseModel):
     results: List[UserMediaEntryDB] = Field(..., alias="results")
     page: int = Field(..., alias="page", description="Current page number")

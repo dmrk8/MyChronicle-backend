@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, Path, Query, Body
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from app.models.user_media_entry_models import (
     UserMediaEntryCreate,
     UserMediaEntryUpdate,
-    UserMediaEntryResponse,
     UserMediaEntryPagination,
 )
 from app.models.user_models import UserDB
@@ -16,7 +15,7 @@ from app.auth.auth_dependencies import get_current_user
 user_media_entry_router = APIRouter(prefix="/user-media-entry", tags=["UserMediaEntry"])
 
 
-@user_media_entry_router.post("/", response_model=UserMediaEntryResponse)
+@user_media_entry_router.post("/")
 async def create_user_media_entry(
     entry: UserMediaEntryCreate = Body(...),
     user: UserDB = Depends(get_current_user),
@@ -28,7 +27,7 @@ async def create_user_media_entry(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@user_media_entry_router.get("/{entry_id}", response_model=UserMediaEntryResponse)
+@user_media_entry_router.get("/{entry_id}")
 async def get_user_media_entry_by_id(
     entry_id: str = Path(..., description="User Media Entry ID"),
     user: UserDB = Depends(get_current_user),
@@ -40,7 +39,7 @@ async def get_user_media_entry_by_id(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@user_media_entry_router.patch("/{entry_id}", response_model=UserMediaEntryResponse)
+@user_media_entry_router.patch("/{entry_id}")
 async def update_user_media_entry(
     entry_id: str = Path(..., description="User Media Entry ID"),
     update: UserMediaEntryUpdate = Body(...),
@@ -53,7 +52,7 @@ async def update_user_media_entry(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@user_media_entry_router.delete("/{entry_id}", response_model=UserMediaEntryResponse)
+@user_media_entry_router.delete("/{entry_id}")
 async def delete_user_media_entry(
     entry_id: str = Path(..., description="User Media Entry ID"),
     user: UserDB = Depends(get_current_user),
@@ -65,7 +64,7 @@ async def delete_user_media_entry(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@user_media_entry_router.get("/by-user/", response_model=UserMediaEntryResponse)
+@user_media_entry_router.get("/by-user/")
 async def get_entries_by_user_id(
     user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
@@ -76,7 +75,7 @@ async def get_entries_by_user_id(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@user_media_entry_router.get("/by-external/{external_id}", response_model=UserMediaEntryResponse)
+@user_media_entry_router.get("/by-external/{external_id}")
 async def get_entry_by_external_id(
     external_id: int = Path(..., description="External ID"),
     user: UserDB = Depends(get_current_user),

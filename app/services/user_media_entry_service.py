@@ -6,7 +6,6 @@ from app.models.user_media_entry_models import (
     UserMediaEntryUpdate,
     UserMediaEntryDB,
     UserMediaEntryPagination,
-    UserMediaEntryResponse,
 )
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 from datetime import datetime, timezone
@@ -17,68 +16,50 @@ logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
 
 class UserMediaEntryService:
-    def __init__(self, repository: UserMediaEntryRepository, review_service: ReviewService ):
+    def __init__(
+        self, repository: UserMediaEntryRepository, review_service: ReviewService
+    ):
         self.repository = repository
         self.review_service = review_service
 
     async def create_entry(
         self, entry_request: UserMediaEntryCreate, user_id: str
-    ) -> UserMediaEntryResponse:
+    ) -> UserMediaEntryDB:
 
         entry_data = UserMediaEntryDB(
             **entry_request.model_dump(),
             user_id=user_id,  # type: ignore
         )
         result: InsertOneResult = await self.repository.create_entry(entry_data)
-        return UserMediaEntryResponse(
-            message="User media entry created successfully",
-            acknowledged=result.acknowledged
-        ) # type: ignore
+        return await self.repository.get_entry_by_id(result.inserted_id)
 
-    async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
-        entry = await self._verify_ownership(entry_id, user_id)
-        return UserMediaEntryResponse(
-            message="User media entry fetched successfully",
-            data=entry,
-            acknowledged=True
-        )
+    async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
+        return await self._verify_ownership(entry_id, user_id)
 
     async def update_entry(
         self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
-    ) -> UserMediaEntryResponse:
+    ) -> UserMediaEntryDB:
         await self._verify_ownership(entry_id, user_id)
 
         update_dict = update_data.model_dump(exclude_unset=True)
         update_dict["updated_at"] = datetime.now(timezone.utc)
         result: UpdateResult = await self.repository.update_entry(entry_id, update_dict)
-        return UserMediaEntryResponse(
-            message="User media entry updated successfully",
-            acknowledged=result.acknowledged,
-        )
+        return await self.repository.get_entry_by_id(result.upserted_id)
 
-    async def delete_entry(self, entry_id: str, user_id: str) -> UserMediaEntryResponse:
+    async def delete_entry(self, entry_id: str, user_id: str) -> bool:
         await self._verify_ownership(entry_id, user_id)
         result: DeleteResult = await self.repository.delete_entry(entry_id)
         await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
-        return UserMediaEntryResponse(
-            message="User media entry deleted successfully",
-            acknowledged=result.acknowledged
-        )
+        return result.acknowledged
 
-    async def get_entries_by_user_id(self, user_id: str) -> UserMediaEntryResponse:
-        entries = await self.repository.get_entries_by_user_id(user_id)
-        return UserMediaEntryResponse(
-            message="User media entries fetched successfully", data=entries, user_id=user_id  # type: ignore
-        )
+    async def get_entries_by_user_id(self, user_id: str) -> List[UserMediaEntryDB]:
+        return await self.repository.get_entries_by_user_id(user_id)
 
     async def get_entry_by_external_id(
         self, external_id: int, user_id: str
-    ) -> UserMediaEntryResponse:
-        entry = await self.repository.get_entry_by_external_id_and_user_id(external_id, user_id)
-        return UserMediaEntryResponse(
-            message="User media entries fetched successfully",
-            data=entry,
-            acknowledged=True
+    ) -> Optional[UserMediaEntryDB]:
+        return await self.repository.get_entry_by_external_id_and_user_id(
+            external_id, user_id
         )
 
     async def get_entries(
@@ -130,6 +111,8 @@ class UserMediaEntryService:
         if not entry:
             raise ValueError(f"Entry {entry_id} not found")
         if entry.user_id != user_id:
-            logger.warning("Unauthorized access attempt", user_id=user_id, entry_id=entry_id)
+            logger.warning(
+                "Unauthorized access attempt", user_id=user_id, entry_id=entry_id
+            )
             raise ValueError("User not authorized for this entry")
         return entry
