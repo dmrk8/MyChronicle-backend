@@ -1,30 +1,42 @@
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from app.enums.review_enums import ReviewMediaType, ReviewMediaSource, ReviewStatus
+from app.enums.user_media_entry_enums import (
+    MediaExternalSource,
+    MediaType,
+    UserMediaEntryStatus,
+)
 
 
 class UserMediaEntryCreate(BaseModel):
     external_id: int = Field(
-        ..., alias="externalId", description="The external ID of the media from the source API"
+        ...,
+        alias="externalId",
+        description="The external ID of the media from the source API",
     )
-    source: ReviewMediaSource = Field(
+    external_source: MediaExternalSource = Field(
         ...,
         alias="externalSource",
         description="The source of the media (e.g., AniList, TMDB, IGDB)",
     )
-    media_type: ReviewMediaType = Field(
+    media_type: MediaType = Field(
         ...,
         alias="mediaType",
         description="The type of media (e.g., anime, manga, game, movie, TV)",
     )
-    status: Optional[ReviewStatus] = Field(
-        ReviewStatus.PLANNING,
+    title: str = Field(..., alias="title", description="The title of the media")
+    cover_image: Optional[str] = Field(
+        None, alias="coverImage", description="The cover image URL of the media"
+    )
+    status: Optional[UserMediaEntryStatus] = Field(
+        UserMediaEntryStatus.PLANNING,
         alias="status",
         description="The user's consumption status for the media",
     )
     repeat_count: Optional[int] = Field(
-        0, alias="repeatCount", description="How many times the user has consumed the media"
+        0,
+        alias="repeatCount",
+        description="How many times the user has consumed the media",
     )
     is_favorite: Optional[bool] = Field(
         False,
@@ -32,7 +44,9 @@ class UserMediaEntryCreate(BaseModel):
         description="Whether the user has marked this media as a favorite",
     )
     in_library: Optional[bool] = Field(
-        False, alias="inLibrary", description="Whether the media is in the user's personal library"
+        False,
+        alias="inLibrary",
+        description="Whether the media is in the user's personal library",
     )
 
     @field_validator("repeat_count")
@@ -51,7 +65,7 @@ class UserMediaEntryDB(UserMediaEntryCreate):
     )
     user_id: str = Field(..., alias="userId", description="The ID of the user")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
+        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
@@ -61,7 +75,7 @@ class UserMediaEntryDB(UserMediaEntryCreate):
 
 
 class UserMediaEntryUpdate(BaseModel):
-    status: Optional[ReviewStatus] = Field(
+    status: Optional[UserMediaEntryStatus] = Field(
         None, alias="status", description="Updated consumption status"
     )
     repeat_count: Optional[int] = Field(
@@ -88,7 +102,9 @@ class UserMediaEntryPagination(BaseModel):
     results: List[UserMediaEntryDB] = Field(..., alias="results")
     page: int = Field(..., alias="page", description="Current page number")
     per_page: int = Field(..., alias="perPage", description="Number of items per page")
-    has_next_page: bool = Field(..., alias="hasNextPage", description="Is there a next page?")
+    has_next_page: bool = Field(
+        ..., alias="hasNextPage", description="Is there a next page?"
+    )
     total: int = Field(..., alias="total", description="Total number of items")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

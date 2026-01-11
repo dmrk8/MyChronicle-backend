@@ -67,6 +67,7 @@ class TMDBService:
         self,
         media_type: str,
     ) -> MediaFeaturedBulk:
+        media_type = media_type.lower()
         language="en-US"
         popular_results, page_info = await self.tmdb_api.get_popular_season(
             media_type=media_type,

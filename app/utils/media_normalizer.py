@@ -2,15 +2,29 @@ from typing import List, Union
 import datetime
 
 import structlog
-from app.models.anilist_models import AnilistMediaMinimal, AnilistMediaDetailed, AnilistPageInfo
+from app.models.anilist_models import (
+    AnilistMediaMinimal,
+    AnilistMediaDetailed,
+    AnilistPageInfo,
+)
 from app.models.tmdb_models import TMDBMediaMinimal, TMDBTVDetail, TMDBMovieDetail
 from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
 from app.utils.genre_utils import get_movie_genre_name_by_id, get_tv_genre_name_by_id
+from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
 
 logger = structlog.get_logger("media normalizer")
 
 
 class MediaNormalizer:
+    @staticmethod
+    def _get_media_type(media_type_str: str) -> MediaType:
+        """
+        Helper function to get ReviewMediaType enum from a string (case-insensitive).
+        """
+        try:
+            return MediaType(media_type_str.upper())
+        except ValueError:
+            raise ValueError(f"Invalid media type: {media_type_str}")
 
     @staticmethod
     def normalize_anilist_minimal(
@@ -21,9 +35,11 @@ class MediaNormalizer:
             for media in results:
                 mm = MediaMinimal(
                     id=media.id,
-                    mediaType=media.type,
-                    mediaSource="anilist",
-                    title=media.title.english or media.title.romaji or media.title.native,
+                    mediaType=MediaNormalizer._get_media_type(media.type),
+                    externalSource=MediaExternalSource.ANILIST,
+                    title=media.title.english
+                    or media.title.romaji
+                    or media.title.native,
                     format=media.format,
                     genres=media.genres,
                     status=media.status,
@@ -31,7 +47,11 @@ class MediaNormalizer:
                     averageScore=media.average_score,
                     episodes=media.episodes,
                     mainStudio=next(
-                        (studio.node.name for studio in media.studios.edges if studio.is_main),
+                        (
+                            studio.node.name
+                            for studio in media.studios.edges
+                            if studio.is_main
+                        ),
                         None,
                     ),
                     chapters=media.chapters,
@@ -51,14 +71,19 @@ class MediaNormalizer:
 
         try:
             next_airing_str = None
-            if media.next_airing_episode and media.next_airing_episode.airing_at is not None:
-                dt = datetime.datetime.fromtimestamp(float(media.next_airing_episode.airing_at))
+            if (
+                media.next_airing_episode
+                and media.next_airing_episode.airing_at is not None
+            ):
+                dt = datetime.datetime.fromtimestamp(
+                    float(media.next_airing_episode.airing_at)
+                )
                 next_airing_str = f"Episode {media.next_airing_episode.episode} airs on {dt.day} {dt.strftime('%B %Y')}"
 
             return MediaDetailed(
                 id=media.id,
-                mediaSource="anilist",
-                mediaType=media.type,
+                externalSource=MediaExternalSource.ANILIST,
+                mediaType=MediaNormalizer._get_media_type(media.type),
                 title=media.title.english or media.title.romaji or media.title.native,
                 format=media.format,
                 genres=media.genres,
@@ -94,9 +119,12 @@ class MediaNormalizer:
             for media in results:
                 mm = MediaMinimal(
                     id=media.id,
-                    mediaType=media_type,
-                    mediaSource="tmdb",
-                    title=media.title or media.original_title or media.name or media.original_name,
+                    mediaType=MediaNormalizer._get_media_type(media_type),
+                    externalSource=MediaExternalSource.TMDB,
+                    title=media.title
+                    or media.original_title
+                    or media.name
+                    or media.original_name,
                     genres=[
                         (
                             get_movie_genre_name_by_id(genre_id)
@@ -105,7 +133,7 @@ class MediaNormalizer:
                         )
                         for genre_id in media.genre_ids
                     ],
-                    averageScore=round(media.vote_average, 1), 
+                    averageScore=round(media.vote_average, 1),
                     format=media.media_type,
                     coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
                     releaseDate=media.release_date,
@@ -117,14 +145,16 @@ class MediaNormalizer:
         return media_list
 
     @staticmethod
-    def normalize_tmdb_detailed(media: Union[TMDBMovieDetail, TMDBTVDetail]) -> MediaDetailed:
+    def normalize_tmdb_detailed(
+        media: Union[TMDBMovieDetail, TMDBTVDetail],
+    ) -> MediaDetailed:
         media_type = "movie" if isinstance(media, TMDBMovieDetail) else "tv"
 
         try:
             return MediaDetailed(
                 id=media.id,
-                mediaSource="tmdb",
-                mediaType=media_type,
+                externalSource=MediaExternalSource.TMDB,
+                mediaType=MediaNormalizer._get_media_type(media_type),
                 title=(
                     (media.title or media.original_title)
                     if media_type == "movie"
@@ -134,13 +164,19 @@ class MediaNormalizer:
                 genres=[m.name for m in media.genres],
                 status=media.status,
                 coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
-                averageScore=round(media.vote_average, 1), 
+                averageScore=round(media.vote_average, 1),
                 description=media.overview,
                 bannerImage=f"https://image.tmdb.org/t/p/original/{media.backdrop_path}",
-                numberOfEpisodes=None if media_type == "movie" else media.number_of_episodes,
-                numberOfSeasons=None if media_type == "movie" else media.number_of_seasons,
+                numberOfEpisodes=(
+                    None if media_type == "movie" else media.number_of_episodes
+                ),
+                numberOfSeasons=(
+                    None if media_type == "movie" else media.number_of_seasons
+                ),
                 studios=[s.name for s in media.production_companies],
-                countryOfOrigin=media.origin_country[0] if media.origin_country else None,
+                countryOfOrigin=(
+                    media.origin_country[0] if media.origin_country else None
+                ),
                 isAdult=media.adult,
                 originalLanguage=media.original_language,
                 releaseDate=media.release_date if media_type == "movie" else None,

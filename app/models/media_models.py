@@ -5,7 +5,7 @@ from typing import List, Optional
 class MediaMinimal(BaseModel):
 
     id: int
-    media_source: str = Field(alias="mediaSource")
+    external_source: str = Field(alias="externalSource")
     media_type: str = Field(alias="mediaType")
 
     # shared
@@ -41,10 +41,11 @@ class MediaPagination(BaseModel):
 
     model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
 
+
 class MediaDetailed(BaseModel):
     id: int
-    media_source: str = Field(alias="mediaSource")
-    media_type: str = Field(alias="mediaType") 
+    external_source: str = Field(alias="externalSource")
+    media_type: str = Field(alias="mediaType")
 
     # shared
     title: str
@@ -55,50 +56,50 @@ class MediaDetailed(BaseModel):
     average_score: Optional[float] = Field(None, alias="averageScore")
     description: Optional[str] = None
     banner_image: Optional[str] = Field(None, alias="bannerImage")
-    #tags: List[Tag] = []
-    
+    # tags: List[Tag] = []
+
     # anime
     episodes: Optional[int] = None
-    #main_studio: Optional[str] = Field(None, alias="mainStudio")
-    studios: Optional[List[str]] = None 
+    # main_studio: Optional[str] = Field(None, alias="mainStudio")
+    studios: Optional[List[str]] = None
     duration: Optional[int] = None
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
     start_date: Optional[str] = Field(None, alias="startDate")
     end_date: Optional[str] = Field(None, alias="endDate")
     next_airing_episode: Optional[str] = Field(None, alias="nextAiringEpisode")
-    #relations: Relations = Relations(edges=[])
-    
+    # relations: Relations = Relations(edges=[])
+
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
     is_adult: Optional[bool] = Field(None, alias="isAdult")
     source: Optional[str] = None
     synonyms: Optional[List[str]] = None
-    
+
     # manga
     chapters: Optional[int] = None
     volumes: Optional[int] = None
-    
-    #imdb_id: Optional[str] = Field(None, alias="imdbId")
+
+    # imdb_id: Optional[str] = Field(None, alias="imdbId")
     original_language: Optional[str] = Field(None, alias="originalLanguage")
-    
+
     # movie
     release_date: Optional[str] = Field(None, alias="releaseDate")
-    #belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
+    # belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
     #    None, alias="belongsToCollection"
-    #)
+    # )
     budget: Optional[int] = None
     revenue: Optional[int] = None
     runtime: Optional[int] = None
-    
+
     # tv
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     created_by: Optional[str] = Field(None, alias="createdBy")
     episode_run_time: Optional[int] = Field(None, alias="episodeRunTime")
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
-    #next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="nextEpisodeToAir")
+    # next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="nextEpisodeToAir")
     number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
     number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
-    #seasons: Optional[List[TMDBSeason]] = None
+    # seasons: Optional[List[TMDBSeason]] = None
     type: Optional[str] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -106,9 +107,13 @@ class MediaDetailed(BaseModel):
 
 class MediaFeaturedBulk(BaseModel):
     trending: Optional[List[MediaMinimal]] = None
-    popular_season: Optional[List[MediaMinimal]] = Field(default=None, alias="popularSeason")
+    popular_season: Optional[List[MediaMinimal]] = Field(
+        default=None, alias="popularSeason"
+    )
     upcoming: Optional[List[MediaMinimal]] = None
     all_time: Optional[List[MediaMinimal]] = Field(default=None, alias="allTime")
-    all_time_manhwa: Optional[List[MediaMinimal]] = Field(default=None, alias="allTimeManhwa")
+    all_time_manhwa: Optional[List[MediaMinimal]] = Field(
+        default=None, alias="allTimeManhwa"
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

@@ -44,13 +44,16 @@ class UserMediaEntryService:
         update_dict = update_data.model_dump(exclude_unset=True)
         update_dict["updated_at"] = datetime.now(timezone.utc)
         result: UpdateResult = await self.repository.update_entry(entry_id, update_dict)
-        return await self.repository.get_entry_by_id(result.upserted_id)
+        return await self.repository.get_entry_by_id(entry_id)
 
-    async def delete_entry(self, entry_id: str, user_id: str) -> bool:
+    async def delete_entry(self, entry_id: str, user_id: str) -> str:
         await self._verify_ownership(entry_id, user_id)
         result: DeleteResult = await self.repository.delete_entry(entry_id)
-        await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
-        return result.acknowledged
+        if result.acknowledged:
+            await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
+            return entry_id
+        else:
+            raise ValueError("Failed to delete entry")
 
     async def get_entries_by_user_id(self, user_id: str) -> List[UserMediaEntryDB]:
         return await self.repository.get_entries_by_user_id(user_id)
