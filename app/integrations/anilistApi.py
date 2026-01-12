@@ -443,6 +443,7 @@ class AnilistApi:
                   season
                   seasonYear
                   averageScore
+                  bannerImage
                 }
                 """,
             "variables": variables,
@@ -536,6 +537,7 @@ class AnilistApi:
                     medium
                     extraLarge
                   }
+                  bannerImage
                   averageScore
                 }
             """,

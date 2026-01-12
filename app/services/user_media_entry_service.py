@@ -9,6 +9,7 @@ from app.models.user_media_entry_models import (
 )
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 from datetime import datetime, timezone
+from app.enums.user_media_entry_enums import UserMediaEntrySortFields, UserMediaEntrySortOptions
 
 import structlog
 
@@ -72,10 +73,10 @@ class UserMediaEntryService:
         is_favorite: Optional[bool],
         status: Optional[str],
         media_type: Optional[str],
-        page: int = 1,
-        per_page: int = 20,
-        sort_by: str = "created_at",
-        sort_order: int = -1,
+        page: int,
+        per_page: int,
+        sort_by: UserMediaEntrySortFields,
+        sort_order: UserMediaEntrySortOptions,
     ) -> UserMediaEntryPagination:
         filters: dict[str, Any] = {"user_id": user_id}
 

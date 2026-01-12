@@ -15,7 +15,8 @@ class MediaMinimal(BaseModel):
     status: Optional[str] = None
     cover_image: Optional[str] = Field(None, alias="coverImage")
     average_score: Optional[float] = Field(None, alias="averageScore")
-
+    banner_image: Optional[str] = Field(None, alias="bannerImage")
+    
     # anime
     episodes: Optional[int] = None
     main_studio: Optional[str] = Field(None, alias="mainStudio")

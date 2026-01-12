@@ -12,6 +12,11 @@ from app.services.user_media_entry_service import UserMediaEntryService
 from app.core.dependencies import get_user_media_entry_service
 from app.auth.auth_dependencies import get_current_user
 
+from app.enums.user_media_entry_enums import (
+    UserMediaEntrySortFields,
+    UserMediaEntrySortOptions,
+)
+
 user_media_entry_router = APIRouter(prefix="/user-media-entry", tags=["UserMediaEntry"])
 
 
@@ -70,7 +75,7 @@ async def get_entries_by_user_id(
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     try:
-        return await service.get_entries_by_user_id(user.id) # type: ignore
+        return await service.get_entries_by_user_id(user.id)  # type: ignore
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -90,15 +95,27 @@ async def get_entry_by_external_id(
 @user_media_entry_router.get("/", response_model=UserMediaEntryPagination)
 async def get_user_media_entries(
     page: int = Query(1, ge=1, alias="page", description="Page number"),
-    per_page: int = Query(20, ge=1, le=100, alias="perPage", description="Items per page"),
-    sort_by: str = Query("created_at", alias="sortBy", description="Sort by field"),
-    sort_order: int = Query(
-        -1, alias="sortOrder", description="Sort order: 1 for ascending, -1 for descending"
+    per_page: int = Query(
+        20, ge=1, le=100, alias="perPage", description="Items per page"
     ),
-    in_library: Optional[bool] = Query(None, alias="inLibrary", description="Filter by inLibrary"),
-    is_favorite: Optional[bool] = Query(None, alias="isFavorite", description="Filter by isFavorite"),
+    sort_by: UserMediaEntrySortFields = Query(
+        UserMediaEntrySortFields.CREATED_AT, alias="sortBy", description="Sort by field"
+    ),
+    sort_order: UserMediaEntrySortOptions = Query(
+        UserMediaEntrySortOptions.CREATED_AT_DESC,
+        alias="sortOrder",
+        description="Sort order: 1 for ascending, -1 for descending",
+    ),
+    in_library: Optional[bool] = Query(
+        None, alias="inLibrary", description="Filter by inLibrary"
+    ),
+    is_favorite: Optional[bool] = Query(
+        None, alias="isFavorite", description="Filter by isFavorite"
+    ),
     status: Optional[str] = Query(None, alias="status", description="Filter by status"),
-    media_type: Optional[str] = Query(None, alias="mediaType", description="Filter by media type"),
+    media_type: Optional[str] = Query(
+        None, alias="mediaType", description="Filter by media type"
+    ),
     user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):

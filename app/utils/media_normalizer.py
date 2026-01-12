@@ -44,7 +44,12 @@ class MediaNormalizer:
                     genres=media.genres,
                     status=media.status,
                     coverImage=media.cover_image.extra_large,
-                    averageScore=media.average_score,
+                    bannerImage=media.banner_image,
+                    averageScore=(
+                        round(media.average_score / 10, 1)
+                        if media.average_score
+                        else None
+                    ),
                     episodes=media.episodes,
                     mainStudio=next(
                         (
@@ -89,7 +94,9 @@ class MediaNormalizer:
                 genres=media.genres,
                 status=media.status,
                 coverImage=media.cover_image.large,
-                averageScore=media.average_score,
+                averageScore=(
+                    round(media.average_score / 10, 1) if media.average_score else None
+                ),
                 description=media.description,
                 bannerImage=media.banner_image,
                 episodes=media.episodes,
