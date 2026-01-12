@@ -1,5 +1,6 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal
 
 
 class Settings(BaseSettings):
@@ -9,16 +10,24 @@ class Settings(BaseSettings):
     log_level: str = Field(description="Logging level (e.g., DEBUG, INFO)")
     service_name: str = Field(description="Name of the service/application")
 
-    mongodb_uri: str = Field(description="MongoDB connection URI for the database cluster")
+    mongodb_uri: str = Field(
+        description="MongoDB connection URI for the database cluster"
+    )
     database_name: str = Field(description="Name of the MongoDB database to use")
-    review_collection: str = Field(description="Name of the MongoDB collection for storing reviews")
-    user_collection: str = Field(description="Name of the MongoDB collection for storing user data")
+    review_collection: str = Field(
+        description="Name of the MongoDB collection for storing reviews"
+    )
+    user_collection: str = Field(
+        description="Name of the MongoDB collection for storing user data"
+    )
     user_media_entry_collection: str = Field(
         description="Name of the MongoDB collection for storing user media entries"
     )
 
     jwt_secret_key: str = Field(description="Secret key used for signing JWT tokens")
-    jwt_algorithm: str = Field(description="Algorithm used for JWT encoding and decoding")
+    jwt_algorithm: str = Field(
+        description="Algorithm used for JWT encoding and decoding"
+    )
     jwt_access_token_expire_minutes: int = Field(
         description="Expiration time for JWT tokens in minutes"
     )
@@ -39,9 +48,28 @@ class Settings(BaseSettings):
     twitch_client_id: str = Field(description="Client ID for Twitch API")
     twitch_client_secret: str = Field(description="Client secret for Twitch API")
     igdb_access_token: str = Field(description="Access token for IGDB API")
-    igdb_expires_in: int = Field(description="Expiration time for IGDB access token in seconds")
+    igdb_expires_in: int = Field(
+        description="Expiration time for IGDB access token in seconds"
+    )
     steam_web_api_key: str = Field(description="API key for Steam Web API")
     omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
+
+    allow_origins_str: str = Field(
+        default="http://localhost:5173",
+        description="Comma-separated list of allowed origins",
+    )
+    allow_origins: list[str] = Field(default_factory=list)
+
+    samesite: Literal["lax", "strict", "none"] = Field(
+        default="none", description="SameSite attribute for cookies (none, lax, strict)"
+    )
+
+    @field_validator("allow_origins", mode="before")
+    @classmethod
+    def parse_allow_origins(cls, v, info):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
 
 _settings: Settings | None = None
