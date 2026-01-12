@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 
@@ -58,7 +58,11 @@ class Settings(BaseSettings):
         default="http://localhost:5173",
         description="Comma-separated list of allowed origins",
     )
-    allow_origins: list[str] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def allow_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.allow_origins_str.split(",")]
 
     samesite: Literal["lax", "strict", "none"] = Field(
         default="none", description="SameSite attribute for cookies (none, lax, strict)"
