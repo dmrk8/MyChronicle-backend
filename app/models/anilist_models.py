@@ -79,6 +79,65 @@ class Studios(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class CharacterImage(BaseModel):
+    large: Optional[str] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class CharacterName(BaseModel):
+    full: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class CharacterNode(BaseModel):
+    image: CharacterImage
+    name: CharacterName
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class CharacterEdge(BaseModel):
+    node: CharacterNode
+    name: Optional[str] = None
+    role: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class Characters(BaseModel):
+    edges: List[CharacterEdge]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class RecommendationMedia(BaseModel):
+    id: int
+    title: Title
+    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class RecommendationNode(BaseModel):
+    media_recommendation: RecommendationMedia = Field(..., alias="mediaRecommendation")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class RecommendationEdge(BaseModel):
+    node: RecommendationNode
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class Recommendations(BaseModel):
+    edges: List[RecommendationEdge]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
 class AnilistMediaMinimal(BaseModel):
     id: int = Field(..., alias="id")
     type: str
@@ -91,7 +150,9 @@ class AnilistMediaMinimal(BaseModel):
     status: Optional[str] = None
     start_date: Optional[MediaDate] = Field(None, alias="startDate")
     end_date: Optional[MediaDate] = Field(None, alias="endDate")
-    next_airing_episode: Optional[NextAiringEpisode] = Field(None, alias="nextAiringEpisode")
+    next_airing_episode: Optional[NextAiringEpisode] = Field(
+        None, alias="nextAiringEpisode"
+    )
     studios: Studios = Studios(edges=[])
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
     banner_image: Optional[str] = Field(None, alias="bannerImage")
@@ -116,7 +177,9 @@ class AnilistMediaDetailed(BaseModel):
     format: Optional[str] = None
     genres: Optional[List[str]] = None
     is_adult: Optional[bool] = Field(None, alias="isAdult")
-    next_airing_episode: Optional[NextAiringEpisode] = Field(None, alias="nextAiringEpisode")
+    next_airing_episode: Optional[NextAiringEpisode] = Field(
+        None, alias="nextAiringEpisode"
+    )
     relations: Relations = Relations(edges=[])
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
@@ -129,6 +192,8 @@ class AnilistMediaDetailed(BaseModel):
     volumes: Optional[int] = None
     tags: List[Tag] = []
     studios: Studios = Studios(edges=[])
+    recommendations: Optional[Recommendations] = None
+    characters: Optional[Characters] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -154,10 +219,12 @@ class AnilistPagination(BaseModel):
 
 class AnilistFeaturedMediaResponse(BaseModel):
     trending: Optional[List[AnilistMediaMinimal]] = None
-    popular_season: Optional[List[AnilistMediaMinimal]] = Field(default=None, alias="popularSeason")
+    popular_season: Optional[List[AnilistMediaMinimal]] = Field(
+        default=None, alias="popularSeason"
+    )
     upcoming: Optional[List[AnilistMediaMinimal]] = None
     all_time: Optional[List[AnilistMediaMinimal]] = Field(default=None, alias="allTime")
-    alL_time_manhwa: Optional[List[AnilistMediaMinimal]] = Field(
+    all_time_manhwa: Optional[List[AnilistMediaMinimal]] = Field(
         default=None, alias="allTimeManhwa"
     )
 

@@ -31,7 +31,12 @@ class AnilistApi:
         Uses the provided GraphQL query with different parameters for each category.
         """
 
-        variables = {"page": page, "perPage": per_page, "sort": [sort], "type": media_type}
+        variables = {
+            "page": page,
+            "perPage": per_page,
+            "sort": [sort],
+            "type": media_type,
+        }
 
         if season:
             variables["season"] = season
@@ -276,6 +281,7 @@ class AnilistApi:
                       title {
                         english
                         romaji
+                        native
                       }
                       format
                       id
@@ -313,6 +319,37 @@ class AnilistApi:
                       name
                       id
                     }
+                  }
+                }
+                recommendations(sort: RATING_DESC, page: 1, perPage: 6) {
+                  edges {
+                    node {
+                      mediaRecommendation {
+                        id
+                        title {
+                          english
+                          native
+                          romaji
+                        }
+                        coverImage {
+                          extraLarge
+                        }
+                      }
+                    }
+                  }
+                }
+                characters(sort: RELEVANCE, page: 1, perPage: 6) {
+                  edges {
+                    node {
+                      image {
+                        large
+                      }
+                      name {
+                        full
+                      }
+                    }
+                    name
+                    role
                   }
                 }
                 id
@@ -460,7 +497,9 @@ class AnilistApi:
         )
 
         trending_results = data.get("data", {}).get("trending").get("media", [])
-        popular_season_results = data.get("data", {}).get("popularSeason").get("media", [])
+        popular_season_results = (
+            data.get("data", {}).get("popularSeason").get("media", [])
+        )
         upcoming_results = data.get("data", {}).get("upcoming").get("media", [])
         alltime_results = data.get("data", {}).get("allTime").get("media", [])
 
@@ -481,7 +520,10 @@ class AnilistApi:
             all_time.append(AnilistMediaMinimal.model_validate(media))
 
         return AnilistFeaturedMediaResponse(
-            allTime=all_time, popularSeason=popular_season, trending=trending, upcoming=upcoming
+            allTime=all_time,
+            popularSeason=popular_season,
+            trending=trending,
+            upcoming=upcoming,
         )
 
     async def get_featured_manga_bulk(
@@ -556,7 +598,9 @@ class AnilistApi:
 
         trending_results = data.get("data", {}).get("trending").get("media", [])
         alltime_results = data.get("data", {}).get("Alltime").get("media", [])
-        alltime_manhwa_results = data.get("data", {}).get("AlltimeManhwa").get("media", [])
+        alltime_manhwa_results = (
+            data.get("data", {}).get("AlltimeManhwa").get("media", [])
+        )
 
         trending = []
         for media in trending_results:

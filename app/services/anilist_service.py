@@ -1,11 +1,21 @@
 from typing import List, Optional
-from app.models.anilist_models import AnilistMediaDetailed, AnilistPagination, AnilistMediaMinimal
+from app.models.anilist_models import (
+    AnilistMediaDetailed,
+    AnilistPagination,
+    AnilistMediaMinimal,
+)
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
 from app.utils.media_normalizer import MediaNormalizer
-from app.models.media_models import MediaFeaturedBulk, MediaMinimal, MediaPagination, MediaDetailed
+from app.models.media_models import (
+    MediaFeaturedBulk,
+    MediaMinimal,
+    MediaPagination,
+    MediaDetailedUnion,
+)
 from app.context.anilist_season_info import get_season_context
-
+import structlog
+logger = structlog.get_logger("anilist_service")
 
 class AnilistService:
     def __init__(self, anilist_api: AnilistApi):
@@ -66,10 +76,13 @@ class AnilistService:
             total=page_info.total,
         )
 
-    async def get_media_detail(self, media_id: int) -> MediaDetailed:
-
+    async def get_media_detail(self, media_id: int) -> MediaDetailedUnion:
         res = await self.anilist_api.get_media_detail(media_id)
-        return MediaNormalizer.normalize_anilist_detailed(res)
+        try:
+            return MediaNormalizer.normalize_anilist_detailed(res)
+        except Exception as e:
+            logger.error(f"Error normalizing media detail for ID {media_id}: {e}")
+            raise ValueError(f"Failed to normalize media detail: {e}")
 
     async def get_featured_media_bulk(
         self,
@@ -91,7 +104,9 @@ class AnilistService:
         )
         return {
             "trending": MediaNormalizer.normalize_anilist_minimal(res.trending),
-            "popularSeason": MediaNormalizer.normalize_anilist_minimal(res.popular_season),
+            "popularSeason": MediaNormalizer.normalize_anilist_minimal(
+                res.popular_season
+            ),
             "upcoming": MediaNormalizer.normalize_anilist_minimal(res.upcoming),
             "allTime": MediaNormalizer.normalize_anilist_minimal(res.all_time),
         }
@@ -113,7 +128,9 @@ class AnilistService:
         return {
             "trending": MediaNormalizer.normalize_anilist_minimal(res["trending"]),
             "allTime": MediaNormalizer.normalize_anilist_minimal(res["allTime"]),
-            "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(res["allTimeManhwa"]),
+            "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(
+                res["allTimeManhwa"]
+            ),
         }
 
     async def get_featured_bulk(
@@ -121,7 +138,7 @@ class AnilistService:
         media_type: str = AnilistMediaType.ANIME,
         page: int = 1,
         per_page: int = 6,
-    )-> MediaFeaturedBulk:
+    ) -> MediaFeaturedBulk:
         """
         Fetches featured anime and/or manga data in bulk.
         """
@@ -138,9 +155,11 @@ class AnilistService:
             )
             return MediaFeaturedBulk(
                 trending=MediaNormalizer.normalize_anilist_minimal(anime_res.trending),
-                popularSeason=MediaNormalizer.normalize_anilist_minimal(anime_res.popular_season),
+                popularSeason=MediaNormalizer.normalize_anilist_minimal(
+                    anime_res.popular_season
+                ),
                 upcoming=MediaNormalizer.normalize_anilist_minimal(anime_res.upcoming),
-                all_time=MediaNormalizer.normalize_anilist_minimal(anime_res.all_time), # type: ignore
+                all_time=MediaNormalizer.normalize_anilist_minimal(anime_res.all_time),  # type: ignore
             )
         else:
             res = await self.anilist_api.get_featured_manga_bulk(
@@ -149,7 +168,7 @@ class AnilistService:
                 media_type=media_type,
             )
             return MediaFeaturedBulk(
-                trending=MediaNormalizer.normalize_anilist_minimal(res.trending), # type: ignore
-                allTime=MediaNormalizer.normalize_anilist_minimal(res.all_time), # type: ignore
-                allTimeManhwa=MediaNormalizer.normalize_anilist_minimal(res.alL_time_manhwa), # type: ignore
+                trending=MediaNormalizer.normalize_anilist_minimal(res.trending),  # type: ignore
+                allTime=MediaNormalizer.normalize_anilist_minimal(res.all_time),  # type: ignore
+                allTimeManhwa=MediaNormalizer.normalize_anilist_minimal(res.all_time_manhwa),  # type: ignore
             )

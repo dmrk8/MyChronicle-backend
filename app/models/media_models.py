@@ -1,9 +1,18 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Union
+
+from app.models.anilist_models import (
+    Characters,
+    MediaDate,
+    NextAiringEpisode,
+    Recommendations,
+    Relations,
+    Studios,
+    Tag,
+)
 
 
 class MediaMinimal(BaseModel):
-
     id: int
     external_source: str = Field(alias="externalSource")
     media_type: str = Field(alias="mediaType")
@@ -16,7 +25,7 @@ class MediaMinimal(BaseModel):
     cover_image: Optional[str] = Field(None, alias="coverImage")
     average_score: Optional[float] = Field(None, alias="averageScore")
     banner_image: Optional[str] = Field(None, alias="bannerImage")
-    
+
     # anime
     episodes: Optional[int] = None
     main_studio: Optional[str] = Field(None, alias="mainStudio")
@@ -43,6 +52,88 @@ class MediaPagination(BaseModel):
     model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
 
 
+class MediaBase(BaseModel):
+    id: int
+    external_source: str = Field(alias="externalSource")
+    media_type: str = Field(alias="mediaType")
+    title: str
+    format: Optional[str] = None
+    genres: Optional[List[str]] = None
+    status: Optional[str] = None
+    cover_image: Optional[str] = Field(None, alias="coverImage")
+    average_score: Optional[float] = Field(None, alias="averageScore")
+    description: Optional[str] = None
+    banner_image: Optional[str] = Field(None, alias="bannerImage")
+    is_adult: Optional[bool] = Field(None, alias="isAdult")
+    synonyms: Optional[List[str]] = None
+
+    model_config = ConfigDict(
+        validate_by_name=True,
+        validate_by_alias=True,
+        from_attributes=True,
+    )
+
+
+class AnimeDetailed(MediaBase):
+    episodes: Optional[int] = None
+    studios: Optional[Studios] = None
+    duration: Optional[int] = None
+    season: Optional[str] = None
+    season_year: Optional[int] = Field(None, alias="seasonYear")
+    start_date: Optional[MediaDate] = Field(None, alias="startDate")
+    end_date: Optional[MediaDate] = Field(None, alias="endDate")
+    next_airing_episode: Optional[NextAiringEpisode] = Field(
+        None, alias="nextAiringEpisode"
+    )
+    country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
+    source: Optional[str] = None
+    tags: Optional[List[Tag]] = None
+    relations: Optional[Relations] = None
+    recommendations: Optional[Recommendations] = None
+    characters: Optional[Characters] = None
+
+
+class MangaDetailed(MediaBase):
+    chapters: Optional[int] = None
+    volumes: Optional[int] = None
+    start_date: Optional[MediaDate] = Field(None, alias="startDate")
+    end_date: Optional[MediaDate] = Field(None, alias="endDate")
+    country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
+    source: Optional[str] = None
+    tags: Optional[List[Tag]] = None
+    relations: Optional[Relations] = None
+    recommendations: Optional[Recommendations] = None
+    characters: Optional[Characters] = None
+
+
+class MovieDetailed(MediaBase):
+    release_date: Optional[str] = Field(None, alias="releaseDate")
+    budget: Optional[int] = None
+    revenue: Optional[int] = None
+    runtime: Optional[int] = None  # total runtime in minutes
+    original_language: Optional[str] = Field(None, alias="originalLanguage")
+    # belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
+    #     None, alias="belongsToCollection"
+    # )
+
+
+class TVDetailed(MediaBase):
+    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
+    last_air_date: Optional[str] = Field(None, alias="lastAirDate")
+    created_by: Optional[str] = Field(None, alias="createdBy")
+    episode_run_time: Optional[int] = Field(None, alias="episodeRunTime")
+    number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
+    number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
+    # next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(
+    #     None, alias="nextEpisodeToAir"
+    # )
+    # seasons: Optional[List[TMDBSeason]] = None
+    type: Optional[str] = None  # e.g., Scripted, Documentary
+    original_language: Optional[str] = Field(None, alias="originalLanguage")
+
+
+MediaDetailedUnion = Union[AnimeDetailed, MangaDetailed, MovieDetailed, TVDetailed]
+
 class MediaDetailed(BaseModel):
     id: int
     external_source: str = Field(alias="externalSource")
@@ -57,6 +148,8 @@ class MediaDetailed(BaseModel):
     average_score: Optional[float] = Field(None, alias="averageScore")
     description: Optional[str] = None
     banner_image: Optional[str] = Field(None, alias="bannerImage")
+    is_adult: Optional[bool] = Field(None, alias="isAdult")
+    synonyms: Optional[List[str]] = None
     # tags: List[Tag] = []
 
     # anime

@@ -8,7 +8,15 @@ from app.models.anilist_models import (
     AnilistPageInfo,
 )
 from app.models.tmdb_models import TMDBMediaMinimal, TMDBTVDetail, TMDBMovieDetail
-from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed
+from app.models.media_models import (
+    MediaBase,
+    MediaMinimal,
+    MediaPagination,
+    MediaDetailed,
+    AnimeDetailed,
+    MangaDetailed,
+    MediaDetailedUnion
+)
 from app.utils.genre_utils import get_movie_genre_name_by_id, get_tv_genre_name_by_id
 from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
 
@@ -67,55 +75,76 @@ class MediaNormalizer:
         return media_list
 
     @staticmethod
-    def normalize_anilist_detailed(media: AnilistMediaDetailed) -> MediaDetailed:
-        def format_date(date):
-            if date and date.year:
-                dt = datetime.date(date.year, date.month or 1, date.day or 1)
-                return f"{dt.day} {dt.strftime('%B %Y')}"
-            return None
-
-        try:
-            next_airing_str = None
-            if (
-                media.next_airing_episode
-                and media.next_airing_episode.airing_at is not None
-            ):
-                dt = datetime.datetime.fromtimestamp(
-                    float(media.next_airing_episode.airing_at)
-                )
-                next_airing_str = f"Episode {media.next_airing_episode.episode} airs on {dt.day} {dt.strftime('%B %Y')}"
-
-            return MediaDetailed(
+    def normalize_anilist_detailed(media: AnilistMediaDetailed) -> MediaDetailedUnion:
+        if media.type == MediaType.ANIME:
+            return AnimeDetailed(
                 id=media.id,
                 externalSource=MediaExternalSource.ANILIST,
-                mediaType=MediaNormalizer._get_media_type(media.type),
-                title=media.title.english or media.title.romaji or media.title.native,
+                mediaType=MediaType.ANIME,
+                title=media.title.english
+                or media.title.romaji
+                or media.title.native
+                or "",
                 format=media.format,
                 genres=media.genres,
                 status=media.status,
-                coverImage=media.cover_image.large,
+                coverImage=media.cover_image.large if media.cover_image else None,
                 averageScore=(
                     round(media.average_score / 10, 1) if media.average_score else None
                 ),
                 description=media.description,
                 bannerImage=media.banner_image,
-                episodes=media.episodes,
-                studios=[edge.node.name for edge in media.studios.edges],
-                duration=media.duration,
+                isAdult=media.is_adult,
+                synonyms=media.synonyms,
+                countryOfOrigin=media.country_of_origin,
                 season=media.season,
                 seasonYear=media.season_year,
-                startDate=format_date(media.start_date),
-                endDate=format_date(media.end_date),
-                nextAiringEpisode=next_airing_str,
-                countryOfOrigin=media.country_of_origin,
-                isAdult=media.is_adult,
                 source=media.source,
+                episodes=media.episodes,
+                duration=media.duration,
+                startDate=media.start_date,
+                endDate=media.end_date,
+                studios=media.studios,
+                tags=media.tags,
+                relations=media.relations,
+                recommendations=media.recommendations,
+                characters=media.characters,
+                nextAiringEpisode=media.next_airing_episode,
+            )
+        elif media.type == MediaType.MANGA:
+            return MangaDetailed(
+                id=media.id,
+                externalSource=MediaExternalSource.ANILIST,
+                mediaType=MediaType.MANGA,
+                title=media.title.english
+                or media.title.romaji
+                or media.title.native
+                or "",
+                format=media.format,
+                genres=media.genres,
+                status=media.status,
+                coverImage=media.cover_image.large if media.cover_image else None,
+                averageScore=(
+                    round(media.average_score / 10, 1) if media.average_score else None
+                ),
+                description=media.description,
+                bannerImage=media.banner_image,
+                isAdult=media.is_adult,
                 synonyms=media.synonyms,
+                countryOfOrigin=media.country_of_origin,
+                source=media.source,
                 chapters=media.chapters,
                 volumes=media.volumes,
-            )  # type: ignore
-        except Exception as e:
-            logger.info("normalize_anilist_detail", error=str(e))
+                startDate=media.start_date,
+                endDate=media.end_date,
+                tags=media.tags,
+                relations=media.relations,
+                recommendations=media.recommendations,
+                characters=media.characters,
+            )
+        else:
+            raise ValueError(f"Unsupported media type: {media.type}")
+
 
     @staticmethod
     def normalize_tmdb_minimal(
