@@ -10,6 +10,7 @@ from app.models.anilist_models import (
 from app.models.tmdb_models import TMDBMediaMinimal, TMDBTVDetail, TMDBMovieDetail
 from app.models.media_models import (
     MediaBase,
+    MediaCast,
     MediaMinimal,
     MediaPagination,
     MediaDetailed,
@@ -100,15 +101,25 @@ class MediaNormalizer:
             else None
         )
 
-        recommendations = [
-            MediaRecommendation(
-                id=edge.node.media_recommendation.id,
-                title=edge.node.media_recommendation.title,
-                coverImage=edge.node.media_recommendation.cover_image,
-            )
-            for edge in media.recommendations.edges
-        ] if media.recommendations else None
-        
+        recommendations = (
+            [
+                MediaRecommendation(
+                    id=edge.node.media_recommendation.id,
+                    title=edge.node.media_recommendation.title.english
+                    or edge.node.media_recommendation.title.romaji
+                    or edge.node.media_recommendation.title.native
+                    or "",
+                    coverImage=(
+                        edge.node.media_recommendation.cover_image.extra_large
+                        if edge.node.media_recommendation.cover_image
+                        else None
+                    ),
+                )
+                for edge in media.recommendations.edges
+            ]
+            if media.recommendations
+            else None
+        )
 
         characters = (
             [
@@ -143,7 +154,9 @@ class MediaNormalizer:
                 format=media.format,
                 genres=media.genres,
                 status=media.status,
-                coverImage=media.cover_image.large if media.cover_image else None,
+                coverImage=(
+                    media.cover_image.extra_large if media.cover_image.large else None
+                ),
                 averageScore=(
                     round(media.average_score / 10, 1) if media.average_score else None
                 ),
@@ -178,7 +191,9 @@ class MediaNormalizer:
                 format=media.format,
                 genres=media.genres,
                 status=media.status,
-                coverImage=media.cover_image.large if media.cover_image else None,
+                coverImage=(
+                    media.cover_image.extra_large if media.cover_image.large else None
+                ),
                 averageScore=(
                     round(media.average_score / 10, 1) if media.average_score else None
                 ),
@@ -257,13 +272,47 @@ class MediaNormalizer:
                 revenue=media.revenue,
                 runtime=media.runtime,
                 belongsToCollection=media.belongs_to_collection,
-                alternativeTitles=media.alternative_titles,
-                keywords=media.keywords,
-                credits=media.credits,
-                productionCompanies=media.production_companies,
-                recommendations=media.recommendations,
-                spokenLanguages=media.spoken_languages,
-                synonyms=[t.title for t in media.alternative_titles.titles],
+                alternativeTitles=(
+                    [t.title for t in media.alternative_titles.titles]
+                    if media.alternative_titles
+                    else None
+                ),
+                keywords=(
+                    [k.name for k in media.keywords.keywords]
+                    if media.keywords
+                    else None
+                ),
+                credits=(
+                    [
+                        MediaCast(
+                            name=c.name,
+                            character=c.character,
+                            cast_image=f"https://image.tmdb.org/t/p/original/{c.profile_path}",
+                        )
+                        for c in media.credits.cast[:6]
+                    ]
+                    if media.credits
+                    else None
+                ),
+                productionCompanies=[p.name for p in media.production_companies],
+                recommendations=(
+                    [
+                        MediaRecommendation(
+                            id=r.id,
+                            title=r.title or r.original_title or "",
+                            coverImage=f"https://image.tmdb.org/t/p/original/{r.poster_path}",
+                        )
+                        for r in media.recommendations.results[:6]
+                    ]
+                    if media.recommendations
+                    else None
+                ),
+                spokenLanguages=[l.english_name for l in media.spoken_languages],
+                synonyms=(
+                    [t.title for t in media.alternative_titles.titles]
+                    if media.alternative_titles
+                    else None
+                ),
             )
         except Exception as e:
             logger.error("normalize_tmdb_detailed_movie", error=str(e))
@@ -275,7 +324,7 @@ class MediaNormalizer:
             return TVDetailed(
                 id=media.id,
                 externalSource=MediaExternalSource.TMDB,
-                mediaType=MediaNormalizer._get_media_type("movie"),
+                mediaType=MediaNormalizer._get_media_type("tv"),
                 title=media.name or media.original_name or "",
                 format=media.type,
                 genres=[m.name for m in media.genres],
@@ -288,7 +337,7 @@ class MediaNormalizer:
                 originalLanguage=media.original_language,
                 firstAirDate=media.first_air_date,
                 lastAirDate=media.last_air_date,
-                createdBy=media.created_by,
+                createdBy=[c.name for c in media.created_by],
                 numberOfEpisodes=media.number_of_episodes,
                 numberOfSeasons=media.number_of_seasons,
                 nextEpisodeToAir=media.next_episode_to_air,
@@ -297,17 +346,45 @@ class MediaNormalizer:
                 inProduction=media.in_production,
                 languages=media.languages,
                 lastEpisodeToAir=media.last_episode_to_air,
-                networks=media.networks,
-                keywords=media.keywords,
-                credits=media.credits,
-                recommendations=media.recommendations,
-                productionCountries=media.production_countries,
+                networks=[n.name for n in media.networks],
+                keywords=(
+                    [k.name for k in media.keywords.results] if media.keywords else None
+                ),
+                credits=(
+                    [
+                        MediaCast(
+                            name=c.name,
+                            character=c.character,
+                            cast_image=f"https://image.tmdb.org/t/p/original/{c.profile_path}",
+                        )
+                        for c in media.credits.cast[:6]
+                    ]
+                    if media.credits
+                    else None
+                ),
+                recommendations=(
+                    [
+                        MediaRecommendation(
+                            id=r.id,
+                            title=r.title
+                            or r.name
+                            or r.original_title
+                            or r.original_name
+                            or "",
+                            coverImage=f"https://image.tmdb.org/t/p/original/{r.poster_path}",
+                        )
+                        for r in media.recommendations.results[:6]
+                    ]
+                    if media.recommendations
+                    else None
+                ),
+                productionCountries=[p.name for p in media.production_countries],
                 synonyms=(
                     [t.title for t in media.alternative_titles.results]
                     if media.alternative_titles
-                    else []
+                    else None
                 ),
             )
         except Exception as e:
-            logger.error("normalize_tmdb_detailed_movie", error=str(e))
+            logger.error("normalize_tmdb_detailed_tv", error=str(e))
             raise

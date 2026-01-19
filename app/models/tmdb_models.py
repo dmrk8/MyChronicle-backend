@@ -49,13 +49,15 @@ class TMDBLastEpisodeToAir(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class TMDBNextEpisodeToAir(BaseModel):
     air_date: str = Field(..., alias="airDate")
     episode_number: int = Field(..., alias="episodeNumber")
     season_number: int = Field(..., alias="seasonNumber")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-    
+
+
 class TMDBNetwork(BaseModel):
     name: str
 

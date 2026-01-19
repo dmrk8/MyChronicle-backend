@@ -114,8 +114,8 @@ class MediaRelations(BaseModel):
 
 class MediaRecommendation(BaseModel):
     id: int
-    title: Title
-    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+    title: str
+    cover_image: Optional[str] = Field(None, alias="coverImage")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -157,6 +157,13 @@ class MangaDetailed(MediaBase):
     recommendations: Optional[List[MediaRecommendation]] = None
     characters: Optional[List[MediaCharacters]] = None
 
+class MediaCast(BaseModel):
+    name: str
+    character: Optional[str] = None
+    cast_image: Optional[str]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 
 class MovieDetailed(MediaBase):
     release_date: Optional[str] = Field(None, alias="releaseDate")
@@ -168,22 +175,22 @@ class MovieDetailed(MediaBase):
     belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
         None, alias="belongsToCollection"
     )
-    production_companies: List[TMDBProductionCompany] = Field(
-        ..., alias="productionCompanies"
+    production_companies: Optional[List[str]] = Field(
+        None, alias="productionCompanies"
     )
-    keywords: Optional[TMDBMovieKeywords] = None
-    recommendations: Optional[TMDBPaginationRecommendation] = None
-    alternative_titles: Optional[TMDBAlternativeTitles] = Field(
+    keywords: Optional[List[str]] = None
+    recommendations: Optional[List[MediaRecommendation]] = None
+    alternative_titles: Optional[Optional[List[str]]] = Field(
         None, alias="alternativeTitles"
     )
-    credits: Optional[TMDBCredits] = None
-    spoken_languages: List[TMDBSpokenLanguage] = Field(..., alias="spokenLanguages")
+    credits: Optional[List[MediaCast]] = None
+    spoken_languages: Optional[List[str]] = Field(None, alias="spokenLanguages")
 
 
 class TVDetailed(MediaBase):
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
-    created_by: Optional[List[TMDBCreatedBy]] = Field(None, alias="createdBy")
+    created_by: Optional[List[str]] = Field(None, alias="createdBy")
     number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
     number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
     next_episode_to_air: Optional[TMDBNextEpisodeToAir] = Field(
@@ -197,11 +204,11 @@ class TVDetailed(MediaBase):
     last_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(
         None, alias="lastEpisodeToAir"
     )
-    networks: Optional[List[TMDBNetwork]] = None
-    keywords: Optional[TMDBTvKeywords] = None
-    credits: Optional[TMDBCredits] = None
-    recommendations: Optional[TMDBPaginationRecommendation] = None
-    production_countries: Optional[List[TMDBProductionCountry]] = Field(
+    networks: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    credits: Optional[List[MediaCast]] = None
+    recommendations: Optional[List[MediaRecommendation]] = None
+    production_countries: Optional[List[str]] = Field(
         None, alias="productionCountries"
     )
 
