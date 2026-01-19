@@ -10,6 +10,25 @@ from app.models.anilist_models import (
     Studios,
     Tag,
 )
+from app.models.tmdb_models import (
+    TMDBAlternativeTitles,
+    TMDBBelongsToCollection,
+    TMDBCollectionPart,
+    TMDBCreatedBy,
+    TMDBCredits,
+    TMDBLastEpisodeToAir,
+    TMDBMovieKeywords,
+    TMDBNextEpisodeToAir,
+    TMDBPagination,
+    TMDBPaginationRecommendation,
+    TMDBProductionCompany,
+    TMDBSeason,
+    TMDBSpokenLanguage,
+    TMDBExternalIds,
+    TMDBNetwork,
+    TMDBTvKeywords,
+    TMDBProductionCountry,
+)
 
 
 class MediaMinimal(BaseModel):
@@ -110,29 +129,63 @@ class MovieDetailed(MediaBase):
     release_date: Optional[str] = Field(None, alias="releaseDate")
     budget: Optional[int] = None
     revenue: Optional[int] = None
-    runtime: Optional[int] = None  # total runtime in minutes
+    runtime: Optional[int] = None
+    origin_country: List[str] = Field(..., alias="originCountry")
     original_language: Optional[str] = Field(None, alias="originalLanguage")
-    # belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
-    #     None, alias="belongsToCollection"
-    # )
+    belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
+        None, alias="belongsToCollection"
+    )
+    production_companies: List[TMDBProductionCompany] = Field(
+        ..., alias="productionCompanies"
+    )
+    keywords: Optional[TMDBMovieKeywords] = None
+    recommendations: Optional[TMDBPaginationRecommendation] = None
+    alternative_titles: Optional[TMDBAlternativeTitles] = Field(
+        None, alias="alternativeTitles"
+    )
+    credits: Optional[TMDBCredits] = None
+    spoken_languages: List[TMDBSpokenLanguage] = Field(..., alias="spokenLanguages")
 
 
 class TVDetailed(MediaBase):
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
-    created_by: Optional[str] = Field(None, alias="createdBy")
-    episode_run_time: Optional[int] = Field(None, alias="episodeRunTime")
+    created_by: Optional[List[TMDBCreatedBy]] = Field(None, alias="createdBy")
     number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
     number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
-    # next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(
-    #     None, alias="nextEpisodeToAir"
-    # )
-    # seasons: Optional[List[TMDBSeason]] = None
+    next_episode_to_air: Optional[TMDBNextEpisodeToAir] = Field(
+        None, alias="nextEpisodeToAir"
+    )
+    seasons: Optional[List[TMDBSeason]] = None
     type: Optional[str] = None  # e.g., Scripted, Documentary
     original_language: Optional[str] = Field(None, alias="originalLanguage")
+    in_production: Optional[bool] = Field(None, alias="inProduction")
+    languages: Optional[List[str]] = None
+    last_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(
+        None, alias="lastEpisodeToAir"
+    )
+    networks: Optional[List[TMDBNetwork]] = None
+    keywords: Optional[TMDBTvKeywords] = None
+    credits: Optional[TMDBCredits] = None
+    recommendations: Optional[TMDBPaginationRecommendation] = None
+    production_countries: Optional[List[TMDBProductionCountry]] = Field(
+        None, alias="productionCountries"
+    )
 
 
 MediaDetailedUnion = Union[AnimeDetailed, MangaDetailed, MovieDetailed, TVDetailed]
+
+
+class MovieCollection(BaseModel):
+    id: int
+    name: str
+    overview: str
+    poster_path: Optional[str] = Field(None, alias="posterPath")
+    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
+    parts: List[TMDBCollectionPart]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 
 class MediaDetailed(BaseModel):
     id: int

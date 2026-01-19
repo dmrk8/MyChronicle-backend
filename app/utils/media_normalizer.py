@@ -15,7 +15,9 @@ from app.models.media_models import (
     MediaDetailed,
     AnimeDetailed,
     MangaDetailed,
-    MediaDetailedUnion
+    MovieDetailed,
+    TVDetailed,
+    MediaDetailedUnion,
 )
 from app.utils.genre_utils import get_movie_genre_name_by_id, get_tv_genre_name_by_id
 from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
@@ -145,7 +147,6 @@ class MediaNormalizer:
         else:
             raise ValueError(f"Unsupported media type: {media.type}")
 
-
     @staticmethod
     def normalize_tmdb_minimal(
         results: List[TMDBMediaMinimal], media_type: str
@@ -181,52 +182,79 @@ class MediaNormalizer:
         return media_list
 
     @staticmethod
-    def normalize_tmdb_detailed(
-        media: Union[TMDBMovieDetail, TMDBTVDetail],
-    ) -> MediaDetailed:
-        media_type = "movie" if isinstance(media, TMDBMovieDetail) else "tv"
-
+    def normalize_tmdb_detailed_movie(media: TMDBMovieDetail) -> MediaDetailedUnion:
         try:
-            return MediaDetailed(
+            return MovieDetailed(
                 id=media.id,
                 externalSource=MediaExternalSource.TMDB,
-                mediaType=MediaNormalizer._get_media_type(media_type),
-                title=(
-                    (media.title or media.original_title)
-                    if media_type == "movie"
-                    else (media.name or media.original_name)
-                ),
-                format=media_type,
+                mediaType=MediaNormalizer._get_media_type("movie"),
+                title=media.title or media.original_title or "",
+                format="movie",
                 genres=[m.name for m in media.genres],
                 status=media.status,
                 coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
                 averageScore=round(media.vote_average, 1),
                 description=media.overview,
                 bannerImage=f"https://image.tmdb.org/t/p/original/{media.backdrop_path}",
-                numberOfEpisodes=(
-                    None if media_type == "movie" else media.number_of_episodes
-                ),
-                numberOfSeasons=(
-                    None if media_type == "movie" else media.number_of_seasons
-                ),
-                studios=[s.name for s in media.production_companies],
-                countryOfOrigin=(
-                    media.origin_country[0] if media.origin_country else None
-                ),
+                originCountry=media.origin_country,
                 isAdult=media.adult,
                 originalLanguage=media.original_language,
-                releaseDate=media.release_date if media_type == "movie" else None,
-                budget=media.budget if media_type == "movie" else None,
-                revenue=media.revenue if media_type == "movie" else None,
-                runtime=media.runtime if media_type == "movie" else None,
-                firstAirDate=media.first_air_date if media_type == "tv" else None,
-                episodeRunTime=(
-                    media.episode_run_time[0]
-                    if media_type == "tv" and media.episode_run_time
-                    else None
-                ),
-                lastAirDate=media.last_air_date if media_type == "tv" else None,
-                type=media.type if media_type == "tv" else None,
-            )  # type: ignore
+                releaseDate=media.release_date,
+                budget=media.budget,
+                revenue=media.revenue,
+                runtime=media.runtime,
+                belongsToCollection=media.belongs_to_collection,
+                alternativeTitles=media.alternative_titles,
+                keywords=media.keywords,
+                credits=media.credits,
+                productionCompanies=media.production_companies,
+                recommendations=media.recommendations,
+                spokenLanguages=media.spoken_languages,
+                synonyms=[t.title for t in media.alternative_titles.titles],
+            )
         except Exception as e:
-            logger.info("normalize_tmdb_detailed", error=str(e))
+            logger.error("normalize_tmdb_detailed_movie", error=str(e))
+            raise
+
+    @staticmethod
+    def normalize_tmdb_detailed_tv(media: TMDBTVDetail) -> MediaDetailedUnion:
+        try:
+            return TVDetailed(
+                id=media.id,
+                externalSource=MediaExternalSource.TMDB,
+                mediaType=MediaNormalizer._get_media_type("movie"),
+                title=media.name or media.original_name or "",
+                format=media.type,
+                genres=[m.name for m in media.genres],
+                status=media.status,
+                coverImage=f"https://image.tmdb.org/t/p/original/{media.poster_path}",
+                averageScore=round(media.vote_average, 1),
+                description=media.overview,
+                bannerImage=f"https://image.tmdb.org/t/p/original/{media.backdrop_path}",
+                isAdult=media.adult,
+                originalLanguage=media.original_language,
+                firstAirDate=media.first_air_date,
+                lastAirDate=media.last_air_date,
+                createdBy=media.created_by,
+                numberOfEpisodes=media.number_of_episodes,
+                numberOfSeasons=media.number_of_seasons,
+                nextEpisodeToAir=media.next_episode_to_air,
+                seasons=media.seasons,
+                type=media.type,
+                inProduction=media.in_production,
+                languages=media.languages,
+                lastEpisodeToAir=media.last_episode_to_air,
+                networks=media.networks,
+                keywords=media.keywords,
+                credits=media.credits,
+                recommendations=media.recommendations,
+                productionCountries=media.production_countries,
+                synonyms=(
+                    [t.title for t in media.alternative_titles.results]
+                    if media.alternative_titles
+                    else []
+                ),
+            )
+        except Exception as e:
+            logger.error("normalize_tmdb_detailed_movie", error=str(e))
+            raise

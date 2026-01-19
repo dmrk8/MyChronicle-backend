@@ -3,25 +3,19 @@ from typing import List, Optional
 
 
 class TMDBGenre(BaseModel):
-    id: int
     name: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class TMDBProductionCompany(BaseModel):
-    id: int
-    logo_path: Optional[str] = Field(None, alias="logoPath")
     name: str
-    origin_country: str = Field(..., alias="originCountry")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class TMDBSpokenLanguage(BaseModel):
     english_name: str = Field(..., alias="englishName")
-    iso_639_1: str = Field(..., alias="iso6391")
-    name: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -36,39 +30,34 @@ class TMDBBelongsToCollection(BaseModel):
 
 
 class TMDBCreatedBy(BaseModel):
-    id: int
-    credit_id: str = Field(..., alias="creditId")
     name: str
     original_name: str = Field(..., alias="originalName")
-    gender: int
-    profile_path: Optional[str] = Field(None, alias="profilePath")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class TMDBLastEpisodeToAir(BaseModel):
-    id: int
     name: str
     overview: str
     vote_average: float = Field(..., alias="voteAverage")
-    vote_count: int = Field(..., alias="voteCount")
     air_date: str = Field(..., alias="airDate")
     episode_number: int = Field(..., alias="episodeNumber")
     episode_type: str = Field(..., alias="episodeType")
-    production_code: str = Field(..., alias="productionCode")
     runtime: Optional[int]
     season_number: int = Field(..., alias="seasonNumber")
-    show_id: int = Field(..., alias="showId")
     still_path: Optional[str] = Field(None, alias="stillPath")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class TMDBNextEpisodeToAir(BaseModel):
+    air_date: str = Field(..., alias="airDate")
+    episode_number: int = Field(..., alias="episodeNumber")
+    season_number: int = Field(..., alias="seasonNumber")
 
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    
 class TMDBNetwork(BaseModel):
-    id: int
-    logo_path: Optional[str] = Field(None, alias="logoPath")
     name: str
-    origin_country: str = Field(..., alias="originCountry")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -76,18 +65,15 @@ class TMDBNetwork(BaseModel):
 class TMDBSeason(BaseModel):
     air_date: Optional[str] = Field(None, alias="airDate")
     episode_count: int = Field(..., alias="episodeCount")
-    id: int
     name: str
     overview: str
     poster_path: Optional[str] = Field(None, alias="posterPath")
     season_number: int = Field(..., alias="seasonNumber")
-    vote_average: float = Field(..., alias="voteAverage")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class TMDBKeyword(BaseModel):
-    id: int
     name: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -127,9 +113,6 @@ class TMDBCollectionPart(BaseModel):
     original_title: str = Field(..., alias="originalTitle")
     media_type: str = Field(..., alias="mediaType")
     release_date: str = Field(..., alias="releaseDate")
-    video: bool
-    vote_average: float = Field(..., alias="voteAverage")
-    vote_count: int = Field(..., alias="voteCount")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -186,6 +169,64 @@ class TMDBPagination(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class TMDBMediaMinimalRecommendation(BaseModel):
+    poster_path: Optional[str] = Field(None, alias="posterPath")
+    id: int
+
+    title: Optional[str] = None
+    original_title: Optional[str] = Field(None, alias="originalTitle")
+
+    # TV-specific fields
+    name: Optional[str] = None
+    original_name: Optional[str] = Field(None, alias="originalName")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBPaginationRecommendation(BaseModel):
+    results: List[TMDBMediaMinimalRecommendation]
+    page: int
+    total_pages: int = Field(..., alias="totalPages")
+    total_results: int = Field(..., alias="totalResults")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBAlternativeTitle(BaseModel):
+    title: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBAlternativeTitles(BaseModel):
+    titles: List[TMDBAlternativeTitle]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBAlternativeTitlesTv(BaseModel):
+    results: List[TMDBAlternativeTitle]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBCast(BaseModel):
+    name: str
+    character: Optional[str] = None
+    order: Optional[int] = None
+    known_for_department: Optional[str] = Field(None, alias="knownForDepartment")
+    original_name: Optional[str] = Field(None, alias="originalName")
+    profile_path: Optional[str] = Field(None, alias="profilePath")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBCredits(BaseModel):
+    cast: List[TMDBCast]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
 class TMDBMediaDetailBase(BaseModel):
     adult: bool
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
@@ -197,7 +238,9 @@ class TMDBMediaDetailBase(BaseModel):
     overview: str
     popularity: float
     poster_path: Optional[str] = Field(None, alias="posterPath")
-    production_companies: List[TMDBProductionCompany] = Field(..., alias="productionCompanies")
+    production_companies: List[TMDBProductionCompany] = Field(
+        ..., alias="productionCompanies"
+    )
     spoken_languages: List[TMDBSpokenLanguage] = Field(..., alias="spokenLanguages")
     status: str
     tagline: Optional[str] = None
@@ -219,21 +262,34 @@ class TMDBMovieDetail(TMDBMediaDetailBase):
     runtime: Optional[int] = None
     title: Optional[str] = None
     keywords: Optional[TMDBMovieKeywords] = None
+    recommendations: Optional[TMDBPaginationRecommendation] = None
+    alternative_titles: Optional[TMDBAlternativeTitles] = Field(
+        None, alias="alternativeTitles"
+    )
+    credits: Optional[TMDBCredits] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class TMDBProductionCountry(BaseModel):
+    name: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class TMDBTVDetail(TMDBMediaDetailBase):
     created_by: Optional[List[TMDBCreatedBy]] = Field(None, alias="createdBy")
-    episode_run_time: Optional[List[int]] = Field(None, alias="episodeRunTime")
     first_air_date: Optional[str] = Field(None, alias="firstAirDate")
     in_production: Optional[bool] = Field(None, alias="inProduction")
     languages: Optional[List[str]] = None
     last_air_date: Optional[str] = Field(None, alias="lastAirDate")
-    external_ids: Optional[TMDBExternalIds] = None
-    last_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="lastEpisodeToAir")
+    last_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(
+        None, alias="lastEpisodeToAir"
+    )
     name: Optional[str] = None
-    next_episode_to_air: Optional[TMDBLastEpisodeToAir] = Field(None, alias="nextEpisodeToAir")
+    next_episode_to_air: Optional[TMDBNextEpisodeToAir] = Field(
+        None, alias="nextEpisodeToAir"
+    )
     networks: Optional[List[TMDBNetwork]] = None
     number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
     number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
@@ -241,5 +297,13 @@ class TMDBTVDetail(TMDBMediaDetailBase):
     seasons: Optional[List[TMDBSeason]] = None
     type: Optional[str] = None
     keywords: Optional[TMDBTvKeywords] = None
+    credits: Optional[TMDBCredits] = None
+    recommendations: Optional[TMDBPaginationRecommendation] = None
+    production_countries: Optional[List[TMDBProductionCountry]] = Field(
+        None, alias="productionCountries"
+    )
+    alternative_titles: Optional[TMDBAlternativeTitlesTv] = Field(
+        None, alias="alternativeTitles"
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

@@ -11,7 +11,7 @@ from app.models.tmdb_models import (
     TMDBPageInfo,
 )
 
-from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed, MediaFeaturedBulk
+from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed, MediaFeaturedBulk, MediaDetailedUnion
 from app.utils.media_normalizer import MediaNormalizer
 
 
@@ -217,17 +217,17 @@ class TMDBService:
         self,
         movie_id: int,
         language: str,
-    ) -> MediaDetailed:
+    ) -> MediaDetailedUnion:
         res = await self.tmdb_api.get_movie_detail(movie_id, language)
-        return MediaNormalizer.normalize_tmdb_detailed(res)
+        return MediaNormalizer.normalize_tmdb_detailed_movie(res)
 
     async def get_tv_detail(
         self,
         tv_id: int,
         language: str,
-    ) -> MediaDetailed:
+    ) -> MediaDetailedUnion:
         res = await self.tmdb_api.get_tv_detail(tv_id, language)
-        return MediaNormalizer.normalize_tmdb_detailed(res)
+        return MediaNormalizer.normalize_tmdb_detailed_tv(res)
 
     async def search_movie_test(
         self,

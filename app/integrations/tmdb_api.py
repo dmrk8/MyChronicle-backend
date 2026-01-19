@@ -47,7 +47,9 @@ class TMDBApi:
             action="get_trending_media",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
 
         page_info = TMDBPageInfo.model_validate(
             {
@@ -84,7 +86,9 @@ class TMDBApi:
             action="get_search_movie",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
         page_info = TMDBPageInfo.model_validate(
             {
                 "page": data.get("page", page),
@@ -120,7 +124,9 @@ class TMDBApi:
             action="get_search_tv",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
         page_info = TMDBPageInfo.model_validate(
             {
                 "page": data.get("page", page),
@@ -158,11 +164,12 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-            
             action="get_popular_season",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
         page_info = TMDBPageInfo.model_validate(
             {
                 "page": data.get("page", 1),
@@ -191,7 +198,12 @@ class TMDBApi:
         Fetches discovered movies with filters from TMDB.
         """
         url = f"{self.BASE_URL}/discover/movie"
-        params = {"language": language, "page": page, "sort_by": sort_by, "include_adult": "false"}
+        params = {
+            "language": language,
+            "page": page,
+            "sort_by": sort_by,
+            "include_adult": "false",
+        }
 
         if primary_release_date_gte:
             params["primary_release_date.gte"] = primary_release_date_gte
@@ -218,11 +230,12 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-            
             action="get_discover_movie",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
         page_info = TMDBPageInfo.model_validate(
             {
                 "page": data.get("page", page),
@@ -292,11 +305,12 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-           
             action="get_discover_tv",
         )
 
-        results = [TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])]
+        results = [
+            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
+        ]
         page_info = TMDBPageInfo.model_validate(
             {
                 "page": data.get("page", page),
@@ -316,7 +330,7 @@ class TMDBApi:
         """
         url = f"{self.BASE_URL}/movie/{movie_id}"
         params = {
-            "append_to_response": "keywords",
+            "append_to_response": "keywords,recommendations,alternative_titles,credits",
             "language": language,
         }
         data = await perform_request(
@@ -325,7 +339,6 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-            
             action="get_movie_detail",
         )
 
@@ -342,7 +355,7 @@ class TMDBApi:
         """
         url = f"{self.BASE_URL}/tv/{tv_id}"
         params = {
-            "append_to_response": "keywords,external_ids",
+            "append_to_response": "keywords,credits,recommendations,alternative_titles",
             "language": language,
         }
         data = await perform_request(
@@ -351,7 +364,6 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-            
             action="get_tv_detail",
         )
 
@@ -422,11 +434,11 @@ class TMDBApi:
             url=url,
             headers=self.headers,
             params=params,
-            
             action="get_collection_detail",
         )
 
         collection_detail = TMDBCollection.model_validate(data)
         return collection_detail
 
-#https://api.themoviedb.org/3/search/keyword
+
+# https://api.themoviedb.org/3/search/keyword
