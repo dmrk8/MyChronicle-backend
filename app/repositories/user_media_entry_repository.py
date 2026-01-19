@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from pymongo.errors import PyMongoError
@@ -14,7 +14,9 @@ class UserMediaEntryRepository:
     def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
         self.db = db
         self.collection = self.db[collection_name]
-        self.logger = logger.bind(repository="UserMediaEntryRepository", collection=collection_name)
+        self.logger = logger.bind(
+            repository="UserMediaEntryRepository", collection=collection_name
+        )
 
     def map_to_model(self, mongo_doc: dict) -> UserMediaEntryDB:
         mongo_doc["id"] = str(mongo_doc["_id"])
@@ -37,7 +39,9 @@ class UserMediaEntryRepository:
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
-                "mongo_user_media_entry_insert_one_error", error=str(e), elapsed_ms=elapsed_ms
+                "mongo_user_media_entry_insert_one_error",
+                error=str(e),
+                elapsed_ms=elapsed_ms,
             )
             raise
 
@@ -87,7 +91,9 @@ class UserMediaEntryRepository:
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
-                "mongo_user_media_entry_update_one_error", error=str(e), elapsed_ms=elapsed_ms
+                "mongo_user_media_entry_update_one_error",
+                error=str(e),
+                elapsed_ms=elapsed_ms,
             )
             raise
 
@@ -158,12 +164,18 @@ class UserMediaEntryRepository:
             )
             raise
 
-    async def get_entry_by_external_id_and_user_id(
-        self, external_id: int, user_id: str
+    async def get_entry_by_external_id_and_external_source_and_user_id(
+        self, external_id: int, external_source: str, user_id: str
     ) -> UserMediaEntryDB:
         start = time.perf_counter()
         try:
-            data = await self.collection.find_one({"external_id": external_id, "user_id": user_id})
+            data = await self.collection.find_one(
+                {
+                    "external_id": external_id,
+                    "external_source": external_source,
+                    "user_id": user_id,
+                }
+            )
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             if data:
                 self.logger.info(
@@ -214,7 +226,10 @@ class UserMediaEntryRepository:
             filters = filters or {}
             skip = (page - 1) * per_page
             cursor = (
-                self.collection.find(filters).sort(sort_by, sort_order).skip(skip).limit(per_page)
+                self.collection.find(filters)
+                .sort(sort_by, sort_order)
+                .skip(skip)
+                .limit(per_page)
             )
             results = [self.map_to_model(doc) async for doc in cursor]
             elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -234,4 +249,7 @@ class UserMediaEntryRepository:
             raise
 
     async def is_exists(self, entry_id: str) -> bool:
-        return await self.collection.count_documents({"_id": ObjectId(entry_id)}, limit=1) > 0
+        return (
+            await self.collection.count_documents({"_id": ObjectId(entry_id)}, limit=1)
+            > 0
+        )

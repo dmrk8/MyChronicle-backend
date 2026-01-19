@@ -9,7 +9,11 @@ from app.models.user_media_entry_models import (
 )
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 from datetime import datetime, timezone
-from app.enums.user_media_entry_enums import UserMediaEntrySortFields, UserMediaEntrySortOptions
+from app.enums.user_media_entry_enums import (
+    MediaExternalSource,
+    UserMediaEntrySortFields,
+    UserMediaEntrySortOptions,
+)
 
 import structlog
 
@@ -59,11 +63,11 @@ class UserMediaEntryService:
     async def get_entries_by_user_id(self, user_id: str) -> List[UserMediaEntryDB]:
         return await self.repository.get_entries_by_user_id(user_id)
 
-    async def get_entry_by_external_id(
-        self, external_id: int, user_id: str
+    async def get_entry_by_external_id_and_source(
+        self, external_id: int, external_source: MediaExternalSource, user_id: str
     ) -> Optional[UserMediaEntryDB]:
-        return await self.repository.get_entry_by_external_id_and_user_id(
-            external_id, user_id
+        return await self.repository.get_entry_by_external_id_and_external_source_and_user_id(
+            external_id, external_source, user_id
         )
 
     async def get_entries(

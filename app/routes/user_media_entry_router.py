@@ -13,6 +13,7 @@ from app.core.dependencies import get_user_media_entry_service
 from app.auth.auth_dependencies import get_current_user
 
 from app.enums.user_media_entry_enums import (
+    MediaExternalSource,
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
 )
@@ -80,14 +81,17 @@ async def get_entries_by_user_id(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@user_media_entry_router.get("/by-external/{external_id}")
+@user_media_entry_router.get("/by-external/{external_source}/{external_id}")
 async def get_entry_by_external_id(
     external_id: int = Path(..., description="External ID"),
+    external_source: MediaExternalSource = Path(..., description="External Source"),
     user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     try:
-        return await service.get_entry_by_external_id(external_id, user.id)  # type: ignore
+        return await service.get_entry_by_external_id_and_source(
+            external_id, external_source, user.id
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
