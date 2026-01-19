@@ -213,8 +213,6 @@ class TVDetailed(MediaBase):
     )
 
 
-MediaDetailedUnion = Union[AnimeDetailed, MangaDetailed, MovieDetailed, TVDetailed]
-
 
 class MovieCollection(BaseModel):
     id: int

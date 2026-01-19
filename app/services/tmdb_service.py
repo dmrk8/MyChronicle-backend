@@ -11,10 +11,16 @@ from app.models.tmdb_models import (
     TMDBPageInfo,
 )
 
-from app.models.media_models import MediaMinimal, MediaPagination, MediaDetailed, MediaFeaturedBulk, MediaDetailedUnion
-from app.utils.media_normalizer import MediaNormalizer
-
-
+from app.models.media_models import (
+    MediaMinimal,
+    MediaPagination,
+    MediaDetailed,
+    MediaFeaturedBulk,
+    MovieCollection,
+    MovieDetailed,
+    TVDetailed
+)
+from app.utils.tmdb_normalizer import TMDBNormalizer
 class TMDBService:
     def __init__(self, tmdb_api: TMDBApi):
         self.tmdb_api = tmdb_api
@@ -33,10 +39,13 @@ class TMDBService:
             for media in results
             if not (16 in media.genre_ids and media.original_language == "ja")
         ]
-        results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, media_type)
+        results = TMDBNormalizer.normalize_minimal(filtered_results, media_type)
 
         return MediaPagination(
-            results=results, currentPage=page, perPage=per_page, hasNextPage=per_page == 20
+            results=results,
+            currentPage=page,
+            perPage=per_page,
+            hasNextPage=per_page == 20,
         )
 
     async def get_popular_season(
@@ -57,8 +66,8 @@ class TMDBService:
             sort_by=sort_by,
         )
         per_page = len(results)
-        results = MediaNormalizer.normalize_tmdb_minimal(results, media_type)
-
+        results = TMDBNormalizer.normalize_minimal(results, media_type)
+        
         return MediaPagination(
             results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
@@ -68,7 +77,7 @@ class TMDBService:
         media_type: str,
     ) -> MediaFeaturedBulk:
         media_type = media_type.lower()
-        language="en-US"
+        language = "en-US"
         popular_results, page_info = await self.tmdb_api.get_popular_season(
             media_type=media_type,
             start_date=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
@@ -77,7 +86,9 @@ class TMDBService:
             language=language,
             sort_by="popularity.desc",
         )
-        popular_results = MediaNormalizer.normalize_tmdb_minimal(popular_results, media_type)
+        popular_results = TMDBNormalizer.normalize_minimal(
+            popular_results, media_type
+        )
 
         trending_results, page_info = await self.tmdb_api.get_trending_media(
             media_type=media_type, time_window="week", language=language, page=1
@@ -88,11 +99,13 @@ class TMDBService:
             for media in trending_results
             if not (16 in media.genre_ids and media.original_language == "ja")
         ]
-        trending_results = MediaNormalizer.normalize_tmdb_minimal(
+        trending_results = TMDBNormalizer.normalize_minimal(
             filtered_trending_results, media_type
         )
 
-        return MediaFeaturedBulk(trending=trending_results, popularSeason=popular_results)
+        return MediaFeaturedBulk(
+            trending=trending_results, popularSeason=popular_results
+        )
 
     async def search_movie(
         self,
@@ -121,7 +134,7 @@ class TMDBService:
                 for media in results
                 if not (16 in media.genre_ids and media.original_language == "ja")
             ]
-            results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, "movie")
+            results = TMDBNormalizer.normalize_minimal(filtered_results, "movie")
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
@@ -146,7 +159,7 @@ class TMDBService:
                 without_keywords=without_keywords,
             )
             per_page = len(results)
-            results = MediaNormalizer.normalize_tmdb_minimal(results, "movie")
+            results = TMDBNormalizer.normalize_minimal(results, "movie")
         return MediaPagination(
             results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
@@ -180,7 +193,7 @@ class TMDBService:
                 for media in results
                 if not (16 in media.genre_ids and media.original_language == "ja")
             ]
-            results = MediaNormalizer.normalize_tmdb_minimal(filtered_results, "tv")
+            results = TMDBNormalizer.normalize_minimal(filtered_results, "tv")
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
@@ -208,7 +221,7 @@ class TMDBService:
                 without_keywords=without_keywords,
             )
             per_page = len(results)
-            results = MediaNormalizer.normalize_tmdb_minimal(results, "tv")
+            results = TMDBNormalizer.normalize_minimal(results, "tv")
         return MediaPagination(
             results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
@@ -217,17 +230,17 @@ class TMDBService:
         self,
         movie_id: int,
         language: str,
-    ) -> MediaDetailedUnion:
+    ) -> MovieDetailed:
         res = await self.tmdb_api.get_movie_detail(movie_id, language)
-        return MediaNormalizer.normalize_tmdb_detailed_movie(res)
+        return TMDBNormalizer.normalize_movie_detailed(res)
 
     async def get_tv_detail(
         self,
         tv_id: int,
         language: str,
-    ) -> MediaDetailedUnion:
+    ) -> TVDetailed:
         res = await self.tmdb_api.get_tv_detail(tv_id, language)
-        return MediaNormalizer.normalize_tmdb_detailed_tv(res)
+        return TMDBNormalizer.normalize_tv_detailed(res)
 
     async def search_movie_test(
         self,
@@ -268,7 +281,9 @@ class TMDBService:
                     for media in filtered_results
                     if media.keywords
                     and keywords_set.issubset(
-                        media_keywords := {keyword.id for keyword in media.keywords.keywords}
+                        media_keywords := {
+                            keyword.id for keyword in media.keywords.keywords
+                        }
                     )
                     and excluded_keyword not in media_keywords
                 ]
@@ -277,7 +292,8 @@ class TMDBService:
                 filtered_results = [
                     media
                     for media in filtered_results
-                    if media.runtime is not None and length_gte <= media.runtime <= length_lte
+                    if media.runtime is not None
+                    and length_gte <= media.runtime <= length_lte
                 ]
 
             if release_date_gte or release_date_lte:
@@ -285,8 +301,14 @@ class TMDBService:
                     media
                     for media in filtered_results
                     if media.release_date is not None
-                    and (release_date_gte is None or media.release_date >= release_date_gte)
-                    and (release_date_lte is None or media.release_date <= release_date_lte)
+                    and (
+                        release_date_gte is None
+                        or media.release_date >= release_date_gte
+                    )
+                    and (
+                        release_date_lte is None
+                        or media.release_date <= release_date_lte
+                    )
                 ]
 
             if with_original_language:
@@ -301,7 +323,8 @@ class TMDBService:
                     filtered_results.sort(key=lambda x: x.popularity, reverse=True)
 
             results = [
-                TMDBMediaMinimal.model_validate(media.model_dump()) for media in filtered_results
+                TMDBMediaMinimal.model_validate(media.model_dump())
+                for media in filtered_results
             ]
             return TMDBPagination(
                 results=results,
@@ -323,7 +346,9 @@ class TMDBService:
             if result.imdb_id is not None:
                 imdb_tasks.append(self.imdb_service.get_imdb_rating(result.imdb_id))
             else:
-                imdb_tasks.append(asyncio.sleep(0))  # Placeholder task that does nothing
+                imdb_tasks.append(
+                    asyncio.sleep(0)
+                )  # Placeholder task that does nothing
 
         imdb_ratings = await asyncio.gather(*imdb_tasks, return_exceptions=True)
 

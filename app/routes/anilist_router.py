@@ -70,16 +70,41 @@ async def search_anilist(
         )
 
 
-@anilist_router.get("/media/{media_id}")
-async def get_media_detail(
-    media_id: int = Path(..., ge=1, description="Media ID"),
+@anilist_router.get("/anime/{anime_id}")
+async def get_anime_detail(
+    anime_id: int = Path(..., ge=1, description="Anime ID"),
     service: AnilistService = Depends(get_anilist_service),
 ):
     try:
-        result = await service.get_media_detail(media_id)
+        result = await service.get_anime_detail(anime_id)
         if not result:
             raise HTTPException(
-                status_code=http_status.HTTP_404_NOT_FOUND, detail="Media not found"
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="Anime not found"
+            )
+        return result
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=e.response.status_code, detail="AniList API error"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
+
+
+@anilist_router.get("/manga/{manga_id}")
+async def get_manga_detail(
+    manga_id: int = Path(..., ge=1, description="Manga ID"),
+    service: AnilistService = Depends(get_anilist_service),
+):
+    try:
+        result = await service.get_manga_detail(manga_id)
+        if not result:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND, detail="Manga not found"
             )
         return result
     except httpx.HTTPStatusError as e:

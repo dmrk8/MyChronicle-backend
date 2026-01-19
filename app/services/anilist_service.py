@@ -6,12 +6,14 @@ from app.models.anilist_models import (
 )
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType, SortOption
-from app.utils.media_normalizer import MediaNormalizer
+from app.utils.anilist_normalizer import AnilistNormalizer
 from app.models.media_models import (
+    MangaDetailed,
     MediaFeaturedBulk,
     MediaMinimal,
     MediaPagination,
-    MediaDetailedUnion,
+    AnimeDetailed,
+    MediaDetailed
 )
 from app.context.anilist_season_info import get_season_context
 import structlog
@@ -34,7 +36,7 @@ class AnilistService:
         return await self.anilist_api.get_featured_media(
             page, per_page, season, season_year, sort, media_type
         )
-        return MediaNormalizer.normalize_anilist_minimal(res)
+        return AnilistNormalizer.normalize_minimal(res)
 
     async def search_media(
         self,
@@ -69,20 +71,25 @@ class AnilistService:
             country_of_origin,
         )
         return MediaPagination(
-            results=MediaNormalizer.normalize_anilist_minimal(media_list),
+            results=AnilistNormalizer.normalize_minimal(media_list),
             currentPage=page_info.current_page,
             perPage=per_page,
             hasNextPage=page_info.has_next_page,
             total=page_info.total,
         )
 
-    async def get_media_detail(self, media_id: int) -> MediaDetailedUnion:
-        res = await self.anilist_api.get_media_detail(media_id)
-        try:
-            return MediaNormalizer.normalize_anilist_detailed(res)
-        except Exception as e:
-            logger.error(f"Error normalizing media detail for ID {media_id}: {e}")
-            raise ValueError(f"Failed to normalize media detail: {e}")
+    async def get_anime_detail(self, anime_id: int) -> AnimeDetailed:
+        res = await self.anilist_api.get_media_detail(anime_id)
+        if res.type != "ANIME":
+            raise TypeError(f"Expected ANIME, got {res.type}")
+        return AnilistNormalizer.normalize_anime_detailed(res)
+        
+
+    async def get_manga_detail(self, manga_id: int) -> MangaDetailed:
+        res = await self.anilist_api.get_media_detail(manga_id)
+        if res.type != "MANGA":
+            raise TypeError(f"Expected MANGA, got {res.type}")
+        return AnilistNormalizer.normalize_manga_detailed(res)
 
     async def get_featured_media_bulk(
         self,
@@ -103,12 +110,12 @@ class AnilistService:
             next_season_year=seasont_ctx["nextSeasonYear"],
         )
         return {
-            "trending": MediaNormalizer.normalize_anilist_minimal(res.trending),
-            "popularSeason": MediaNormalizer.normalize_anilist_minimal(
+            "trending": AnilistNormalizer.normalize_minimal(res.trending),
+            "popularSeason": AnilistNormalizer.normalize_minimal(
                 res.popular_season
             ),
-            "upcoming": MediaNormalizer.normalize_anilist_minimal(res.upcoming),
-            "allTime": MediaNormalizer.normalize_anilist_minimal(res.all_time),
+            "upcoming": AnilistNormalizer.normalize_minimal(res.upcoming),
+            "allTime": AnilistNormalizer.normalize_minimal(res.all_time),
         }
 
     async def get_featured_manga_bulk(
@@ -126,9 +133,9 @@ class AnilistService:
             media_type=media_type,
         )
         return {
-            "trending": MediaNormalizer.normalize_anilist_minimal(res["trending"]),
-            "allTime": MediaNormalizer.normalize_anilist_minimal(res["allTime"]),
-            "allTimeManhwa": MediaNormalizer.normalize_anilist_minimal(
+            "trending": AnilistNormalizer.normalize_minimal(res["trending"]),
+            "allTime": AnilistNormalizer.normalize_minimal(res["allTime"]),
+            "allTimeManhwa": AnilistNormalizer.normalize_minimal(
                 res["allTimeManhwa"]
             ),
         }
@@ -154,12 +161,12 @@ class AnilistService:
                 next_season_year=season_ctx["nextSeasonYear"],
             )
             return MediaFeaturedBulk(
-                trending=MediaNormalizer.normalize_anilist_minimal(anime_res.trending),
-                popularSeason=MediaNormalizer.normalize_anilist_minimal(
+                trending=AnilistNormalizer.normalize_minimal(anime_res.trending),
+                popularSeason=AnilistNormalizer.normalize_minimal(
                     anime_res.popular_season
                 ),
-                upcoming=MediaNormalizer.normalize_anilist_minimal(anime_res.upcoming),
-                all_time=MediaNormalizer.normalize_anilist_minimal(anime_res.all_time),  # type: ignore
+                upcoming=AnilistNormalizer.normalize_minimal(anime_res.upcoming),
+                all_time=AnilistNormalizer.normalize_minimal(anime_res.all_time),  # type: ignore
             )
         else:
             res = await self.anilist_api.get_featured_manga_bulk(
@@ -168,7 +175,7 @@ class AnilistService:
                 media_type=media_type,
             )
             return MediaFeaturedBulk(
-                trending=MediaNormalizer.normalize_anilist_minimal(res.trending),  # type: ignore
-                allTime=MediaNormalizer.normalize_anilist_minimal(res.all_time),  # type: ignore
-                allTimeManhwa=MediaNormalizer.normalize_anilist_minimal(res.all_time_manhwa),  # type: ignore
+                trending=AnilistNormalizer.normalize_minimal(res.trending),  # type: ignore
+                allTime=AnilistNormalizer.normalize_minimal(res.all_time),  # type: ignore
+                allTimeManhwa=AnilistNormalizer.normalize_minimal(res.all_time_manhwa),  # type: ignore
             )
