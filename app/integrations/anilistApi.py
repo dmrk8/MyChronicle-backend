@@ -286,6 +286,9 @@ class AnilistApi:
                       format
                       id
                       status
+                      coverImage {
+                        extraLarge
+                      }
                     }
                   }
                 }
@@ -348,7 +351,6 @@ class AnilistApi:
                         full
                       }
                     }
-                    name
                     role
                   }
                 }

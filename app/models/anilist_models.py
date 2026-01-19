@@ -44,6 +44,7 @@ class RelationNode(BaseModel):
     title: Title
     format: Optional[str] = None
     status: Optional[str] = None
+    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -100,7 +101,6 @@ class CharacterNode(BaseModel):
 
 class CharacterEdge(BaseModel):
     node: CharacterNode
-    name: Optional[str] = None
     role: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
@@ -116,6 +116,9 @@ class RecommendationMedia(BaseModel):
     id: int
     title: Title
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+    format: Optional[str] = None
+    status: Optional[str] = None
+    
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

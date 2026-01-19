@@ -15,6 +15,10 @@ from app.models.media_models import (
     MediaDetailed,
     AnimeDetailed,
     MangaDetailed,
+    MediaRecommendation,
+    MediaRelations,
+    MediaStudios,
+    MediaCharacters,
     MovieDetailed,
     TVDetailed,
     MediaDetailedUnion,
@@ -78,7 +82,56 @@ class MediaNormalizer:
 
     @staticmethod
     def normalize_anilist_detailed(media: AnilistMediaDetailed) -> MediaDetailedUnion:
+        relations = (
+            [
+                MediaRelations(
+                    relationType=edge.relation_type,
+                    id=edge.node.id,
+                    title=edge.node.title.english
+                    or edge.node.title.romaji
+                    or edge.node.title.native
+                    or "",
+                    format=edge.node.format,
+                    status=edge.node.status,
+                )
+                for edge in media.relations.edges
+            ]
+            if media.relations
+            else None
+        )
+
+        recommendations = [
+            MediaRecommendation(
+                id=edge.node.media_recommendation.id,
+                title=edge.node.media_recommendation.title,
+                coverImage=edge.node.media_recommendation.cover_image,
+            )
+            for edge in media.recommendations.edges
+        ] if media.recommendations else None
+        
+
+        characters = (
+            [
+                MediaCharacters(
+                    role=edge.role,
+                    image=edge.node.image.large,
+                    name=edge.node.name.full,
+                )
+                for edge in media.characters.edges
+            ]
+            if media.characters
+            else None
+        )
+
         if media.type == MediaType.ANIME:
+            studios = (
+                [
+                    MediaStudios(isMain=studio.is_main, name=studio.node.name)
+                    for studio in media.studios.edges
+                ]
+                if media.studios
+                else None
+            )
             return AnimeDetailed(
                 id=media.id,
                 externalSource=MediaExternalSource.ANILIST,
@@ -106,11 +159,11 @@ class MediaNormalizer:
                 duration=media.duration,
                 startDate=media.start_date,
                 endDate=media.end_date,
-                studios=media.studios,
+                studios=studios,
                 tags=media.tags,
-                relations=media.relations,
-                recommendations=media.recommendations,
-                characters=media.characters,
+                relations=relations,
+                recommendations=recommendations,
+                characters=characters,
                 nextAiringEpisode=media.next_airing_episode,
             )
         elif media.type == MediaType.MANGA:
@@ -140,9 +193,9 @@ class MediaNormalizer:
                 startDate=media.start_date,
                 endDate=media.end_date,
                 tags=media.tags,
-                relations=media.relations,
-                recommendations=media.recommendations,
-                characters=media.characters,
+                relations=relations,
+                recommendations=recommendations,
+                characters=characters,
             )
         else:
             raise ValueError(f"Unsupported media type: {media.type}")

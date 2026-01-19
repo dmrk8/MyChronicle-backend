@@ -3,12 +3,14 @@ from typing import List, Optional, Union
 
 from app.models.anilist_models import (
     Characters,
+    CoverImage,
     MediaDate,
     NextAiringEpisode,
     Recommendations,
     Relations,
     Studios,
     Tag,
+    Title,
 )
 from app.models.tmdb_models import (
     TMDBAlternativeTitles,
@@ -93,9 +95,40 @@ class MediaBase(BaseModel):
     )
 
 
+class MediaStudios(BaseModel):
+    is_main: bool = Field(..., alias="isMain")
+    name: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class MediaRelations(BaseModel):
+    relation_type: str = Field(..., alias="relationType")
+    id: int
+    title: str
+    format: Optional[str] = None
+    status: Optional[str] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class MediaRecommendation(BaseModel):
+    id: int
+    title: Title
+    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class MediaCharacters(BaseModel):
+    role: str
+    image: str
+    name: str
+
+
 class AnimeDetailed(MediaBase):
     episodes: Optional[int] = None
-    studios: Optional[Studios] = None
+    studios: Optional[List[MediaStudios]] = None
     duration: Optional[int] = None
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
@@ -107,9 +140,9 @@ class AnimeDetailed(MediaBase):
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
     source: Optional[str] = None
     tags: Optional[List[Tag]] = None
-    relations: Optional[Relations] = None
-    recommendations: Optional[Recommendations] = None
-    characters: Optional[Characters] = None
+    relations: Optional[List[MediaRelations]] = None
+    recommendations: Optional[List[MediaRecommendation]] = None
+    characters: Optional[List[MediaCharacters]] = None
 
 
 class MangaDetailed(MediaBase):
@@ -120,9 +153,9 @@ class MangaDetailed(MediaBase):
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
     source: Optional[str] = None
     tags: Optional[List[Tag]] = None
-    relations: Optional[Relations] = None
-    recommendations: Optional[Recommendations] = None
-    characters: Optional[Characters] = None
+    relations: Optional[List[MediaRelations]] = None
+    recommendations: Optional[List[MediaRecommendation]] = None
+    characters: Optional[List[MediaCharacters]] = None
 
 
 class MovieDetailed(MediaBase):
