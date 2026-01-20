@@ -205,6 +205,7 @@ class AnilistNormalizer:
                 mediaType=edge.node.media_recommendation.type,
             )
             for edge in recommendations.edges
+            if edge.node.media_recommendation is not None
         ]
 
     @staticmethod

@@ -146,7 +146,7 @@ class RecommendationMedia(BaseModel):
 
 
 class RecommendationNode(BaseModel):
-    media_recommendation: RecommendationMedia = Field(..., alias="mediaRecommendation")
+    media_recommendation: Optional[RecommendationMedia] = Field(None, alias="mediaRecommendation")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
