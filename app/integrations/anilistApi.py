@@ -289,6 +289,7 @@ class AnilistApi:
                       coverImage {
                         extraLarge
                       }
+                      type
                     }
                   }
                 }
@@ -324,7 +325,7 @@ class AnilistApi:
                     }
                   }
                 }
-                recommendations(sort: RATING_DESC, page: 1, perPage: 6) {
+                recommendations(sort: RATING_DESC, page: 1, perPage: 7) {
                   edges {
                     node {
                       mediaRecommendation {
@@ -337,6 +338,7 @@ class AnilistApi:
                         coverImage {
                           extraLarge
                         }
+                        type
                       }
                     }
                   }
@@ -351,9 +353,18 @@ class AnilistApi:
                         full
                       }
                     }
+                    voiceActors(language: JAPANESE) {
+                      name {
+                        full
+                      }
+                      image {
+                        large
+                      }
+                    }
                     role
                   }
                 }
+
                 id
               }
             }

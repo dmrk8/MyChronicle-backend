@@ -115,6 +115,7 @@ class TMDBCollectionPart(BaseModel):
     original_title: str = Field(..., alias="originalTitle")
     media_type: str = Field(..., alias="mediaType")
     release_date: str = Field(..., alias="releaseDate")
+    poster_path: Optional[str] = Field(None, alias="posterPath")  
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -174,6 +175,9 @@ class TMDBPagination(BaseModel):
 class TMDBMediaMinimalRecommendation(BaseModel):
     poster_path: Optional[str] = Field(None, alias="posterPath")
     id: int
+    media_type: str = Field(alias="mediaType")
+    genre_ids: List[int] = Field(..., alias="genreIds")
+    original_language: str = Field(..., alias="originalLanguage")
 
     title: Optional[str] = None
     original_title: Optional[str] = Field(None, alias="originalTitle")

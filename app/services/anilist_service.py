@@ -12,8 +12,7 @@ from app.models.media_models import (
     MediaFeaturedBulk,
     MediaMinimal,
     MediaPagination,
-    AnimeDetailed,
-    MediaDetailed
+    AnimeDetailed
 )
 from app.context.anilist_season_info import get_season_context
 import structlog

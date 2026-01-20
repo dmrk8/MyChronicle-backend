@@ -45,6 +45,8 @@ class RelationNode(BaseModel):
     format: Optional[str] = None
     status: Optional[str] = None
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+    type: str
+    
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -92,6 +94,25 @@ class CharacterName(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class VoiceActorName(BaseModel):
+    full: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class VoiceActorImage(BaseModel):
+    large: Optional[str] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class VoiceActor(BaseModel):
+    name: VoiceActorName
+    image: VoiceActorImage
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
 class CharacterNode(BaseModel):
     image: CharacterImage
     name: CharacterName
@@ -102,6 +123,7 @@ class CharacterNode(BaseModel):
 class CharacterEdge(BaseModel):
     node: CharacterNode
     role: str
+    voice_actors: Optional[List[VoiceActor]] = Field(None, alias="voiceActors")  
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -118,7 +140,7 @@ class RecommendationMedia(BaseModel):
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
     format: Optional[str] = None
     status: Optional[str] = None
-    
+    type: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

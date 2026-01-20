@@ -14,13 +14,14 @@ from app.models.tmdb_models import (
 from app.models.media_models import (
     MediaMinimal,
     MediaPagination,
-    MediaDetailed,
     MediaFeaturedBulk,
     MovieCollection,
     MovieDetailed,
-    TVDetailed
+    TVDetailed,
 )
 from app.utils.tmdb_normalizer import TMDBNormalizer
+
+
 class TMDBService:
     def __init__(self, tmdb_api: TMDBApi):
         self.tmdb_api = tmdb_api
@@ -67,7 +68,7 @@ class TMDBService:
         )
         per_page = len(results)
         results = TMDBNormalizer.normalize_minimal(results, media_type)
-        
+
         return MediaPagination(
             results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
         )
@@ -86,9 +87,7 @@ class TMDBService:
             language=language,
             sort_by="popularity.desc",
         )
-        popular_results = TMDBNormalizer.normalize_minimal(
-            popular_results, media_type
-        )
+        popular_results = TMDBNormalizer.normalize_minimal(popular_results, media_type)
 
         trending_results, page_info = await self.tmdb_api.get_trending_media(
             media_type=media_type, time_window="week", language=language, page=1
@@ -232,6 +231,13 @@ class TMDBService:
         language: str,
     ) -> MovieDetailed:
         res = await self.tmdb_api.get_movie_detail(movie_id, language)
+        if res.recommendations:
+            filtered_results = [
+                media
+                for media in res.recommendations.results
+                if not (16 in media.genre_ids and media.original_language == "ja")
+            ]
+            res.recommendations.results = filtered_results
         return TMDBNormalizer.normalize_movie_detailed(res)
 
     async def get_tv_detail(
@@ -240,6 +246,13 @@ class TMDBService:
         language: str,
     ) -> TVDetailed:
         res = await self.tmdb_api.get_tv_detail(tv_id, language)
+        if res.recommendations:
+            filtered_results = [
+                media
+                for media in res.recommendations.results
+                if not (16 in media.genre_ids and media.original_language == "ja")
+            ]
+            res.recommendations.results = filtered_results
         return TMDBNormalizer.normalize_tv_detailed(res)
 
     async def search_movie_test(
@@ -387,5 +400,6 @@ class TMDBService:
         self,
         collection_id: int,
         language: str,
-    ) -> TMDBCollection:
-        return await self.tmdb_api.get_collection_detail(collection_id, language)
+    ) -> MovieCollection: 
+        res = await self.tmdb_api.get_collection_detail(collection_id, language)
+        return TMDBNormalizer._get_movie_collection(res)  

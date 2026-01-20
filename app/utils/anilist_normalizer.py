@@ -1,31 +1,35 @@
 from typing import List, Optional
 import structlog
+import calendar
 
 from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
 from app.models.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,
+    MediaDate,
     Relations,
     Recommendations,
     Characters,
     Studios,
     Title,
+    VoiceActor,
 )
 from app.models.media_models import (
     AnimeDetailed,
     MangaDetailed,
-    MediaCharacters,
+    MediaCharacter,
     MediaMinimal,
     MediaRecommendation,
-    MediaRelations,
-    MediaStudios,
+    MediaRelation,
+    MediaStudio,
+    MediaVoiceActor,
 )
 
 logger = structlog.get_logger("anilist_normalizer")
 
 
 class AnilistNormalizer:
-    
+
     @staticmethod
     def normalize_minimal(results: List[AnilistMediaMinimal]) -> List[MediaMinimal]:
         """Normalize AniList minimal media list"""
@@ -49,13 +53,13 @@ class AnilistNormalizer:
                     ),
                     episodes=media.episodes,
                     mainStudio=AnilistNormalizer._get_main_studio(media.studios),
-                    chapters=media.chapters
-                ) 
+                    chapters=media.chapters,
+                )
                 media_list.append(mm)
         except Exception as e:
             logger.error("normalize_anilist_minimal", error=str(e))
         return media_list
-    
+
     @staticmethod
     def normalize_anime_detailed(media: AnilistMediaDetailed) -> AnimeDetailed:
         """Normalize AniList anime data to AnimeDetailed"""
@@ -67,6 +71,9 @@ class AnilistNormalizer:
             )
             characters = AnilistNormalizer._normalize_characters(media.characters)
             studios = AnilistNormalizer._normalize_studios(media.studios)
+
+            start_date = AnilistNormalizer._convert_date(media.start_date)
+            end_date = AnilistNormalizer._convert_date(media.end_date)
 
             return AnimeDetailed(
                 id=media.id,
@@ -90,8 +97,8 @@ class AnilistNormalizer:
                 source=media.source,
                 episodes=media.episodes,
                 duration=media.duration,
-                startDate=media.start_date,
-                endDate=media.end_date,
+                startDate=start_date,
+                endDate=end_date,
                 studios=studios,
                 tags=media.tags,
                 relations=relations,
@@ -115,6 +122,8 @@ class AnilistNormalizer:
                 media.recommendations
             )
             characters = AnilistNormalizer._normalize_characters(media.characters)
+            start_date = AnilistNormalizer._convert_date(media.start_date)
+            end_date = AnilistNormalizer._convert_date(media.end_date)
 
             return MangaDetailed(
                 id=media.id,
@@ -136,8 +145,8 @@ class AnilistNormalizer:
                 source=media.source,
                 chapters=media.chapters,
                 volumes=media.volumes,
-                startDate=media.start_date,
-                endDate=media.end_date,
+                startDate=start_date,
+                endDate=end_date,
                 tags=media.tags,
                 relations=relations,
                 recommendations=recommendations,
@@ -149,17 +158,16 @@ class AnilistNormalizer:
             )
             raise
 
-    # Private helper methods to reduce duplication
     @staticmethod
     def _normalize_relations(
         relations: Relations | None,
-    ) -> List[MediaRelations] | None:
+    ) -> List[MediaRelation] | None:
         """Extract common relations normalization"""
         if not relations:
             return None
 
         return [
-            MediaRelations(
+            MediaRelation(
                 relationType=edge.relation_type,
                 id=edge.node.id,
                 title=edge.node.title.english
@@ -168,6 +176,8 @@ class AnilistNormalizer:
                 or "",
                 format=edge.node.format,
                 status=edge.node.status,
+                coverImage=edge.node.cover_image.extra_large,
+                mediaType=edge.node.type,
             )
             for edge in relations.edges
         ]
@@ -192,6 +202,7 @@ class AnilistNormalizer:
                     if edge.node.media_recommendation.cover_image
                     else None
                 ),
+                mediaType=edge.node.media_recommendation.type,
             )
             for edge in recommendations.edges
         ]
@@ -199,28 +210,42 @@ class AnilistNormalizer:
     @staticmethod
     def _normalize_characters(
         characters: Characters,
-    ) -> List[MediaCharacters]:
+    ) -> List[MediaCharacter]:
         """Extract common characters normalization"""
         if not characters:
-            return None
+            return []
 
         return [
-            MediaCharacters(
+            MediaCharacter(
                 role=edge.role,
                 image=edge.node.image.large,
                 name=edge.node.name.full,
+                voiceActor=(
+                    MediaVoiceActor(
+                        image=(
+                            edge.voice_actors[0].image.large or ""
+                            if edge.voice_actors
+                            else ""
+                        ),
+                        name=(
+                            edge.voice_actors[0].name.full if edge.voice_actors else ""
+                        ),
+                    )
+                    if edge.voice_actors
+                    else None
+                ),
             )
             for edge in characters.edges
         ]
 
     @staticmethod
-    def _normalize_studios(studios: Studios) -> List[MediaStudios] | None:
+    def _normalize_studios(studios: Studios) -> List[MediaStudio] | None:
         """Normalize studios (anime only)"""
         if not studios:
             return None
 
         return [
-            MediaStudios(isMain=studio.is_main, name=studio.node.name)
+            MediaStudio(isMain=studio.is_main, name=studio.node.name)
             for studio in studios.edges
         ]
 
@@ -228,9 +253,9 @@ class AnilistNormalizer:
     def _get_title(title: Title) -> str:
         """Extract title with fallback logic"""
         return title.english or title.romaji or title.native or ""
-    
+
     @staticmethod
-    def _get_main_studio(studios) -> Optional[str]:
+    def _get_main_studio(studios: Studios) -> Optional[str]:
         """Get main studio name from studios"""
         if not studios:
             return None
@@ -238,3 +263,16 @@ class AnilistNormalizer:
             (studio.node.name for studio in studios.edges if studio.is_main),
             None,
         )
+
+    @staticmethod
+    def _convert_date(date: MediaDate) -> str:
+        if not date:
+            return ""
+        parts = []
+        if date.day:
+            parts.append(f"{date.day:02d}")
+        if date.month:
+            parts.append(calendar.month_name[date.month])
+        if date.year:
+            parts.append(str(date.year))
+        return " ".join(parts)
