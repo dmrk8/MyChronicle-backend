@@ -20,7 +20,7 @@ anilist_router = APIRouter(prefix="/anilist")
 
 @anilist_router.get("/search/{media_type}")
 async def search_anilist(
-    media_type: str = Path(..., regex="^(anime|manga)$"),
+    media_type: AnilistMediaType = Path(...),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=50, alias="perPage"),
     search: Optional[str] = Query(None, min_length=1),
@@ -44,7 +44,7 @@ async def search_anilist(
             page,
             per_page,
             search,
-            media_type.upper(),
+            media_type.value,
             sort,
             season,
             season_year,
