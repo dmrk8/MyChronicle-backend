@@ -16,6 +16,7 @@ from app.enums.user_media_entry_enums import (
 )
 
 import structlog
+import re
 
 logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
@@ -81,6 +82,7 @@ class UserMediaEntryService:
         per_page: int,
         sort_by: UserMediaEntrySortFields,
         sort_order: UserMediaEntrySortOptions,
+        title_search: Optional[str] = None,
     ) -> UserMediaEntryPagination:
         filters: dict[str, Any] = {"user_id": user_id}
 
@@ -92,6 +94,8 @@ class UserMediaEntryService:
             filters["status"] = status
         if media_type is not None:
             filters["media_type"] = media_type
+        if title_search is not None:
+            filters["title"] = {"$regex": re.escape(title_search), "$options": "i"}
 
         entries = await self.repository.get_entries(
             filters=filters,
