@@ -28,6 +28,9 @@ class UserMediaEntryCreate(BaseModel):
     cover_image: Optional[str] = Field(
         None, alias="coverImage", description="The cover image URL of the media"
     )
+    is_adult: Optional[bool] = Field(
+        False, alias="isAdult", description="Whether the media is adult content"
+    )
     status: Optional[UserMediaEntryStatus] = Field(
         UserMediaEntryStatus.PLANNING,
         alias="status",
@@ -86,6 +89,9 @@ class UserMediaEntryUpdate(BaseModel):
     )
     in_library: Optional[bool] = Field(
         None, alias="inLibrary", description="Updated library status"
+    )
+    is_adult: Optional[bool] = Field(
+        None, alias="isAdult", description="Updated adult status"
     )
 
     @field_validator("repeat_count")
