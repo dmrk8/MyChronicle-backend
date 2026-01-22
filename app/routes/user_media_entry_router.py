@@ -123,6 +123,9 @@ async def get_user_media_entries(
     title_search: Optional[str] = Query(
         None, alias="titleSearch", description="Search by title"
     ),
+    is_adult: Optional[bool] = Query(
+        None, alias="isAdult", description="Filter by adult content"
+    ),
     user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
@@ -138,6 +141,7 @@ async def get_user_media_entries(
             sort_by=sort_by,
             sort_order=sort_order,
             title_search=title_search,
+            is_adult=is_adult,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

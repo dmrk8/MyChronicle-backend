@@ -82,7 +82,8 @@ class UserMediaEntryService:
         per_page: int,
         sort_by: UserMediaEntrySortFields,
         sort_order: UserMediaEntrySortOptions,
-        title_search: Optional[str] = None,
+        title_search: Optional[str],
+        is_adult: Optional[bool],
     ) -> UserMediaEntryPagination:
         filters: dict[str, Any] = {"user_id": user_id}
 
@@ -96,6 +97,14 @@ class UserMediaEntryService:
             filters["media_type"] = media_type
         if title_search is not None:
             filters["title"] = {"$regex": re.escape(title_search), "$options": "i"}
+        if is_adult is False:
+            filters["$or"] = [
+                {"is_adult": False},
+                {"is_adult": {"$exists": False}},
+                {"is_adult": None},
+            ]
+        elif is_adult is True:
+            filters["is_adult"] = True
 
         entries = await self.repository.get_entries(
             filters=filters,
