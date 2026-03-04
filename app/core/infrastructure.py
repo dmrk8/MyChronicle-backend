@@ -14,7 +14,8 @@ class AppState:
     mongo_client: AsyncIOMotorClient | None = None
     redis_client: Redis | None = None
     anilist_client: AsyncClient | None = None
-    tmdb_client: AsyncClient | None = None 
+    tmdb_client: AsyncClient | None = None
+
 
 state = AppState()
 
@@ -45,26 +46,26 @@ async def lifespan(app):
         logger.critical("mongodb_connection_failed", exc_info=True)
         raise
 
-    logger.info("connecting_to_redis")
-    try:
-        state.redis_client = Redis(
-            host=state.settings.redis_host,
-            port=state.settings.redis_port,
-            username=state.settings.redis_username,
-            password=state.settings.redis_password,
-            decode_responses=True,
-            max_connections=10,
-        )
-        await state.redis_client.ping()
-        logger.info("redis_connected")
-    except Exception:
-        logger.critical("redis_connection_failed", exc_info=True)
-        raise
-    
+    # logger.info("connecting_to_redis")
+    # try:
+    #     state.redis_client = Redis(
+    #         host=state.settings.redis_host,
+    #         port=state.settings.redis_port,
+    #         username=state.settings.redis_username,
+    #         password=state.settings.redis_password,
+    #         decode_responses=True,
+    #         max_connections=10,
+    #     )
+    #     await state.redis_client.ping()
+    #     logger.info("redis_connected")
+    # except Exception:
+    #     logger.critical("redis_connection_failed", exc_info=True)
+    #     raise
+
     logger.info("opening httpx connections")
     state.anilist_client = AsyncClient(timeout=10.0)
     state.tmdb_client = AsyncClient(timeout=10.0)
-    
+
     yield
 
     logger.info("closing_connections")
