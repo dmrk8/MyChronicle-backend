@@ -22,7 +22,7 @@ anilist_router = APIRouter(prefix="/anilist")
 async def search_anilist(
     media_type: AnilistMediaType = Path(...),
     page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50, alias="perPage"),
+    per_page: int = Query(20, ge=1, le=50, alias="perPage"),
     search: Optional[str] = Query(None, min_length=1),
     sort: str = Query(SortOption.POPULARITY_DESC),
     season: Optional[str] = Query(None, regex="^(SPRING|SUMMER|FALL|WINTER)$"),
@@ -33,7 +33,7 @@ async def search_anilist(
     status: Optional[str] = Query(None),
     genre_in: Optional[List[str]] = Query(None, alias="genreIn"),
     tag_in: Optional[List[str]] = Query(None, alias="tagIn"),
-    is_adult: Optional[bool] = Query(None, alias="isAdult"),
+    is_adult: Optional[bool] = Query(False, alias="isAdult"),
     country_of_origin: Optional[str] = Query(
         None, regex="^(JP|KR|CN)$", alias="countryOfOrigin"
     ),
@@ -123,7 +123,7 @@ async def get_manga_detail(
 @anilist_router.get("/featured")
 async def get_anilist_featured_media(
     page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50, alias="perPage"),
+    per_page: int = Query(20, ge=1, le=50, alias="perPage"),
     season: Optional[str] = None,
     season_year: Optional[int] = Query(None, alias="seasonYear"),
     sort: str = Query(None),

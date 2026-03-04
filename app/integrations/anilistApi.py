@@ -135,6 +135,7 @@ class AnilistApi:
             "type": media_type,
             "sort": [sort],
             "search": search,
+            "isAdult": is_adult
         }
 
         if season:
@@ -149,8 +150,6 @@ class AnilistApi:
             variables["genreIn"] = genre_in
         if tag_in:
             variables["tagIn"] = tag_in
-        if is_adult:
-            variables["isAdult"] = is_adult
         if country_of_origin:
             variables["countryOfOrigin"] = country_of_origin
 
