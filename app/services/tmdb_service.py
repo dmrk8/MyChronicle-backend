@@ -137,11 +137,13 @@ class TMDBService:
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
+                if "281372" not in keyword_list:
+                    keyword_list.append("281372")
                 if "210024" not in keyword_list:
                     keyword_list.append("210024")
                 without_keywords = ",".join(keyword_list)
             else:
-                without_keywords = "210024"
+                without_keywords = "281372,210024"
 
             results, page_info = await self.tmdb_api.get_discover_movie(
                 page=page,
@@ -196,11 +198,13 @@ class TMDBService:
         else:
             if without_keywords:
                 keyword_list = without_keywords.split(",")
+                if "281372" not in keyword_list:
+                    keyword_list.append("281372")
                 if "210024" not in keyword_list:
                     keyword_list.append("210024")
                 without_keywords = ",".join(keyword_list)
             else:
-                without_keywords = "210024"
+                without_keywords = "281372,210024"
 
             results, page_info = await self.tmdb_api.get_discover_tv(
                 page=page,
@@ -400,6 +404,6 @@ class TMDBService:
         self,
         collection_id: int,
         language: str,
-    ) -> MovieCollection: 
+    ) -> MovieCollection:
         res = await self.tmdb_api.get_collection_detail(collection_id, language)
-        return TMDBNormalizer._get_movie_collection(res)  
+        return TMDBNormalizer._get_movie_collection(res)
