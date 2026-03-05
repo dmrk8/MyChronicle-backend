@@ -2,15 +2,26 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import structlog
 from app.repositories.review_repository import ReviewRepository
-from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate, ReviewResponse
+from app.models.review_models import (
+    ReviewCreate,
+    ReviewDB,
+    ReviewUpdate,
+    ReviewResponse,
+)
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
+from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 
 logger = structlog.get_logger().bind(service="ReviewService")
 
 
 class ReviewService:
-    def __init__(self, review_repository: ReviewRepository):
+    def __init__(
+        self,
+        review_repository: ReviewRepository,
+        user_media_entry_repository: "UserMediaEntryRepository",
+    ):
         self.repository = review_repository
+        self.user_media_entry_repository = user_media_entry_repository
 
     async def create_review(self, review_request: ReviewCreate) -> ReviewDB:
         if review_request.rating is not None and (
@@ -34,6 +45,13 @@ class ReviewService:
             res = await self.repository.get_review_by_id(result.inserted_id)
             if res is None:
                 raise ValueError("Error returing the newly created review")
+
+            # Update last updated in user media entry
+            await self.user_media_entry_repository.update_entry(
+                str(review_request.user_media_entry_id),
+                {"updated_at": datetime.now(timezone.utc)},
+            )
+
             return res
         except Exception as e:
             logger.error(
@@ -62,16 +80,21 @@ class ReviewService:
             raise ValueError("Review must be less than 5000 characters")
 
         if update_request.review_progress is not None:
-            if update_request.review_progress < 0 or update_request.review_progress > 10000:
+            if (
+                update_request.review_progress < 0
+                or update_request.review_progress > 10000
+            ):
                 logger.warning(
-                    "Invalid review progress", review_progress=update_request.review_progress
+                    "Invalid review progress",
+                    review_progress=update_request.review_progress,
                 )
                 raise ValueError("Review progress must be between 0 and 10000")
 
         if update_request.written_at is not None:
             if update_request.written_at > datetime.now():
                 logger.warning(
-                    "Written at date is in the future", written_at=update_request.written_at
+                    "Written at date is in the future",
+                    written_at=update_request.written_at,
                 )
                 raise ValueError("Written at date cannot be in the future")
 
@@ -83,6 +106,13 @@ class ReviewService:
             updated_review = await self.repository.get_review_by_id(review_id)
             if updated_review is None:
                 raise ValueError("Review not found")
+
+            # Update last updated in user media entry
+            await self.user_media_entry_repository.update_entry(
+                str(updated_review.user_media_entry_id),
+                {"updated_at": datetime.now(timezone.utc)},
+            )
+
             return updated_review
         except Exception as e:
             logger.error("Error updating review", error=str(e))
@@ -102,16 +132,22 @@ class ReviewService:
             raise
         return False
 
-    async def get_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> List[ReviewDB]:
+    async def get_reviews_by_user_media_entry_id(
+        self, user_media_entry_id: str
+    ) -> List[ReviewDB]:
         try:
-            reviews = await self.repository.get_reviews_by_user_media_entry_id(user_media_entry_id)
+            reviews = await self.repository.get_reviews_by_user_media_entry_id(
+                user_media_entry_id
+            )
             if not reviews:
                 raise ValueError("Reviews not found")
             logger.info("Fetched reviews", user_media_entry_id=user_media_entry_id)
             return reviews
         except Exception as e:
             logger.error(
-                "Error fetching reviews", user_media_entry_id=user_media_entry_id, error=str(e)
+                "Error fetching reviews",
+                user_media_entry_id=user_media_entry_id,
+                error=str(e),
             )
 
     async def get_review_by_id(self, review_id: str) -> ReviewDB:
@@ -122,24 +158,36 @@ class ReviewService:
             logger.info("Review fetched successfully", review_id=review_id)
             return review_data
         except Exception as e:
-            logger.error("Error finding review by id", review_id=review_id, error=str(e))
+            logger.error(
+                "Error finding review by id", review_id=review_id, error=str(e)
+            )
             raise
 
-    async def count_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> int:
+    async def count_reviews_by_user_media_entry_id(
+        self, user_media_entry_id: str
+    ) -> int:
         try:
-            count = await self.repository.count_reviews_by_user_media_entry_id(user_media_entry_id)
+            count = await self.repository.count_reviews_by_user_media_entry_id(
+                user_media_entry_id
+            )
             logger.info("Counted reviews", user_media_entry_id=user_media_entry_id)
             return count
         except Exception as e:
             logger.error(
-                "Error counting reviews", user_media_entry_id=user_media_entry_id, error=str(e)
+                "Error counting reviews",
+                user_media_entry_id=user_media_entry_id,
+                error=str(e),
             )
             raise
 
-    async def delete_reviews_by_user_media_entry_id(self, user_media_entry_id: str) -> bool:
+    async def delete_reviews_by_user_media_entry_id(
+        self, user_media_entry_id: str
+    ) -> bool:
         try:
-            result: DeleteResult = await self.repository.delete_reviews_by_user_media_entry_id(
-                user_media_entry_id
+            result: DeleteResult = (
+                await self.repository.delete_reviews_by_user_media_entry_id(
+                    user_media_entry_id
+                )
             )
             logger.info(
                 "Reviews deleted",
@@ -161,11 +209,18 @@ class ReviewService:
         self, user_id: str, media_id: str
     ) -> List[ReviewDB]:
         try:
-            reviews = await self.repository.get_reviews_by_user_id_and_media_id(user_id, media_id)
+            reviews = await self.repository.get_reviews_by_user_id_and_media_id(
+                user_id, media_id
+            )
             if not reviews:
                 raise ValueError("Reviews not found")
             logger.info("Fetched reviews", user_id=user_id, media_id=media_id)
             return reviews
         except Exception as e:
-            logger.error("Error fetching reviews", user_id=user_id, media_id=media_id, error=str(e))
+            logger.error(
+                "Error fetching reviews",
+                user_id=user_id,
+                media_id=media_id,
+                error=str(e),
+            )
             raise
