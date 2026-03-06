@@ -440,5 +440,34 @@ class TMDBApi:
         collection_detail = TMDBCollection.model_validate(data)
         return collection_detail
 
+    async def search_keyword(
+        self,
+        query: str,
+        page: int = 1,
+    ) -> tuple[List[dict], TMDBPageInfo]:
+        """
+        Searches for keywords on TMDB.
+        """
+        url = f"{self.BASE_URL}/search/keyword"
+        params = {
+            "query": query,
+            "page": page,
+        }
+        data = await perform_request(
+            client=self.client,
+            method="GET",
+            url=url,
+            headers=self.headers,
+            params=params,
+            action="search_keyword",
+        )
 
-# https://api.themoviedb.org/3/search/keyword
+        results = data.get("results", [])
+        page_info = TMDBPageInfo.model_validate(
+            {
+                "page": data.get("page", page),
+                "total_pages": data.get("total_pages", 1),
+                "total_results": data.get("total_results", 0),
+            }
+        )
+        return results, page_info

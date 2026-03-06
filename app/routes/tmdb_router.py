@@ -236,3 +236,15 @@ async def get_featured_bulk(
         return await tmdb_service.get_featured_bulk(media_type)
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to fetch featured bulk")
+
+
+@tmdb_router.get("/keyword/search")
+async def search_tmdb_keyword(
+    query: str = Query(..., min_length=1, description="Keyword search query"),
+    service: TMDBService = Depends(get_tmdb_service),
+):
+    try:
+        result = await service.search_keyword(query=query)
+        return result
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch keyword search results")

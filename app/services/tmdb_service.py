@@ -407,3 +407,24 @@ class TMDBService:
     ) -> MovieCollection:
         res = await self.tmdb_api.get_collection_detail(collection_id, language)
         return TMDBNormalizer._get_movie_collection(res)
+
+    async def search_keyword(
+        self,
+        query: str,
+    ) -> List[dict]:
+        """
+        Searches for keywords on TMDB. Returns first 60 results (3 pages).
+        """
+        all_results = []
+
+        for page in range(1, 4):  # pages 1, 2, 3
+            results, page_info = await self.tmdb_api.search_keyword(
+                query=query,
+                page=page,
+            )
+            all_results.extend(results)
+
+            if page >= page_info.total_pages:
+                break
+
+        return all_results[:60]
