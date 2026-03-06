@@ -22,21 +22,6 @@ class AnilistService:
     def __init__(self, anilist_api: AnilistApi):
         self.anilist_api = anilist_api
 
-    async def get_featured_media(
-        self,
-        page: int,
-        per_page: int,
-        season: Optional[str] = None,
-        season_year: Optional[int] = None,
-        sort: str = "POPULARITY_DESC",
-        media_type: str = "ANIME",
-    ) -> List[AnilistMediaMinimal]:
-
-        return await self.anilist_api.get_featured_media(
-            page, per_page, season, season_year, sort, media_type
-        )
-        return AnilistNormalizer.normalize_minimal(res)
-
     async def search_media(
         self,
         page: int,

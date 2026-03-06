@@ -201,43 +201,6 @@ async def get_tmdb_trending_media(
         raise HTTPException(status_code=500, detail="Failed to fetch trending media")
 
 
-@tmdb_router.get("/popular-season/{media_type}")
-async def get_tmdb_popular_season(
-    media_type: str = Path(..., regex="^(movie|tv)$", description="Media type: movie or tv"),
-    start_date: str = Query(
-        (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
-        description="Start date (default: 3 months ago)",
-    ),
-    end_date: str = Query(
-        datetime.now().strftime("%Y-%m-%d"), description="End date (default: today)"
-    ),
-    page: int = Query(1, ge=1, description="Page number"),
-    language: str = Query("en-US", description="Language for results"),
-    sort_by: str = Query("popularity.desc", description="Sort by"),
-    service: TMDBService = Depends(get_tmdb_service),
-):
-    try:
-        result = await service.get_popular_season(
-            media_type, start_date, end_date, page, language, sort_by
-        )
-        if result is None:
-            raise HTTPException(status_code=500, detail="Failed to fetch popular season media")
-        return result
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to fetch popular season media")
-
-
-@tmdb_router.get("/featured-bulk")
-async def get_featured_bulk(
-    media_type: str = Query(..., description="Type of media: movie or tv", alias="mediaType"),
-    tmdb_service: TMDBService = Depends(get_tmdb_service),
-):
-    try:
-        return await tmdb_service.get_featured_bulk(media_type)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to fetch featured bulk")
-
-
 @tmdb_router.get("/keyword/search")
 async def search_tmdb_keyword(
     query: str = Query(..., min_length=1, description="Keyword search query"),

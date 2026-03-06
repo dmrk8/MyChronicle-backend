@@ -120,34 +120,6 @@ async def get_manga_detail(
         )
 
 
-@anilist_router.get("/featured")
-async def get_anilist_featured_media(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=50, alias="perPage"),
-    season: Optional[str] = None,
-    season_year: Optional[int] = Query(None, alias="seasonYear"),
-    sort: str = Query(None),
-    media_type: str = Query(None, alias="mediaType"),
-    service: AnilistService = Depends(get_anilist_service),
-):
-    try:
-        result = await service.get_featured_media(
-            page, per_page, season, season_year, sort, media_type
-        )
-        return result
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code, detail="AniList API error"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
-
-
 @anilist_router.get("/featured/bulk/{media_type}")
 async def get_anilist_featured_media_bulk(
     media_type: str,
