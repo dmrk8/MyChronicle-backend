@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Path
+from fastapi import APIRouter, HTTPException, Depends, Path, Query
 
 from app.models.review_models import ReviewCreate, ReviewUpdate
 from app.models.user_models import UserDB
@@ -6,7 +6,7 @@ from app.services.review_service import ReviewService
 from app.auth.auth_dependencies import get_current_user
 from app.core.dependencies import get_review_service
 
-review_router = APIRouter(prefix="/review")
+review_router = APIRouter(prefix="/reviews")
 
 
 @review_router.post("/")
@@ -93,7 +93,7 @@ async def get_reviews_by_user_media_entry_id(
 
 @review_router.get("/by-user-id")
 async def get_reviews_by_user_id_and_media_id(
-    media_id: str = Path(..., description="ID of the media"),
+    media_id: str = Query(..., description="ID of the media"),
     current_user: UserDB = Depends(get_current_user),
     review_service: ReviewService = Depends(get_review_service),
 ):

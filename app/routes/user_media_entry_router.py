@@ -18,7 +18,7 @@ from app.enums.user_media_entry_enums import (
     UserMediaEntrySortOptions,
 )
 
-user_media_entry_router = APIRouter(prefix="/user-media-entry", tags=["UserMediaEntry"])
+user_media_entry_router = APIRouter(prefix="/user-media-entries", tags=["UserMediaEntry"])
 
 
 @user_media_entry_router.post("/")
