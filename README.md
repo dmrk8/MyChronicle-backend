@@ -14,7 +14,7 @@ This service retrieves media data from external APIs and stores user tracking da
 ## Frontend Repository
 
 Frontend for this project:  
-https://github.com/username/media-tracker-frontend
+https://github.com/dmrk8/MyChronicle-frontend
 
 ## Features
 
