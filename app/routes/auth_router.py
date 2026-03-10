@@ -36,17 +36,17 @@ async def login(
 @auth_router.post("/logout")
 async def logout(
     response: Response,
-    session_id: Optional[str] = Cookie(None),
 ):
-    if session_id:
-
-        try:
-            response.delete_cookie(
-                key="access_token", httponly=True, secure=True, samesite=get_settings().samesite
-            )
-            return {"message": "Logged out successfully"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail="Internal server error")
+    try:
+        response.delete_cookie(
+            key="access_token",
+            httponly=True,
+            secure=True,
+            samesite=get_settings().samesite,
+        )
+        return {"message": "Logged out successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @auth_router.get("/me")
@@ -61,22 +61,5 @@ async def get_current_user_info(
             createdAt=current_user.created_at,
             updatedAt=current_user.updated_at,
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@auth_router.post("/refresh")
-async def refresh_access_token(
-    session_id: Optional[str] = Cookie(None),
-    auth_service: AuthService = Depends(get_auth_service),
-):
-    if not session_id:
-        raise HTTPException(status_code=401, detail="No session found")
-
-    try:
-        res = await auth_service.refresh_access_token(session_id)
-        return res.model_dump(exclude="session_id")
-    except ValueError as ve:
-        raise HTTPException(status_code=401, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
