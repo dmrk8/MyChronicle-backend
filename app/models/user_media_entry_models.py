@@ -90,6 +90,12 @@ class UserMediaEntryUpdate(BaseModel):
     in_library: Optional[bool] = Field(
         None, alias="inLibrary", description="Updated library status"
     )
+    title: Optional[str] = Field(
+        None, alias="title", description="Updated title"
+    )
+    cover_image: Optional[str] = Field(
+        None, alias="coverImage", description="Updated cover image URL"
+    )
     is_adult: Optional[bool] = Field(
         None, alias="isAdult", description="Updated adult status"
     )
