@@ -121,8 +121,10 @@ class AnilistApi:
         status: Optional[str],
         genre_in: Optional[List[str]],
         tag_in: Optional[List[str]],
-        is_adult: Optional[bool] = None,
-        country_of_origin: Optional[str] = None,
+        is_adult: Optional[bool],
+        country_of_origin: Optional[str],
+        genre_not_in: Optional[List[str]],
+        tag_not_in: Optional[List[str]],
     ) -> tuple[List[AnilistMediaMinimal], AnilistPageInfo]:
         """
         Searches for media based on the provided parameters.
@@ -135,7 +137,7 @@ class AnilistApi:
             "type": media_type,
             "sort": [sort],
             "search": search,
-            "isAdult": is_adult
+            "isAdult": is_adult,
         }
 
         if season:
@@ -150,12 +152,16 @@ class AnilistApi:
             variables["genreIn"] = genre_in
         if tag_in:
             variables["tagIn"] = tag_in
+        if genre_not_in:
+            variables["genreNotIn"] = genre_not_in
+        if tag_not_in:
+            variables["tagNotIn"] = tag_not_in
         if country_of_origin:
             variables["countryOfOrigin"] = country_of_origin
 
         graphql_query = {
             "query": """ 
-            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode) {
+            query($page: Int, $perPage: Int, $type: MediaType, $sort: [MediaSort], $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $status: MediaStatus, $genreIn: [String], $tagIn: [String], $search: String, $isAdult: Boolean, $countryOfOrigin: CountryCode, $genreNotIn: [String], $tagNotIn: [String]) {
               Page(page: $page, perPage: $perPage) {
                 pageInfo {
                   currentPage
@@ -163,7 +169,7 @@ class AnilistApi:
                   perPage
                   total
                 }
-                media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear, format: $format, status: $status, genre_in: $genreIn, tag_in: $tagIn, search: $search, isAdult: $isAdult, countryOfOrigin: $countryOfOrigin) {
+                media(type: $type, sort: $sort, season: $season, seasonYear: $seasonYear, format: $format, status: $status, genre_in: $genreIn, tag_in: $tagIn, search: $search, isAdult: $isAdult, countryOfOrigin: $countryOfOrigin, genre_not_in: $genreNotIn, tag_not_in: $tagNotIn) {
                   id
                   type
                   title {

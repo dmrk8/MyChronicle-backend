@@ -37,6 +37,8 @@ async def search_anilist(
     country_of_origin: Optional[str] = Query(
         None, regex="^(JP|KR|CN)$", alias="countryOfOrigin"
     ),
+    genre_not_in: Optional[List[str]] = Query(None, alias="genreNotIn"),
+    tag_not_in: Optional[List[str]] = Query(None, alias="tagNotIn"),
     service: AnilistService = Depends(get_anilist_service),
 ):
     try:
@@ -54,6 +56,8 @@ async def search_anilist(
             tag_in,
             is_adult,
             country_of_origin,
+            genre_not_in,
+            tag_not_in,
         )
 
         return result

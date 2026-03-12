@@ -12,11 +12,13 @@ from app.models.media_models import (
     MediaFeaturedBulk,
     MediaMinimal,
     MediaPagination,
-    AnimeDetailed
+    AnimeDetailed,
 )
 from app.context.anilist_season_info import get_season_context
 import structlog
+
 logger = structlog.get_logger("anilist_service")
+
 
 class AnilistService:
     def __init__(self, anilist_api: AnilistApi):
@@ -26,17 +28,19 @@ class AnilistService:
         self,
         page: int,
         per_page: int,
-        search: Optional[str] = None,
-        media_type: str = AnilistMediaType.ANIME,
-        sort: str = SortOption.POPULARITY_DESC,
-        season: Optional[str] = None,
-        season_year: Optional[int] = None,
-        format: Optional[str] = None,
-        status: Optional[str] = None,
-        genre_in: Optional[List[str]] = None,
-        tag_in: Optional[List[str]] = None,
-        is_adult: Optional[bool] = None,
-        country_of_origin: Optional[str] = None,
+        search: Optional[str],
+        media_type: str,
+        sort: str,
+        season: Optional[str],
+        season_year: Optional[int],
+        format: Optional[str],
+        status: Optional[str],
+        genre_in: Optional[List[str]],
+        tag_in: Optional[List[str]],
+        is_adult: Optional[bool],
+        country_of_origin: Optional[str],
+        genre_not_in: Optional[List[str]],
+        tag_not_in: Optional[List[str]],
     ) -> MediaPagination:
 
         media_list, page_info = await self.anilist_api.search_media(
@@ -53,6 +57,8 @@ class AnilistService:
             tag_in,
             is_adult,
             country_of_origin,
+            genre_not_in,
+            tag_not_in,
         )
         return MediaPagination(
             results=AnilistNormalizer.normalize_minimal(media_list),
@@ -67,7 +73,6 @@ class AnilistService:
         if res.type != "ANIME":
             raise TypeError(f"Expected ANIME, got {res.type}")
         return AnilistNormalizer.normalize_anime_detailed(res)
-        
 
     async def get_manga_detail(self, manga_id: int) -> MangaDetailed:
         res = await self.anilist_api.get_media_detail(manga_id)
@@ -95,9 +100,7 @@ class AnilistService:
         )
         return {
             "trending": AnilistNormalizer.normalize_minimal(res.trending),
-            "popularSeason": AnilistNormalizer.normalize_minimal(
-                res.popular_season
-            ),
+            "popularSeason": AnilistNormalizer.normalize_minimal(res.popular_season),
             "upcoming": AnilistNormalizer.normalize_minimal(res.upcoming),
             "allTime": AnilistNormalizer.normalize_minimal(res.all_time),
         }
@@ -119,9 +122,7 @@ class AnilistService:
         return {
             "trending": AnilistNormalizer.normalize_minimal(res["trending"]),
             "allTime": AnilistNormalizer.normalize_minimal(res["allTime"]),
-            "allTimeManhwa": AnilistNormalizer.normalize_minimal(
-                res["allTimeManhwa"]
-            ),
+            "allTimeManhwa": AnilistNormalizer.normalize_minimal(res["allTimeManhwa"]),
         }
 
     async def get_featured_bulk(
