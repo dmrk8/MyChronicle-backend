@@ -320,6 +320,7 @@ class AnilistApi:
                   isMediaSpoiler
                   isGeneralSpoiler
                   rank
+                  description
                 }
                 studios {
                   edges {

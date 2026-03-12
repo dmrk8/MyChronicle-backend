@@ -35,6 +35,7 @@ class Tag(BaseModel):
     is_media_spoiler: bool = Field(..., alias="isMediaSpoiler")
     is_general_spoiler: bool = Field(..., alias="isGeneralSpoiler")
     rank: int
+    description: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
