@@ -9,6 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.services.anilist_service import AnilistService
 from app.integrations.anilistApi import AnilistApi
 
+from app.services.redis_service import RedisService
 from app.services.tmdb_service import TMDBService
 from app.integrations.tmdb_api import TMDBApi
 
@@ -62,8 +63,13 @@ def get_redis() -> Redis:
     return state.redis_client  # type: ignore
 
 
+def get_redis_service(redis_client: Redis = Depends(get_redis)) -> RedisService:
+    return RedisService(redis_client=redis_client)
+
+
 def get_anilist_service(
     anilist_api: AnilistApi = Depends(get_anilist_api),
+   
 ) -> AnilistService:
     return AnilistService(anilist_api=anilist_api)
 
