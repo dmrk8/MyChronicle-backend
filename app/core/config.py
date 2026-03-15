@@ -37,22 +37,17 @@ class Settings(BaseSettings):
         description="Default expiration for refresh tokens in days"
     )
 
-    redis_host: str = Field(description="Hostname for the Redis server")
-    redis_port: int = Field(description="Port number for the Redis server")
-    redis_username: str = Field(description="Username for Redis authentication")
-    redis_password: str = Field(description="Password for Redis authentication")
-
-    api_url: str = Field(description="Base URL for the API endpoints")
     tmdb_api_key: str = Field(description="API key for The Movie Database (TMDB)")
     tmdb_access_token: str = Field(description="Access token for TMDB API")
-    twitch_client_id: str = Field(description="Client ID for Twitch API")
-    twitch_client_secret: str = Field(description="Client secret for Twitch API")
-    igdb_access_token: str = Field(description="Access token for IGDB API")
-    igdb_expires_in: int = Field(
-        description="Expiration time for IGDB access token in seconds"
-    )
-    steam_web_api_key: str = Field(description="API key for Steam Web API")
-    omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
+    
+    #twitch_client_id: str = Field(description="Client ID for Twitch API")
+    #twitch_client_secret: str = Field(description="Client secret for Twitch API")
+    #igdb_access_token: str = Field(description="Access token for IGDB API")
+    #igdb_expires_in: int = Field(
+    #    description="Expiration time for IGDB access token in seconds"
+    #)#
+    #steam_web_api_key: str = Field(description="API key for Steam Web API")
+    #omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
 
     allow_origins_str: str = Field(
         default="http://localhost:5173",
