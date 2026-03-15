@@ -47,6 +47,25 @@ jobs:
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ github.sha }}
 
       - name: Deploy to Cloud Run
+        env:
+          ENV: ${{ secrets.ENV }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          REVIEW_COLLECTION: ${{ secrets.REVIEW_COLLECTION }}
+          USER_COLLECTION: ${{ secrets.USER_COLLECTION }}
+          USER_MEDIA_ENTRY_COLLECTION: ${{ secrets.USER_MEDIA_ENTRY_COLLECTION }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
+          JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
+          SAMESITE: ${{ secrets.SAMESITE }}
+          ALLOW_ORIGINS_STR: ${{ secrets.ALLOW_ORIGINS_STR }}
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
             --image=us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ github.sha }} \
@@ -58,8 +77,8 @@ jobs:
             --max-instances=2 \
             --memory=512Mi \
             --cpu=1 \
-            --set-env-vars="^||^ENV=${{ secrets.ENV }}||LOG_LEVEL=${{ secrets.LOG_LEVEL }}||SERVICE_NAME=${{ secrets.SERVICE_NAME }}||MONGODB_URI=${{ secrets.MONGODB_URI }}||DATABASE_NAME=${{ secrets.DATABASE_NAME }}||REVIEW_COLLECTION=${{ secrets.REVIEW_COLLECTION }}||USER_COLLECTION=${{ secrets.USER_COLLECTION }}||USER_MEDIA_ENTRY_COLLECTION=${{ secrets.USER_MEDIA_ENTRY_COLLECTION }}||JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}||JWT_ALGORITHM=${{ secrets.JWT_ALGORITHM }}||JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}||JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT=${{ secrets.JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT }}||JWT_ISSUER=${{ secrets.JWT_ISSUER }}||JWT_AUDIENCE=${{ secrets.JWT_AUDIENCE }}||TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}||TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }}||SAMESITE=${{ secrets.SAMESITE }}||ALLOW_ORIGINS_STR=${{ secrets.ALLOW_ORIGINS_STR }}"
-
+            --set-env-vars="^||^ENV=${ENV}||LOG_LEVEL=${LOG_LEVEL}||SERVICE_NAME=${SERVICE_NAME}||MONGODB_URI=${MONGODB_URI}||DATABASE_NAME=${DATABASE_NAME}||REVIEW_COLLECTION=${REVIEW_COLLECTION}||USER_COLLECTION=${USER_COLLECTION}||USER_MEDIA_ENTRY_COLLECTION=${USER_MEDIA_ENTRY_COLLECTION}||JWT_SECRET_KEY=${JWT_SECRET_KEY}||JWT_ALGORITHM=${JWT_ALGORITHM}||JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}||JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT=${JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT}||JWT_ISSUER=${JWT_ISSUER}||JWT_AUDIENCE=${JWT_AUDIENCE}||TMDB_API_KEY=${TMDB_API_KEY}||TMDB_ACCESS_TOKEN=${TMDB_ACCESS_TOKEN}||SAMESITE=${SAMESITE}||ALLOW_ORIGINS_STR=${ALLOW_ORIGINS_STR}"
+            
       - name: Clean up old images
         run: |
           gcloud artifacts docker images list \
