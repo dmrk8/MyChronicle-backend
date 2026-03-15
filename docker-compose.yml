@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: otakutime-backend
+    container_name: mychronicle-backend
     ports:
       - "8000:8000"
     env_file:
