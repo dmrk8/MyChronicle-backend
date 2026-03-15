@@ -32,7 +32,6 @@ https://github.com/dmrk8/MyChronicle-frontend
 | Framework | FastAPI |
 | Language | Python 3.13 |
 | Database | MongoDB (Motor async driver) |
-| Cache | Redis |
 | HTTP Client | HTTPX (async) |
 | Deployment | Docker / Docker Compose |
 
@@ -50,7 +49,6 @@ Client
 FastAPI Backend
    │
    ├── MongoDB (user data)
-   ├── Redis (cache)
    ├── AniList API
    └── TMDB API
 
@@ -138,7 +136,7 @@ http://localhost:8000
 
 ```
 app/
-├── auth/           # JWT & session handling
+├── auth/           # JWT 
 ├── context/        # Seasonal context helpers
 ├── core/           # Config, infrastructure, dependencies
 ├── enums/          # Enumerations for media types
