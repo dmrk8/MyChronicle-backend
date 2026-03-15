@@ -83,10 +83,18 @@ jobs:
 
       - name: Clean up old images
         run: |
-          gcloud artifacts docker images list \
+          IMAGES=$(gcloud artifacts docker images list \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
             --format="get(version)" \
-            --sort-by="~createTime" | tail -n +4 | xargs -I {} \
-            gcloud artifacts docker images delete \
-            "us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@{}" \
-            --quiet --async || true
+            --sort-by="~createTime" \
+            --limit=100)
+          
+          COUNT=0
+          for IMAGE_SHA in $IMAGES; do
+            COUNT=$((COUNT + 1))
+            if [ $COUNT -gt 3 ]; then
+              gcloud artifacts docker images delete \
+                "us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@${IMAGE_SHA}" \
+                --quiet --async || true
+            fi
+          done
