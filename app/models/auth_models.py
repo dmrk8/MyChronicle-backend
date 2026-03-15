@@ -33,7 +33,6 @@ class AuthResponse(BaseModel):
     token_type: str = Field(
         default="bearer", description="Token type", alias="tokenType"
     )
-    #session_id: str 
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

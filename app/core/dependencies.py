@@ -25,7 +25,6 @@ from app.services.review_service import ReviewService
 
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.user_media_entry_service import UserMediaEntryService
-from app.auth.session_handler import SessionHandler
 
 _anilist_api = None
 _tmdb_api = None
@@ -87,7 +86,7 @@ def get_user_repository(
 
 
 def get_jwt_handler(
-    settings: Settings = Depends(get_settings), redis_client: Redis = Depends(get_redis)
+    settings: Settings = Depends(get_settings)
 ) -> JWTHandler:
     global _jwt_handler
     if _jwt_handler is None:
@@ -98,18 +97,8 @@ def get_jwt_handler(
             audience=settings.jwt_audience,
             expire_minutes=settings.jwt_access_token_expire_minutes,
             default_expire_days=settings.jwt_refresh_token_expire_days_default,
-            redis_client=redis_client,
         )
     return _jwt_handler
-
-
-def get_session_handler(
-    redis_client: Redis = Depends(get_redis), settings: Settings = Depends(get_settings)
-) -> SessionHandler:
-    return SessionHandler(
-        redis_client=redis_client,
-        session_expire_days=settings.jwt_refresh_token_expire_days_default,
-    )
 
 
 def get_user_service(
@@ -123,8 +112,7 @@ def get_user_service(
 
 def get_auth_service(
     jwt_handler: JWTHandler = Depends(get_jwt_handler),
-    user_service: UserService = Depends(get_user_service),
-    session_handler: SessionHandler = Depends(get_session_handler),
+    user_service: UserService = Depends(get_user_service)
 ) -> AuthService:
     return AuthService(
         jwt_handler=jwt_handler,

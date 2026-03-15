@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta, timezone
-import secrets
 from jose import JWTError, jwt
 from typing import Optional
 import structlog
-from redis.asyncio import Redis, RedisError
 from app.models.auth_models import Claims
 
 logger = structlog.get_logger()
@@ -14,7 +12,6 @@ class JWTHandler:
 
     def __init__(
         self,
-        redis_client: Redis,
         secret: str,
         algorithm: str,
         issuer: str,
@@ -22,7 +19,6 @@ class JWTHandler:
         expire_minutes: int,
         default_expire_days: int,
     ):
-        self.redis_client = redis_client
         self.secret_key = secret
         self.algorithm = algorithm
         self.issuer = issuer
@@ -169,69 +165,3 @@ class JWTHandler:
 
         return self._encode_token(claims)
 
-    async def store_refresh_token(self, user_id: str, refresh_token: str):
-        claims = self._decode_token(refresh_token)
-        if not claims:
-            raise ValueError("Invalid refresh token")
-
-        ttl = claims.exp - int(datetime.now(timezone.utc).timestamp())
-
-        if ttl <= 0:
-            raise ValueError("Refresh token already expired")
-
-        await self.redis_client.setex(
-            f"refresh_token:{user_id}",
-            ttl,
-            refresh_token,
-        )
-        logger.info("Refresh token is stored in Redis", user_id={user_id})
-
-    async def revoke_refresh_token(self, user_id: str):
-        await self.redis_client.delete(f"refresh_token:{user_id}")
-        logger.info("Refresh token is revoked from Redis", user_id={user_id})
-
-    async def verify_refresh_token(self, refresh_token: str) -> Optional[str]:
-        """Checks the validity of the token by checking the storage,
-        if it is valid it returns the sub of the claim, else return None
-
-        Returns:
-            str: sub in Claims
-        """
-
-        user_id = self.verify_token(refresh_token)
-
-        if not user_id:
-            logger.warning("Token sub value is invalid")
-            return None
-
-        try:
-            stored_token = await self.redis_client.get(f"refresh_token:{user_id}")
-
-            if not stored_token:
-                logger.warning("No stored refresh token found", user_id={user_id})
-                return None
-
-            # Decode bytes if necessary, ensure it's a string
-            if isinstance(stored_token, bytes):
-                stored_token_str = stored_token.decode("utf-8")
-            elif isinstance(stored_token, str):
-                stored_token_str = stored_token
-            else:
-                logger.warning(
-                    "Unexpected stored_token type",
-                    user_id={user_id},
-                    stored_token_type={type(stored_token)},
-                )
-                return None
-
-            # Constant-time comparison
-            if secrets.compare_digest(stored_token_str, refresh_token):
-                logger.info("Refresh token verified", user_id={user_id})
-                return user_id
-            else:
-                logger.warning("Refresh token mismatch", user_id={user_id})
-                return None
-
-        except RedisError as e:
-            logger.error("Redis error verifying refresh token", error={e})
-            return None

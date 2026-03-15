@@ -1,11 +1,6 @@
 from typing import List, Optional
-from app.models.anilist_models import (
-    AnilistMediaDetailed,
-    AnilistPagination,
-    AnilistMediaMinimal,
-)
 from app.integrations.anilistApi import AnilistApi
-from app.enums.anilist_enums import AnilistMediaType, SortOption
+from app.enums.anilist_enums import AnilistMediaType
 from app.utils.anilist_normalizer import AnilistNormalizer
 from app.models.media_models import (
     MangaDetailed,
@@ -28,19 +23,19 @@ class AnilistService:
         self,
         page: int,
         per_page: int,
-        search: Optional[str],
+        search: str,
         media_type: str,
         sort: str,
-        season: Optional[str],
-        season_year: Optional[int],
-        format: Optional[str],
-        status: Optional[str],
-        genre_in: Optional[List[str]],
-        tag_in: Optional[List[str]],
-        is_adult: Optional[bool],
-        country_of_origin: Optional[str],
-        genre_not_in: Optional[List[str]],
-        tag_not_in: Optional[List[str]],
+        season: str,
+        season_year: int,
+        format: str,
+        status: str,
+        genre_in: List[str],
+        tag_in: List[str],
+        is_adult: bool,
+        country_of_origin: str,
+        genre_not_in: List[str],
+        tag_not_in: List[str],
     ) -> MediaPagination:
 
         media_list, page_info = await self.anilist_api.search_media(
@@ -70,13 +65,14 @@ class AnilistService:
 
     async def get_anime_detail(self, anime_id: int) -> AnimeDetailed:
         res = await self.anilist_api.get_media_detail(anime_id)
-        if res.type != "ANIME":
+        if res.type != AnilistMediaType.ANIME:
             raise TypeError(f"Expected ANIME, got {res.type}")
         return AnilistNormalizer.normalize_anime_detailed(res)
+        
 
     async def get_manga_detail(self, manga_id: int) -> MangaDetailed:
         res = await self.anilist_api.get_media_detail(manga_id)
-        if res.type != "MANGA":
+        if res.type != AnilistMediaType.MANGA:
             raise TypeError(f"Expected MANGA, got {res.type}")
         return AnilistNormalizer.normalize_manga_detailed(res)
 
@@ -107,9 +103,9 @@ class AnilistService:
 
     async def get_featured_manga_bulk(
         self,
-        media_type: str = "MANGA",
-        page: int = 1,
-        per_page: int = 6,
+        media_type: str,
+        page: int,
+        per_page: int,
     ):
         """
         Fetches featured manga data: trending, all time popular, and all time popular Manhwa.
@@ -127,9 +123,9 @@ class AnilistService:
 
     async def get_featured_bulk(
         self,
-        media_type: str = AnilistMediaType.ANIME,
-        page: int = 1,
-        per_page: int = 6,
+        media_type: str,
+        page: int,
+        per_page: int,
     ) -> MediaFeaturedBulk:
         """
         Fetches featured anime and/or manga data in bulk.

@@ -46,19 +46,19 @@ async def lifespan(app):
         logger.critical("mongodb_connection_failed", exc_info=True)
         raise
 
-    logger.info("connecting_to_redis")
-    try:
-        state.redis_client = Redis(
-            host=state.settings.redis_host,
-            port=state.settings.redis_port,
-            decode_responses=True,
-            max_connections=10,
-        )
-        await state.redis_client.ping()
-        logger.info("redis_connected")
-    except Exception:
-        logger.critical("redis_connection_failed", exc_info=True)
-        raise
+    #logger.info("connecting_to_redis")
+    #try:
+    #    state.redis_client = Redis(
+    #        host=state.settings.redis_host,
+    #        port=state.settings.redis_port,
+    #        decode_responses=True,
+    #        max_connections=10,
+    #    )
+    #    await state.redis_client.ping()
+    #    logger.info("redis_connected")
+    #except Exception:
+    #    logger.critical("redis_connection_failed", exc_info=True)
+    #    raise
 
     logger.info("opening httpx connections")
     state.anilist_client = AsyncClient(timeout=10.0)
