@@ -12,7 +12,7 @@ logger = structlog.get_logger()
 class AppState:
     settings: Settings | None = None
     mongo_client: AsyncIOMotorClient | None = None
-    redis_client: Redis | None = None
+    #redis_client: Redis | None = None
     anilist_client: AsyncClient | None = None
     tmdb_client: AsyncClient | None = None
 
@@ -69,8 +69,8 @@ async def lifespan(app):
     logger.info("closing_connections")
     if state.mongo_client:
         state.mongo_client.close()
-    if state.redis_client:
-        await state.redis_client.close()
+    #if state.redis_client:
+    #    await state.redis_client.close()
     if state.anilist_client:
         await state.anilist_client.aclose()
     if state.tmdb_client:
