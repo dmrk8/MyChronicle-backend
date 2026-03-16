@@ -85,16 +85,15 @@ jobs:
         run: |
           IMAGES=$(gcloud artifacts docker images list \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
-            --format="get(version)" \
-            --sort-by="~createTime" \
-            --limit=100)
-          
+            --format="get(digest)" \
+            --sort-by="~createTime")
+
           COUNT=0
-          for IMAGE_SHA in $IMAGES; do
+          for DIGEST in $IMAGES; do
             COUNT=$((COUNT + 1))
             if [ $COUNT -gt 3 ]; then
-              gcloud artifacts docker images delete \
-                "us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@${IMAGE_SHA}" \
-                --quiet --async || true
+              IMAGE="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@$DIGEST"
+              echo "Deleting $IMAGE"
+              gcloud artifacts docker images delete "$IMAGE" --quiet --delete-tags
             fi
           done
