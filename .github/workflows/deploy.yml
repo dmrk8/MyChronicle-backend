@@ -94,6 +94,6 @@ jobs:
             if [ $COUNT -gt 3 ]; then
               IMAGE="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@$DIGEST"
               echo "Deleting $IMAGE"
-              gcloud artifacts docker images delete "$IMAGE" --quiet --delete-tags
+              gcloud artifacts docker images delete "$IMAGE" --delete-tags --quiet
             fi
           done
