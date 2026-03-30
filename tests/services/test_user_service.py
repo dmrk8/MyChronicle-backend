@@ -124,7 +124,7 @@ async def test_delete_user_success(user_service, mock_user_repository):
 
     result = await user_service.delete_user("user_123")
 
-    assert result is True
+    assert result is None
     mock_user_repository.delete.assert_called_once()
 
 
