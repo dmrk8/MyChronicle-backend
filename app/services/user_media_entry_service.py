@@ -54,9 +54,9 @@ class UserMediaEntryService:
 
     async def delete_entry(self, entry_id: str, user_id: str) -> str:
         await self._verify_ownership(entry_id, user_id)
+        await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
         result: DeleteResult = await self.repository.delete_entry(entry_id)
         if result.acknowledged:
-            await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
             return entry_id
         else:
             raise ValueError("Failed to delete entry")
