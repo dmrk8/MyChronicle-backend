@@ -93,7 +93,7 @@ class UserService:
             role=user.role,
         )
 
-    async def delete_user(self, user_id: str) -> bool:
+    async def delete_user(self, user_id: str) -> None:
         try:
             existing_user = await self.user_repository.get_by_id(user_id)
             if not existing_user:
@@ -108,8 +108,7 @@ class UserService:
                 self.logger.error("delete_user_failed_no_rows_deleted", user_id=user_id)
                 raise RuntimeError("Delete operation failed")
 
-
-            return result.acknowledged
+            return
         except ValueError as ve:
             self.logger.error("validation_error_delete_user", error=str(ve))
             raise

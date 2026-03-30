@@ -40,13 +40,13 @@ async def update_user(
         )
 
 
-@user_router.delete("/", response_model=bool, status_code=status.HTTP_204_NO_CONTENT)
+@user_router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_service: UserService = Depends(get_user_service),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return await user_service.delete_user(current_user.id) 
+        await user_service.delete_user(current_user.id) 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
