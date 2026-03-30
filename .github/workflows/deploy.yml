@@ -98,7 +98,6 @@ jobs:
         run: |
           gcloud artifacts docker images list \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
-            --include-tags \
             --format="get(digest)" \
             --sort-by="~createTime" | tail -n +4 | while read DIGEST; do
               if [ -n "$DIGEST" ]; then
