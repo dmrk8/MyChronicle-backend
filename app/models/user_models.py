@@ -10,18 +10,20 @@ class UserRole(str, Enum):
 
 
 class UserDB(BaseModel):
-    id: Optional[str] = None
-    username: str = Field(..., min_length=3, max_length=50)
-    hash_password: str = Field(..., min_length=8, alias="hashPassword")
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
-    )
-    role: UserRole = UserRole.USER
+    id: str
+    username: str 
+    hash_password: str
+    created_at: datetime
+    updated_at: datetime
+    role: UserRole
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+class UserInsert(BaseModel):
+    username: str
+    hash_password: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    role: UserRole = UserRole.USER
 
 
 class UserCreate(BaseModel):
@@ -56,7 +58,6 @@ class UserUpdateRequest(BaseModel):
         description="Password must contain at least one lowercase letter, one uppercase letter, one digit, and one symbol",
     )
 
-
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, v):
@@ -82,15 +83,15 @@ class UserUpdate(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class User(BaseModel):
+    id: str
+    username: str
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
+    role: UserRole
 
-class UserResponse(BaseModel):
-    message: str = Field(..., description="Response message")
-   
-    data: Optional[UserDB] = Field(
-        None, description="Additional data, such as review lists or details"
-    )
-    acknowledged: Optional[bool] = Field(
-        None, description="Whether the operation was acknowledged by the database"
+    model_config = ConfigDict(
+        validate_by_name=True,
+        validate_by_alias=True, 
     )
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

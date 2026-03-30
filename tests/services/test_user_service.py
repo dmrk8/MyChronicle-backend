@@ -53,8 +53,10 @@ async def test_create_user_success(user_service, mock_user_repository, mock_pass
 
     result = await user_service.create_user(user_create)
 
-    assert result.message == "User Registered Successfully"
-    assert result.acknowledged is True
+    assert result.id == "user_456"
+    assert result.username == "newuser"
+    assert result.role == UserRole.USER
+    
     mock_password_handler.hash_password.assert_called_once_with("Secure@pass123")
     mock_user_repository.create.assert_called_once()
 
@@ -95,8 +97,9 @@ async def test_update_user_success(user_service, mock_user_repository):
     update_request = UserUpdateRequest(username="updateduser", password=None)
     result = await user_service.update_user("user_123", update_request)
 
-    assert result.message == "User updated successfully"
-    assert result.acknowledged is True
+    assert result.id == "user_123"
+    assert result.username == "testuser"
+    assert result.role == UserRole.USER
     mock_user_repository.update.assert_called_once()
 
 
@@ -121,8 +124,8 @@ async def test_delete_user_success(user_service, mock_user_repository):
 
     result = await user_service.delete_user("user_123")
 
-    assert result.message == "User deleted successfully"
-    assert result.acknowledged is True
+    assert result is True
+    mock_user_repository.delete.assert_called_once()
 
 
 @pytest.mark.asyncio

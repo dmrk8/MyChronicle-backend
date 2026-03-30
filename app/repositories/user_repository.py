@@ -5,7 +5,7 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from pymongo.errors import PyMongoError
-from app.models.user_models import UserDB
+from app.models.user_models import UserDB, UserInsert
 
 logger = structlog.get_logger()
 
@@ -14,23 +14,26 @@ class UserRepository:
     def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
         self.db = db
         self.collection = db[collection_name]
-        self.logger = logger.bind(repository="UserRepository", collection=collection_name)
+        self.logger = logger.bind(
+            repository="UserRepository", collection=collection_name
+        )
 
     def map_to_model(self, mongo_doc: dict) -> UserDB:
         mongo_doc["id"] = str(mongo_doc["_id"])
         mongo_doc.pop("_id", None)
         return UserDB(**mongo_doc)
 
-    async def create(self, user: UserDB) -> InsertOneResult:
+    async def create(self, user: UserInsert) -> InsertOneResult:
         start = time.perf_counter()
         try:
             data = user.model_dump()
-            data.pop("id", None)
 
             result = await self.collection.insert_one(data)
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.info(
-                "mongo_user_insert_one", user_id=str(result.inserted_id), elapsed_ms=elapsed_ms
+                "mongo_user_insert_one",
+                user_id=str(result.inserted_id),
+                elapsed_ms=elapsed_ms,
             )
             return result
 
@@ -42,7 +45,9 @@ class UserRepository:
     async def update(self, id: str, update_data: dict) -> UpdateResult:
         start = time.perf_counter()
         try:
-            result = await self.collection.update_one({"_id": ObjectId(id)}, {"$set": update_data})
+            result = await self.collection.update_one(
+                {"_id": ObjectId(id)}, {"$set": update_data}
+            )
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.info(
                 "mongo_user_update_one",
@@ -55,7 +60,10 @@ class UserRepository:
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
-                "mongo_user_update_one_error", error=str(e), user_id=id, elapsed_ms=elapsed_ms
+                "mongo_user_update_one_error",
+                error=str(e),
+                user_id=id,
+                elapsed_ms=elapsed_ms,
             )
             raise
 
@@ -75,7 +83,10 @@ class UserRepository:
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
-                "mongo_user_delete_one_error", error=str(e), user_id=user_id, elapsed_ms=elapsed_ms
+                "mongo_user_delete_one_error",
+                error=str(e),
+                user_id=user_id,
+                elapsed_ms=elapsed_ms,
             )
             raise
 
@@ -98,7 +109,10 @@ class UserRepository:
         except PyMongoError as e:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.exception(
-                "mongo_user_find_one_by_id_error", error=str(e), user_id=id, elapsed_ms=elapsed_ms
+                "mongo_user_find_one_by_id_error",
+                error=str(e),
+                user_id=id,
+                elapsed_ms=elapsed_ms,
             )
             raise
 
@@ -109,7 +123,9 @@ class UserRepository:
             exists = user_doc is not None
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             self.logger.info(
-                "mongo_user_find_one_by_username_exists", exists=exists, elapsed_ms=elapsed_ms
+                "mongo_user_find_one_by_username_exists",
+                exists=exists,
+                elapsed_ms=elapsed_ms,
             )
             return exists
 
