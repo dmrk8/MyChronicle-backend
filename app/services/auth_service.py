@@ -1,5 +1,5 @@
 import structlog
-from app.models.auth_models import LoginRequest, AuthResponse
+from app.models.auth_models import LoginRequest
 from app.auth.jwt_handler import JWTHandler
 from app.services.user_service import UserService
 from app.exceptions import AuthenticationError
@@ -13,7 +13,7 @@ class AuthService:
         self.user_service = user_service
         
 
-    async def login(self, user_login: LoginRequest) -> AuthResponse:
+    async def login(self, user_login: LoginRequest) -> str:
         try:
             user = await self.user_service.verify_credentials(
                 user_login.username, user_login.password
@@ -24,12 +24,8 @@ class AuthService:
 
             logger.info("User logged in successfully", username=user.username)
 
-            refresh_token = self.jwt_handler.create_refresh_token(user.id) 
-
-            return AuthResponse(
-                message="Login successful",
-                accessToken=refresh_token,
-            )
+            return self.jwt_handler.create_access_token(user.id) 
+            
 
         except AuthenticationError as ae:
             logger.error("Login failed", error=str(ae), user_id=user_login.username)

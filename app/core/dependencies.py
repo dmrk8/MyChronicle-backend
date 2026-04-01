@@ -95,8 +95,7 @@ def get_jwt_handler(
             algorithm=settings.jwt_algorithm,
             issuer=settings.jwt_issuer,
             audience=settings.jwt_audience,
-            expire_minutes=settings.jwt_access_token_expire_minutes,
-            default_expire_days=settings.jwt_refresh_token_expire_days_default,
+            expire_days=settings.jwt_access_token_expire_days,
         )
     return _jwt_handler
 

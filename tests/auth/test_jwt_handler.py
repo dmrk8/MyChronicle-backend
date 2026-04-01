@@ -11,8 +11,7 @@ def jwt_handler():
         algorithm="HS256",
         issuer="test_issuer",
         audience="test_audience",
-        expire_minutes=15,
-        default_expire_days=7,
+        expire_days=7,
     )
 
 
@@ -22,12 +21,10 @@ def test_jwt_handler_init_valid():
         algorithm="HS256",
         issuer="issuer",
         audience="audience",
-        expire_minutes=15,
-        default_expire_days=7,
+        expire_days=7,
     )
     assert handler.secret_key == "test_secret"
     assert handler.algorithm == "HS256"
-    assert handler.expire_minutes == 15
 
 
 def test_jwt_handler_init_missing_secret_raises():
@@ -37,8 +34,7 @@ def test_jwt_handler_init_missing_secret_raises():
             algorithm="HS256",
             issuer="issuer",
             audience="audience",
-            expire_minutes=15,
-            default_expire_days=7,
+            expire_days=7,
         )
 
 
@@ -49,8 +45,7 @@ def test_jwt_handler_init_missing_algorithm_raises():
             algorithm="",
             issuer="issuer",
             audience="audience",
-            expire_minutes=15,
-            default_expire_days=7,
+            expire_days=7,
         )
 
 
@@ -61,8 +56,7 @@ def test_jwt_handler_init_missing_issuer_raises():
             algorithm="HS256",
             issuer="",
             audience="audience",
-            expire_minutes=15,
-            default_expire_days=7,
+            expire_days=7,
         )
 
 
@@ -73,20 +67,7 @@ def test_jwt_handler_init_missing_audience_raises():
             algorithm="HS256",
             issuer="issuer",
             audience="",
-            expire_minutes=15,
-            default_expire_days=7,
-        )
-
-
-def test_jwt_handler_init_missing_expire_minutes_raises():
-    with pytest.raises(ValueError, match="expire minutes is required"):
-        JWTHandler(
-            secret="test_secret",
-            algorithm="HS256",
-            issuer="issuer",
-            audience="audience",
-            expire_minutes=0,
-            default_expire_days=7,
+            expire_days=7,
         )
 
 
@@ -121,19 +102,6 @@ def test_verify_token_tampered_token_returns_none(jwt_handler):
     assert result is None
 
 
-def test_create_refresh_token_returns_string(jwt_handler):
-    token = jwt_handler.create_refresh_token("user123")
-    assert isinstance(token, str)
-    assert len(token) > 0
-
-
-def test_refresh_token_can_be_verified(jwt_handler):
-    user_id = "user123"
-    refresh_token = jwt_handler.create_refresh_token(user_id)
-    verified_user_id = jwt_handler.verify_token(refresh_token)
-    assert verified_user_id == user_id
-
-
 def test_generate_claims_with_default_expiry(jwt_handler):
     user_id = "user123"
     claims = jwt_handler.generate_claims(user_id)
@@ -165,23 +133,13 @@ def test_generate_claims_with_different_users(jwt_handler):
     assert claims1.sub != claims2.sub
 
 
-def test_access_token_expires_before_refresh_token(jwt_handler):
-    user_id = "user123"
-    access_token = jwt_handler.create_access_token(user_id)
-    refresh_token = jwt_handler.create_refresh_token(user_id)
-    
-    assert jwt_handler.verify_token(access_token) == user_id
-    assert jwt_handler.verify_token(refresh_token) == user_id
-
-
 def test_multiple_handlers_independent(jwt_handler):
     other_handler = JWTHandler(
         secret="different_secret",
         algorithm="HS256",
         issuer="other_issuer",
         audience="other_audience",
-        expire_minutes=30,
-        default_expire_days=14,
+        expire_days=14,
     )
     
     token = jwt_handler.create_access_token("user123")

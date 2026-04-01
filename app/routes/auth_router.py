@@ -1,8 +1,7 @@
-from typing import Optional
-from fastapi import APIRouter, Cookie, Depends, Response, HTTPException
-from app.models.auth_models import LoginRequest, UserInfo
+from fastapi import APIRouter, Depends, Response, HTTPException
+from app.models.auth_models import LoginRequest
 from app.services.auth_service import AuthService
-from app.models.user_models import UserDB
+from app.models.user_models import User
 from app.auth.auth_dependencies import get_current_user
 from app.core.dependencies import get_auth_service
 from app.core.config import get_settings
@@ -17,10 +16,10 @@ async def login(
     auth_service: AuthService = Depends(get_auth_service),
 ):
     try:
-        res = await auth_service.login(login_request)
+        access_token = await auth_service.login(login_request)
         response.set_cookie(
             key="access_token",
-            value=res.access_token,
+            value=access_token,
             httponly=True,
             samesite=get_settings().samesite,
             secure=True,
@@ -51,15 +50,6 @@ async def logout(
 
 @auth_router.get("/me")
 async def get_current_user_info(
-    current_user: UserDB = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    try:
-        return UserInfo(
-            id=current_user.id,  # type: ignore
-            username=current_user.username,
-            role=current_user.role,
-            createdAt=current_user.created_at,
-            updatedAt=current_user.updated_at,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return current_user

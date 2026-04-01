@@ -28,12 +28,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(
         description="Algorithm used for JWT encoding and decoding"
     )
-    jwt_access_token_expire_minutes: int = Field(
-        description="Expiration time for JWT tokens in minutes"
-    )
     jwt_issuer: str = Field(description="Issuer claim for JWT tokens")
     jwt_audience: str = Field(description="Audience claim for JWT tokens")
-    jwt_refresh_token_expire_days_default: int = Field(
+    jwt_access_token_expire_days: int = Field(
         description="Default expiration for refresh tokens in days"
     )
 
