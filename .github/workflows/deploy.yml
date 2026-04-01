@@ -70,8 +70,7 @@ jobs:
           USER_COLLECTION: ${{ vars.USER_COLLECTION }}
           USER_MEDIA_ENTRY_COLLECTION: ${{ vars.USER_MEDIA_ENTRY_COLLECTION }}
           JWT_ALGORITHM: ${{ vars.JWT_ALGORITHM }}
-          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ vars.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
-          JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT: ${{ vars.JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT }}
+          JWT_ACCESS_TOKEN_EXPIRE_DAYS: ${{ vars.JWT_ACCESS_TOKEN_EXPIRE_DAYS }}
           JWT_ISSUER: ${{ vars.JWT_ISSUER }}
           JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
           SAMESITE: ${{ vars.SAMESITE }}
@@ -99,7 +98,7 @@ jobs:
           gcloud artifacts docker images list \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
             --format="value(version)" \
-            --sort-by="~createTime" | tail -n +4 | while read DIGEST; do
+            --sort-by="~createTime" 2>/dev/null | tail -n +4 | while read DIGEST; do
               if [ -n "$DIGEST" ]; then
                 echo "Deleting $DIGEST ..."
                 gcloud artifacts docker images delete \
