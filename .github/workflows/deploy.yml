@@ -29,6 +29,7 @@ jobs:
   
   deploy:
     needs: test
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,28 +59,7 @@ jobs:
         run: |
           docker push \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ github.sha }}
-
       - name: Deploy to Cloud Run
-        env:
-          # Variables (non-sensitive)
-          ENV: ${{ vars.ENV }}
-          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
-          SERVICE_NAME: ${{ vars.SERVICE_NAME }}
-          DATABASE_NAME: ${{ vars.DATABASE_NAME }}
-          REVIEW_COLLECTION: ${{ vars.REVIEW_COLLECTION }}
-          USER_COLLECTION: ${{ vars.USER_COLLECTION }}
-          USER_MEDIA_ENTRY_COLLECTION: ${{ vars.USER_MEDIA_ENTRY_COLLECTION }}
-          JWT_ALGORITHM: ${{ vars.JWT_ALGORITHM }}
-          JWT_ACCESS_TOKEN_EXPIRE_DAYS: ${{ vars.JWT_ACCESS_TOKEN_EXPIRE_DAYS }}
-          JWT_ISSUER: ${{ vars.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
-          SAMESITE: ${{ vars.SAMESITE }}
-          ALLOW_ORIGINS_STR: ${{ vars.ALLOW_ORIGINS_STR }}
-          # Secrets (sensitive)
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
             --image=us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ github.sha }} \
@@ -91,29 +71,30 @@ jobs:
             --max-instances=2 \
             --memory=512Mi \
             --cpu=1 \
-            --set-env-vars="ENV=${ENV},\
-            LOG_LEVEL=${LOG_LEVEL},\
-            SERVICE_NAME=${SERVICE_NAME},\
-            MONGODB_URI=${MONGODB_URI},\
-            DATABASE_NAME=${DATABASE_NAME},\
-            REVIEW_COLLECTION=${REVIEW_COLLECTION},\
-            USER_COLLECTION=${USER_COLLECTION},\
-            USER_MEDIA_ENTRY_COLLECTION=${USER_MEDIA_ENTRY_COLLECTION},\
-            JWT_SECRET_KEY=${JWT_SECRET_KEY},\
-            JWT_ALGORITHM=${JWT_ALGORITHM},\
-            JWT_ACCESS_TOKEN_EXPIRE_DAYS=${JWT_ACCESS_TOKEN_EXPIRE_DAYS},\
-            JWT_ISSUER=${JWT_ISSUER},\
-            JWT_AUDIENCE=${JWT_AUDIENCE},\
-            TMDB_API_KEY=${TMDB_API_KEY},\
-            TMDB_ACCESS_TOKEN=${TMDB_ACCESS_TOKEN},\
-            SAMESITE=${SAMESITE},\
-            ALLOW_ORIGINS_STR=${ALLOW_ORIGINS_STR}"
+            --set-env-vars="\
+          ENV=${{ vars.ENV }},\
+          LOG_LEVEL=${{ vars.LOG_LEVEL }},\
+          SERVICE_NAME=${{ vars.SERVICE_NAME }},\
+          MONGODB_URI=${{ secrets.MONGODB_URI }},\
+          DATABASE_NAME=${{ vars.DATABASE_NAME }},\
+          REVIEW_COLLECTION=${{ vars.REVIEW_COLLECTION }},\
+          USER_COLLECTION=${{ vars.USER_COLLECTION }},\
+          USER_MEDIA_ENTRY_COLLECTION=${{ vars.USER_MEDIA_ENTRY_COLLECTION }},\
+          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},\
+          JWT_ALGORITHM=${{ vars.JWT_ALGORITHM }},\
+          JWT_ACCESS_TOKEN_EXPIRE_DAYS=${{ vars.JWT_ACCESS_TOKEN_EXPIRE_DAYS }},\
+          JWT_ISSUER=${{ vars.JWT_ISSUER }},\
+          JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }},\
+          TMDB_API_KEY=${{ secrets.TMDB_API_KEY }},\
+          TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }},\
+          SAMESITE=${{ vars.SAMESITE }},\
+          ALLOW_ORIGINS_STR=${{ vars.ALLOW_ORIGINS_STR }}"
             
       - name: Clean up old images
         run: |
           gcloud artifacts docker images list \
             us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
-            --format="value(version)" \
+            --format="value(digest)" \
             --sort-by="~createTime" 2>/dev/null | tail -n +4 | while read DIGEST; do
               if [ -n "$DIGEST" ]; then
                 echo "Deleting $DIGEST ..."
