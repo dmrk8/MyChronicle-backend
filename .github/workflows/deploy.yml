@@ -21,12 +21,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: '3.13'
       - run: pip install -r requirements.txt
-      - run: pip install -r dev-requirements.txt 
+      - run: pip install -r dev-requirements.txt
       - run: pytest tests/ -v
-  
-  
+
   deploy:
     needs: test
     if: github.event_name == 'push'
@@ -34,7 +33,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -89,17 +88,17 @@ jobs:
           TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }},\
           SAMESITE=${{ vars.SAMESITE }},\
           ALLOW_ORIGINS_STR=${{ vars.ALLOW_ORIGINS_STR }}"
-            
+
       - name: Clean up old images
         run: |
           gcloud artifacts docker images list \
-            us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
-            --format="value(digest)" \
-            --sort-by="~createTime" 2>/dev/null | tail -n +4 | while read DIGEST; do
-              if [ -n "$DIGEST" ]; then
-                echo "Deleting $DIGEST ..."
-                gcloud artifacts docker images delete \
-                  "us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@${DIGEST}" \
-                  --delete-tags --quiet || true
-              fi
-            done
+          us-central1-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE} \
+          --format="value(version)" \
+          --sort-by="~createTime" | tail -n +4 | while read DIGEST; do
+            if [ -n "$DIGEST" ]; then
+              echo "Deleting $DIGEST ..."
+              gcloud artifacts docker images delete \
+                "us-central1-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}@${DIGEST}" \
+                --delete-tags --quiet || true
+            fi
+          done
