@@ -85,15 +85,10 @@ jobs:
           JWT_ISSUER=${{ vars.JWT_ISSUER }},\
           JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }},\
           TMDB_API_KEY=${{ secrets.TMDB_API_KEY }},\
+          TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }},\
           SAMESITE=${{ vars.SAMESITE }},\
           ALLOW_ORIGINS_STR=${{ vars.ALLOW_ORIGINS_STR }}"
-      
-      - name: Set TMDB Access Token
-        run: |
-          gcloud run services update ${{ env.SERVICE }} \
-            --region=${{ env.REGION }} \
-            --update-env-vars="^|^TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }}"
-
+                
       - name: Clean up old images
         run: |
           gcloud artifacts docker images list \

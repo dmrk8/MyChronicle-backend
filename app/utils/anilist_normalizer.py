@@ -1,4 +1,3 @@
-from turtle import st
 from typing import List, Optional
 import structlog
 import calendar
