@@ -18,8 +18,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
         with:
           python-version: '3.13'
       - run: pip install -r requirements.txt
@@ -35,7 +35,7 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -92,13 +92,13 @@ jobs:
       - name: Clean up old images
         run: |
           gcloud artifacts docker images list \
-          us-central1-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE} \
-          --format="value(version)" \
-          --sort-by="~createTime" | tail -n +4 | while read DIGEST; do
-            if [ -n "$DIGEST" ]; then
-              echo "Deleting $DIGEST ..."
-              gcloud artifacts docker images delete \
-                "us-central1-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}@${DIGEST}" \
-                --delete-tags --quiet || true
-            fi
-          done
+            us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }} \
+            --format="value(version)" \
+            --sort-by="~createTime" | tail -n +4 | while read DIGEST; do
+              if [ -n "$DIGEST" ]; then
+                echo "Deleting $DIGEST ..."
+                gcloud artifacts docker images delete \
+                  "us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}@${DIGEST}" \
+                  --delete-tags --quiet || true
+              fi
+            done
