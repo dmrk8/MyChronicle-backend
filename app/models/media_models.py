@@ -1,36 +1,14 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from app.enums.user_media_entry_enums import MediaType
 from app.models.anilist_models import (
-    Characters,
-    CoverImage,
-    MediaDate,
     NextAiringEpisode,
-    Recommendations,
-    Relations,
-    Studios,
     Tag,
-    Title,
 )
 from app.models.tmdb_models import (
-    TMDBAlternativeTitles,
-    TMDBBelongsToCollection,
-    TMDBCollectionPart,
-    TMDBCreatedBy,
-    TMDBCredits,
     TMDBLastEpisodeToAir,
-    TMDBMovieKeywords,
     TMDBNextEpisodeToAir,
-    TMDBPagination,
-    TMDBPaginationRecommendation,
-    TMDBProductionCompany,
-    TMDBSeason,
-    TMDBSpokenLanguage,
-    TMDBExternalIds,
-    TMDBNetwork,
-    TMDBTvKeywords,
-    TMDBProductionCountry,
 )
 
 
@@ -104,7 +82,7 @@ class MediaStudio(BaseModel):
 
 
 class MediaRelation(BaseModel):
-    relation_type: str = Field(..., alias="relationType")
+    relation_type: Optional[str] = Field(None, alias="relationType")
     id: int
     title: str
     format: Optional[str] = None
