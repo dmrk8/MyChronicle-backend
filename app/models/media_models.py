@@ -55,7 +55,7 @@ class MediaPagination(BaseModel):
 class MediaBase(BaseModel):
     id: int
     external_source: str = Field(alias="externalSource")
-    media_type: str = Field(alias="mediaType")
+    media_type: MediaType = Field(alias="mediaType")
     title: str
     format: Optional[str] = None
     genres: Optional[List[str]] = None

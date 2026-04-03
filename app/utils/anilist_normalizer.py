@@ -59,6 +59,7 @@ class AnilistNormalizer:
                 media_list.append(mm)
         except Exception as e:
             logger.error("normalize_anilist_minimal", error=str(e))
+            raise
         return media_list
 
     @staticmethod
@@ -95,7 +96,7 @@ class AnilistNormalizer:
                 countryOfOrigin=media.country_of_origin,
                 season=AnilistNormalizer._convert_enum_field(media.season),
                 seasonYear=media.season_year,
-                source=media.source,
+                source=AnilistNormalizer._convert_enum_field(media.source),
                 episodes=media.episodes,
                 duration=media.duration,
                 startDate=start_date,
@@ -133,7 +134,7 @@ class AnilistNormalizer:
                 title=AnilistNormalizer._get_title(media.title),
                 format=AnilistNormalizer._convert_enum_field(media.format),
                 genres=media.genres,
-                status=media.status,
+                status=AnilistNormalizer._convert_enum_field(media.status),
                 coverImage=media.cover_image.extra_large if media.cover_image else None,
                 averageScore=(
                     round(media.average_score / 10, 1) if media.average_score else None
@@ -143,7 +144,7 @@ class AnilistNormalizer:
                 isAdult=media.is_adult,
                 synonyms=media.synonyms,
                 countryOfOrigin=media.country_of_origin,
-                source=media.source,
+                source=AnilistNormalizer._convert_enum_field(media.source),
                 chapters=media.chapters,
                 volumes=media.volumes,
                 startDate=start_date,
@@ -241,7 +242,7 @@ class AnilistNormalizer:
                 )
 
             character = MediaCharacter(
-                role=AnilistNormalizer._convert_enum_field(edge.role), # type: ignore
+                role=AnilistNormalizer._convert_enum_field(edge.role),  # type: ignore
                 image=image,
                 name=name,
                 voiceActor=voice_actor,
