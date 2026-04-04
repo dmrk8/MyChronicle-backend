@@ -2,8 +2,22 @@ import time
 from typing import Optional
 import httpx
 import structlog
+from app.core.exceptions import UpstreamServiceException
 
 logger = structlog.get_logger()
+
+ACTION_SERVICE_MAP = {
+    "get_featured_media": "Anime-Manga",
+    "search_media": "Anime-Manga",
+    "get_media_detail": "Anime-Manga",
+    "get_featured_media_bulk": "Anime-Manga",
+    "get_featured_manga_bulk": "Anime-Manga",
+    "get_trending_media": "Movies-TV",
+    "get_movie_detail": "Movies-TV",
+    "get_tv_detail": "Movies-TV",
+    "get_discover_movie": "Movies-TV",
+    "get_discover_tv": "Movies-TV",
+}
 
 
 async def perform_request(
@@ -54,7 +68,8 @@ async def perform_request(
             response_text=exc.response.text,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        raise
+        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        raise UpstreamServiceException(service_name, exc.response.status_code)
 
     except httpx.RequestError as exc:
         logger.error(
@@ -66,7 +81,8 @@ async def perform_request(
             error=str(exc),
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        raise
+        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        raise UpstreamServiceException(service_name)
     except Exception:
         logger.exception(
             "upstream_request",
@@ -76,4 +92,5 @@ async def perform_request(
             url=str(url),
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        raise
+        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        raise UpstreamServiceException(service_name)

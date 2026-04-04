@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.exception_handlers import app_exception_handler, unhandled_exception_handler
+from app.core.exceptions import AppException
 from app.middleware.request_context import request_context_middleware
 import structlog
 
@@ -23,6 +25,8 @@ app = FastAPI(title=get_settings().service_name, lifespan=lifespan)
 
 
 app.middleware("http")(request_context_middleware)
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 
 @app.get("/health")
@@ -34,8 +38,6 @@ async def health_check():
         "environment": get_settings().env,
     }
 
-
-origins = ["http://localhost:5173"]
 
 app.add_middleware(
     CORSMiddleware,
