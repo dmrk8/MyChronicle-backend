@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, status
 
 from app.models.review_models import ReviewCreate, ReviewUpdate
 from app.models.user_models import UserDB
@@ -9,19 +9,13 @@ from app.core.dependencies import get_review_service
 review_router = APIRouter(prefix="/reviews")
 
 
-@review_router.post("/")
+@review_router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_review(
     review_request: ReviewCreate,
     current_user: UserDB = Depends(get_current_user),
     review_service: ReviewService = Depends(get_review_service),
 ):
-    try:
-        response = await review_service.create_review(review_request)
-        return response
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return await review_service.create_review(review_request, user_id=current_user.id)
 
 
 @review_router.patch("/{review_id}")
@@ -31,46 +25,18 @@ async def update_review(
     current_user: UserDB = Depends(get_current_user),
     review_service: ReviewService = Depends(get_review_service),
 ):
-    try:
-        response = await review_service.update_review(review_id, update_request)
-        return response
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return await review_service.update_review(
+        review_id, update_request, current_user.id
+    )
 
 
-@review_router.delete("/{review_id}")
+@review_router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_review(
     review_id: str,
     current_user: UserDB = Depends(get_current_user),
     review_service: ReviewService = Depends(get_review_service),
 ):
-    try:
-        response = await review_service.delete_review(review_id)
-        return response
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@review_router.get("/{review_id}")
-async def get_review_by_id(
-    review_id: str = Path(..., description="ID of the review"),
-    current_user: UserDB = Depends(get_current_user),
-    review_service: ReviewService = Depends(get_review_service),
-):
-    """
-    Get the review data for the current user and a specific review ID.
-    """
-    try:
-        response = await review_service.get_review_by_id(review_id)  # type: ignore
-        return response
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return await review_service.delete_review(review_id, current_user.id)
 
 
 @review_router.get("/entry/{user_media_entry_id}")
@@ -82,30 +48,4 @@ async def get_reviews_by_user_media_entry_id(
     """
     Get all reviews for a specific user media entry.
     """
-    try:
-        res = await review_service.get_reviews_by_user_media_entry_id(user_media_entry_id)
-        return res
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@review_router.get("/by-user-id")
-async def get_reviews_by_user_id_and_media_id(
-    media_id: str = Query(..., description="ID of the media"),
-    current_user: UserDB = Depends(get_current_user),
-    review_service: ReviewService = Depends(get_review_service),
-):
-    """
-    Get all reviews for a specific user and media.
-    """
-    try:
-        reviews = await review_service.get_reviews_by_user_id_and_media_id(
-            current_user.id, media_id
-        )
-        return reviews
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return await review_service.get_reviews_for_user_media_entry(user_media_entry_id)

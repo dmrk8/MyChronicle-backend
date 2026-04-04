@@ -8,6 +8,7 @@ import pytest
 
 from app.core import dependencies as deps
 from app.core.config import Settings
+from app.core.event_bus import EventBus
 from app.integrations.anilistApi import AnilistApi
 from app.integrations.tmdb_api import TMDBApi
 from app.services.anilist_service import AnilistService
@@ -212,15 +213,15 @@ def test_get_auth_service_wires_dependencies():
 
 def test_get_review_service_wires_dependencies():
     review_repository = MagicMock(spec=ReviewRepository)
-    user_media_entry_repository = MagicMock(spec=UserMediaEntryRepository)
+    event_bus = MagicMock(spec=EventBus)
 
     service = deps.get_review_service(
         review_repository=review_repository,
-        user_media_entry_repository=user_media_entry_repository,
+        event_bus=event_bus,
     )
 
     assert service.repository is review_repository
-    assert service.user_media_entry_repository is user_media_entry_repository
+    assert service.event_bus is event_bus
 
 
 def test_get_user_media_entry_service_wires_dependencies():

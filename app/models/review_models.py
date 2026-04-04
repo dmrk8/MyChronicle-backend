@@ -1,16 +1,21 @@
 from datetime import datetime, timezone
 from typing import Any, Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
-class ReviewCreate(BaseModel):
-    user_media_entry_id: str = Field(
-        ..., alias="userMediaEntryId", description="The ID of the associated UserMediaEntry"
+class ReviewBase(BaseModel):
+    review: Optional[str] = Field(
+        None,
+        max_length=5000,
     )
-    review: Optional[str] = Field(None, description="The user's written review text")
-    rating: Optional[float] = Field(None, description="The user's rating for the media")
+    rating: Optional[float] = Field(
+        None,
+        ge=0,
+        le=10,
+    )
     review_progress: Optional[int] = Field(
         None,
+        ge=0,
         alias="reviewProgress",
         description="The chapter or episode progress at the time the review was written",
     )
@@ -20,45 +25,51 @@ class ReviewCreate(BaseModel):
         description="The date when the user wrote the review",
     )
 
+    @field_validator("written_at")
+    @classmethod
+    def validate_written_at(cls, v: datetime | None):
+        if v is None:
+            return v
+        now = datetime.now(timezone.utc)
+        candidate = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+        if candidate > now:
+            raise ValueError("Written at date cannot be in the future")
+        return v
+
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class ReviewDB(ReviewCreate):
-    id: Optional[str] = Field(None, description="The unique ID of the review in the database")
+class ReviewCreate(ReviewBase):
+    user_media_entry_id: str = Field(
+        ...,
+        alias="userMediaEntryId",
+    )
+
+
+class ReviewInsert(ReviewCreate):
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        alias="createdAt",
-        description="The date when the review was added to the system",
+        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        alias="updatedAt",
-        description="The date when the review was last updated",
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
+    )
+    user_id: str = Field(..., alias="userId")
+
+
+class ReviewDB(ReviewBase):
+    id: str
+    user_media_entry_id: str = Field(
+        ...,
+        alias="userMediaEntryId",
+    )
+    user_id: str = Field(..., alias="userId")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
     )
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class ReviewUpdate(BaseModel):
-    review: Optional[str] = Field(None, description="Updated review text")
-    rating: Optional[float] = Field(None, description="Updated rating")
-    review_progress: Optional[int] = Field(
-        None, alias="reviewProgress", description="Updated progress"
-    )
-    written_at: Optional[datetime] = Field(
-        None,
-        alias="writtenAt",
-        description="The date when the user wrote the review",
-    )
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class ReviewResponse(BaseModel):
-    message: str = Field(description="Response message")
-    acknowledged: Optional[bool] = Field(
-        None, description="Whether the operation was acknowledged by the database"
-    )
-    data: Optional[ReviewDB]  = None
-    data_list:  Optional[List[ReviewDB]] = Field(None, alias="dataList")
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+class ReviewUpdate(ReviewBase):
+    pass

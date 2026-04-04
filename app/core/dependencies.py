@@ -2,6 +2,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
+from app.core.event_bus import EventBus
 from app.core.infrastructure import state
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -30,6 +31,10 @@ _anilist_api = None
 _tmdb_api = None
 _password_handler = None
 _jwt_handler = None
+
+
+def get_event_bus() -> EventBus:
+    return state.event_bus
 
 
 def get_anilist_api() -> AnilistApi:
@@ -68,7 +73,6 @@ def get_redis_service(redis_client: Redis = Depends(get_redis)) -> RedisService:
 
 def get_anilist_service(
     anilist_api: AnilistApi = Depends(get_anilist_api),
-   
 ) -> AnilistService:
     return AnilistService(anilist_api=anilist_api)
 
@@ -85,9 +89,7 @@ def get_user_repository(
     return UserRepository(db=db, collection_name=collection_name)
 
 
-def get_jwt_handler(
-    settings: Settings = Depends(get_settings)
-) -> JWTHandler:
+def get_jwt_handler(settings: Settings = Depends(get_settings)) -> JWTHandler:
     global _jwt_handler
     if _jwt_handler is None:
         _jwt_handler = JWTHandler(
@@ -111,7 +113,7 @@ def get_user_service(
 
 def get_auth_service(
     jwt_handler: JWTHandler = Depends(get_jwt_handler),
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
 ) -> AuthService:
     return AuthService(
         jwt_handler=jwt_handler,
@@ -137,14 +139,9 @@ def get_user_media_entry_repository(
 
 def get_review_service(
     review_repository: ReviewRepository = Depends(get_review_repository),
-    user_media_entry_repository: UserMediaEntryRepository = Depends(
-        get_user_media_entry_repository
-    ),
+    event_bus: EventBus = Depends(get_event_bus),
 ) -> ReviewService:
-    return ReviewService(
-        review_repository=review_repository,
-        user_media_entry_repository=user_media_entry_repository,
-    )
+    return ReviewService(review_repository=review_repository, event_bus=event_bus)
 
 
 def get_user_media_entry_service(
