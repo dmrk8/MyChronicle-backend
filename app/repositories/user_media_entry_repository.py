@@ -1,11 +1,16 @@
 from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
-from pymongo.errors import PyMongoError
+from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
+from pymongo.results import DeleteResult, InsertOneResult
 from bson import ObjectId
-from app.models.user_media_entry_models import UserMediaEntryDB
+from app.models.user_media_entry_models import (
+    UserMediaEntryDB,
+    UserMediaEntryInsert,
+    UserMediaEntryUpdate,
+)
+from app.repositories._repo_observability import run_db_op
 import structlog
-import time
 
 logger = structlog.get_logger()
 
@@ -18,238 +23,252 @@ class UserMediaEntryRepository:
             repository="UserMediaEntryRepository", collection=collection_name
         )
 
-    def map_to_model(self, mongo_doc: dict) -> UserMediaEntryDB:
-        mongo_doc["id"] = str(mongo_doc["_id"])
-        mongo_doc.pop("_id", None)
-        return UserMediaEntryDB(**mongo_doc)
+    async def init_indexes(self) -> None:
+        await self.collection.create_index(
+            [
+                ("user_id", 1),
+                ("external_id", 1),
+                ("external_source", 1),
+            ],
+            unique=True,
+            name="user_external_unique_idx",
+        )
 
-    async def create_entry(self, entry_data: UserMediaEntryDB) -> InsertOneResult:
-        start = time.perf_counter()
+    async def create_entry(self, entry: UserMediaEntryInsert) -> UserMediaEntryDB:
+        data = entry.model_dump()
+
+        async def _op() -> InsertOneResult:
+            return await self.collection.insert_one(data)
+
         try:
-            data = entry_data.model_dump()
-            data.pop("id", None)
-            result = await self.collection.insert_one(data)
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.info(
-                "mongo_user_media_entry_insert_one",
-                entry_id=str(result.inserted_id),
-                elapsed_ms=elapsed_ms,
+            result = await run_db_op(
+                self.logger,
+                _op,
+                success_event="mongo_user_media_entry_insert_one",
+                error_event="mongo_user_media_entry_insert_one_error",
+                context={"user_id": entry.user_id, "external_id": entry.external_id},
             )
-            return result
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_insert_one_error",
-                error=str(e),
-                elapsed_ms=elapsed_ms,
+            return UserMediaEntryDB(**{**data, "_id": result.inserted_id})
+        except DuplicateKeyError:
+            self.logger.warning(
+                "mongo_user_media_entry_insert_duplicate",
+                user_id=entry.user_id,
+                external_id=entry.external_id,
             )
             raise
 
-    async def get_entry_by_id(self, entry_id: str) -> UserMediaEntryDB:
-        start = time.perf_counter()
-        try:
-            data = await self.collection.find_one({"_id": ObjectId(entry_id)})
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            if data:
-                self.logger.info(
-                    "mongo_user_media_entry_find_one_by_id_found",
-                    entry_id=entry_id,
-                    elapsed_ms=elapsed_ms,
-                )
-                return self.map_to_model(data)
-            self.logger.info(
-                "mongo_user_media_entry_find_one_by_id_not_found",
-                entry_id=entry_id,
-                elapsed_ms=elapsed_ms,
+    async def get_entry_by_id(
+        self, entry_id: str, user_id: str
+    ) -> Optional[UserMediaEntryDB]:
+        async def _op():
+            return await self.collection.find_one(
+                {"_id": ObjectId(entry_id), "user_id": user_id}
             )
-            raise
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_find_one_by_id_error",
-                error=str(e),
-                entry_id=entry_id,
-                elapsed_ms=elapsed_ms,
-            )
-            raise
 
-    async def update_entry(self, entry_id: str, update_data: dict) -> UpdateResult:
-        start = time.perf_counter()
-        try:
-            result = await self.collection.update_one(
-                {"_id": ObjectId(entry_id)}, {"$set": update_data}
-            )
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.info(
-                "mongo_user_media_entry_update_one",
-                entry_id=entry_id,
-                matched_count=result.matched_count,
-                modified_count=result.modified_count,
-                elapsed_ms=elapsed_ms,
-            )
-            return result
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_update_one_error",
-                error=str(e),
-                elapsed_ms=elapsed_ms,
-            )
-            raise
+        doc = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_find_one_by_id_query",
+            error_event="mongo_user_media_entry_find_one_by_id_error",
+            context={"user_id": user_id, "entry_id": entry_id},
+        )
 
-    async def delete_entry(self, entry_id: str) -> DeleteResult:
-        start = time.perf_counter()
-        try:
-            result = await self.collection.delete_one({"_id": ObjectId(entry_id)})
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
+        if doc:
             self.logger.info(
-                "mongo_user_media_entry_delete_one",
+                "mongo_user_media_entry_find_one_by_id_found",
                 entry_id=entry_id,
-                deleted_count=result.deleted_count,
-                elapsed_ms=elapsed_ms,
-            )
-            return result
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_delete_one_error",
-                error=str(e),
-                entry_id=entry_id,
-                elapsed_ms=elapsed_ms,
-            )
-            raise
-
-    async def get_entries_by_user_id(self, user_id: str) -> List[UserMediaEntryDB]:
-        start = time.perf_counter()
-        try:
-            cursor = self.collection.find({"user_id": user_id})
-            results = [self.map_to_model(doc) async for doc in cursor]
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.info(
-                "mongo_user_media_entry_find_by_user_id",
                 user_id=user_id,
-                count=len(results),
-                elapsed_ms=elapsed_ms,
             )
-            return results
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_find_by_user_id_error",
-                error=str(e),
-                user_id=user_id,
-                elapsed_ms=elapsed_ms,
-            )
-            raise
+            return UserMediaEntryDB(**doc)
 
-    async def count_entries_by_user_id(self, user_id: str) -> int:
-        start = time.perf_counter()
-        try:
-            count = await self.collection.count_documents({"user_id": user_id})
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.info(
-                "mongo_user_media_entry_count_by_user_id",
-                user_id=user_id,
-                count=count,
-                elapsed_ms=elapsed_ms,
-            )
-            return count
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_count_by_user_id_error",
-                error=str(e),
-                user_id=user_id,
-                elapsed_ms=elapsed_ms,
-            )
-            raise
+        self.logger.info(
+            "mongo_user_media_entry_find_one_by_id_not_found",
+            entry_id=entry_id,
+            user_id=user_id,
+        )
+        return None
 
     async def get_entry_by_external_id_and_external_source_and_user_id(
         self, external_id: int, external_source: str, user_id: str
-    ) -> UserMediaEntryDB:
-        start = time.perf_counter()
-        try:
-            data = await self.collection.find_one(
+    ) -> Optional[UserMediaEntryDB]:
+        async def _op():
+            return await self.collection.find_one(
                 {
                     "external_id": external_id,
                     "external_source": external_source,
                     "user_id": user_id,
                 }
             )
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            if data:
-                self.logger.info(
-                    "mongo_user_media_entry_find_one_by_media_id_and_user_id_found",
-                    external_id=external_id,
-                    user_id=user_id,
-                    elapsed_ms=elapsed_ms,
-                )
-                return self.map_to_model(data)
+
+        doc = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_query",
+            error_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_error",
+            context={
+                "external_id": external_id,
+                "external_source": external_source,
+                "user_id": user_id,
+            },
+        )
+
+        if doc:
             self.logger.info(
-                "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
+                "mongo_user_media_entry_find_one_by_media_id_and_user_id_found",
                 external_id=external_id,
                 user_id=user_id,
-                elapsed_ms=elapsed_ms,
             )
-            raise
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_find_one_by_external_id_and_user_id_error",
-                error=str(e),
-                external_id=external_id,
+            return UserMediaEntryDB(**doc)
+
+        self.logger.info(
+            "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
+            external_id=external_id,
+            user_id=user_id,
+        )
+        return None
+
+    async def update_entry(
+        self, entry_id: str, user_id: str, update: UserMediaEntryUpdate
+    ) -> Optional[UserMediaEntryDB]:
+        update_dict = update.to_update_dict()
+
+        async def _op():
+            return await self.collection.find_one_and_update(
+                {"_id": ObjectId(entry_id), "user_id": user_id},
+                {"$set": update_dict},
+                return_document=ReturnDocument.AFTER,
+            )
+
+        doc = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_update_query",
+            error_event="mongo_user_media_entry_update_one_error",
+            context={"entry_id": entry_id, "user_id": user_id},
+        )
+
+        if doc:
+            self.logger.info(
+                "mongo_user_media_entry_update_success",
+                entry_id=entry_id,
                 user_id=user_id,
-                elapsed_ms=elapsed_ms,
             )
-            raise
+            return UserMediaEntryDB(**doc)
+
+        self.logger.warning(
+            "mongo_user_media_entry_update_not_found_or_forbidden",
+            entry_id=entry_id,
+            user_id=user_id,
+        )
+        return None
+
+    async def delete_entry(self, entry_id: str, user_id: str) -> DeleteResult:
+        async def _op() -> DeleteResult:
+            return await self.collection.delete_one(
+                {"_id": ObjectId(entry_id), "user_id": user_id}
+            )
+
+        result = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_delete_query",
+            error_event="mongo_user_media_entry_delete_one_error",
+            context={"entry_id": entry_id, "user_id": user_id},
+        )
+
+        if result.deleted_count == 0:
+            self.logger.warning(
+                "mongo_user_media_entry_delete_not_found_or_forbidden",
+                entry_id=entry_id,
+                user_id=user_id,
+            )
+        else:
+            self.logger.info(
+                "mongo_user_media_entry_delete_success",
+                entry_id=entry_id,
+                user_id=user_id,
+                deleted_count=result.deleted_count,
+            )
+        return result
+
+    async def count_entries_by_user_id(self, user_id: str) -> int:
+        async def _op() -> int:
+            return await self.collection.count_documents({"user_id": user_id})
+
+        count = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_count_by_user_id",
+            error_event="mongo_user_media_entry_count_by_user_id_error",
+            context={"user_id": user_id},
+        )
+
+        self.logger.info(
+            "mongo_user_media_entry_count_result",
+            user_id=user_id,
+            count=count,
+        )
+        return count
+
+    async def count_entries(self, user_id: str, filters: dict) -> int:
+        query = {**filters, "user_id": user_id}
+
+        async def _op() -> int:
+            return await self.collection.count_documents(query)
+
+        count = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_count_entries",
+            error_event="mongo_user_media_entry_count_entries_error",
+            context={"user_id": user_id},
+        )
+
+        self.logger.info(
+            "mongo_user_media_entry_count_entries_result",
+            user_id=user_id,
+            count=count,
+        )
+        return count
 
     async def get_entries(
         self,
+        user_id: str,
         filters: dict,
         page: int,
         per_page: int,
         sort_by: str,
         sort_order: int,
     ) -> List[UserMediaEntryDB]:
-        """
-        Get user media entries with pagination, sorting, and filters.
+        skip = (page - 1) * per_page
 
-        :param filters: MongoDB filter dict
-        :param page: Page number (1-based)
-        :param per_page: Number of items per page
-        :param sort_by: Field to sort by
-        :param sort_order: 1 for ascending, -1 for descending
-        :return: List of UserMediaEntryDB
-        """
-        start = time.perf_counter()
-        try:
-            filters = filters or {}
-            skip = (page - 1) * per_page
+        query = {**filters, "user_id": user_id}
+
+        async def _op():
             cursor = (
-                self.collection.find(filters)
+                self.collection.find(query)
                 .sort(sort_by, sort_order)
                 .skip(skip)
                 .limit(per_page)
             )
-            results = [self.map_to_model(doc) async for doc in cursor]
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.info(
-                "mongo_user_media_entry_get_entries",
-                count=len(results),
-                elapsed_ms=elapsed_ms,
-            )
-            return results
-        except PyMongoError as e:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            self.logger.exception(
-                "mongo_user_media_entry_get_entries_error",
-                error=str(e),
-                elapsed_ms=elapsed_ms,
-            )
-            raise
+            return [UserMediaEntryDB(**doc) async for doc in cursor]
 
-    async def is_exists(self, entry_id: str) -> bool:
-        return (
-            await self.collection.count_documents({"_id": ObjectId(entry_id)}, limit=1)
-            > 0
+        results = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_get_entries",
+            error_event="mongo_user_media_entry_get_entries_error",
+            context={
+                "user_id": user_id,
+                "page": page,
+                "per_page": per_page,
+                "sort_by": sort_by,
+                "sort_order": sort_order,
+            },
         )
+
+        self.logger.info(
+            "mongo_user_media_entry_get_entries_result",
+            count=len(results),
+        )
+        return results

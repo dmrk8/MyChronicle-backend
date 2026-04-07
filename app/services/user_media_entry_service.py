@@ -1,14 +1,15 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
+from app.core.exceptions import ForbiddenException, NotFoundException
+from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
-from app.services.review_service import ReviewService
 from app.models.user_media_entry_models import (
+    UserMediaEntry,
     UserMediaEntryCreate,
+    UserMediaEntryInsert,
     UserMediaEntryUpdate,
-    UserMediaEntryDB,
     UserMediaEntryPagination,
 )
-from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
-from datetime import datetime, timezone
+from pymongo.results import DeleteResult
 from app.enums.user_media_entry_enums import (
     MediaExternalSource,
     UserMediaEntrySortFields,
@@ -23,54 +24,56 @@ logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
 class UserMediaEntryService:
     def __init__(
-        self, repository: UserMediaEntryRepository, review_service: ReviewService
+        self, repository: UserMediaEntryRepository, review_repository: ReviewRepository
     ):
         self.repository = repository
-        self.review_service = review_service
+        self.review_repository = review_repository
 
     async def create_entry(
         self, entry_request: UserMediaEntryCreate, user_id: str
-    ) -> UserMediaEntryDB:
+    ) -> UserMediaEntry:
 
-        entry_data = UserMediaEntryDB(
+        entry_data = UserMediaEntryInsert(
             **entry_request.model_dump(),
-            user_id=user_id,  # type: ignore
+            user_id=user_id,
         )
-        result: InsertOneResult = await self.repository.create_entry(entry_data)
-        return await self.repository.get_entry_by_id(result.inserted_id)
+        res = await self.repository.create_entry(entry_data)
+        return UserMediaEntry.from_db(res)
 
-    async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
+    async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntry:
         return await self._verify_ownership(entry_id, user_id)
 
     async def update_entry(
         self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
-    ) -> UserMediaEntryDB:
+    ) -> Optional[UserMediaEntry]:
         await self._verify_ownership(entry_id, user_id)
 
-        update_dict = update_data.model_dump(exclude_unset=True)
-        update_dict["updated_at"] = datetime.now(timezone.utc)
-        result: UpdateResult = await self.repository.update_entry(entry_id, update_dict)
-        return await self.repository.get_entry_by_id(entry_id)
+        updated_entry = await self.repository.update_entry(
+            entry_id, user_id, update_data
+        )
+        if updated_entry:
+            return UserMediaEntry.from_db(updated_entry)
+        return None
 
-    async def delete_entry(self, entry_id: str, user_id: str) -> str:
+    async def delete_entry(self, entry_id: str, user_id: str) -> None:
         await self._verify_ownership(entry_id, user_id)
-        await self.review_service.delete_reviews_by_user_media_entry_id(entry_id)
-        result: DeleteResult = await self.repository.delete_entry(entry_id)
-        if result.acknowledged:
-            return entry_id
-        else:
-            raise ValueError("Failed to delete entry")
-
-    async def get_entries_by_user_id(self, user_id: str) -> List[UserMediaEntryDB]:
-        return await self.repository.get_entries_by_user_id(user_id)
+        await self.review_repository.delete_reviews_by_user_media_entry_id(entry_id, user_id)
+        result: DeleteResult = await self.repository.delete_entry(entry_id, user_id)
+        if not result.acknowledged:
+            raise RuntimeError(
+                f"Delete operation not acknowledged for entry {entry_id}"
+            )
 
     async def get_entry_by_external_id_and_source(
         self, external_id: int, external_source: MediaExternalSource, user_id: str
-    ) -> Optional[UserMediaEntryDB]:
-        return await self.repository.get_entry_by_external_id_and_external_source_and_user_id(
+    ) -> Optional[UserMediaEntry]:
+        res = await self.repository.get_entry_by_external_id_and_external_source_and_user_id(
             external_id, external_source, user_id
         )
-
+        if res:
+            return UserMediaEntry.from_db(res)
+        return None
+    
     async def get_entries(
         self,
         user_id: str,
@@ -85,7 +88,7 @@ class UserMediaEntryService:
         title_search: Optional[str],
         is_adult: Optional[bool],
     ) -> UserMediaEntryPagination:
-        filters: dict[str, Any] = {"user_id": user_id}
+        filters: dict[str, Any] = {} 
 
         if in_library is not None:
             filters["in_library"] = in_library
@@ -112,14 +115,15 @@ class UserMediaEntryService:
             per_page=per_page,
             sort_by=sort_by,
             sort_order=sort_order,
+            user_id=user_id
         )
-        total = await self.repository.collection.count_documents(filters)
+        total = await self.repository.count_entries(user_id=user_id, filters=filters)
         has_next_page = (page * per_page) < total
         return UserMediaEntryPagination(
-            results=entries,
+            results=[UserMediaEntry.from_db(e) for e in entries],
             page=page,
-            per_page=per_page,  # type: ignore
-            has_next_page=has_next_page,  # type: ignore
+            perPage=per_page,  
+            hasNextPage=has_next_page,  
             total=total,
         )
 
@@ -127,13 +131,14 @@ class UserMediaEntryService:
         count = await self.repository.count_entries_by_user_id(user_id)
         return count
 
-    async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
-        entry = await self.repository.get_entry_by_id(entry_id)
+    async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntry:
+        entry = await self.repository.get_entry_by_id(entry_id, user_id)
         if not entry:
-            raise ValueError(f"Entry {entry_id} not found")
+            raise NotFoundException(f"Entry {entry_id} not found")
         if entry.user_id != user_id:
             logger.warning(
-                "Unauthorized access attempt", user_id=user_id, entry_id=entry_id
+                "unauthorized_access_attempt", user_id=user_id, entry_id=entry_id
             )
-            raise ValueError("User not authorized for this entry")
-        return entry
+            raise ForbiddenException("You do not have access to this entry")
+        return UserMediaEntry.from_db(entry)
+
