@@ -1,20 +1,8 @@
-import asyncio
-from datetime import datetime, timedelta
-from typing import Optional, List, Union
+from typing import Optional, List
 from app.integrations.tmdb_api import TMDBApi
-from app.models.tmdb_models import (
-    TMDBPagination,
-    TMDBMovieDetail,
-    TMDBTVDetail,
-    TMDBCollection,
-    TMDBMediaMinimal,
-    TMDBPageInfo,
-)
 
 from app.models.media_models import (
-    MediaMinimal,
     MediaPagination,
-    MediaFeaturedBulk,
     MovieCollection,
     MovieDetailed,
     TVDetailed,
@@ -48,7 +36,6 @@ class TMDBService:
             perPage=per_page,
             hasNextPage=per_page == 20,
         )
-
 
     async def search_movie(
         self,

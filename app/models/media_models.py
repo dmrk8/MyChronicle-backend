@@ -241,15 +241,3 @@ class MovieCollection(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class MediaFeaturedBulk(BaseModel):
-    trending: Optional[List[MediaMinimal]] = None
-    popular_season: Optional[List[MediaMinimal]] = Field(
-        default=None, alias="popularSeason"
-    )
-    upcoming: Optional[List[MediaMinimal]] = None
-    all_time: Optional[List[MediaMinimal]] = Field(default=None, alias="allTime")
-    all_time_manhwa: Optional[List[MediaMinimal]] = Field(
-        default=None, alias="allTimeManhwa"
-    )
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

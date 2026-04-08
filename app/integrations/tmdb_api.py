@@ -136,48 +136,6 @@ class TMDBApi:
         )
         return results, page_info
 
-    async def get_popular_season(
-        self,
-        media_type: str,  # "movie" or "tv"
-        start_date: str,  # e.g., "2025-08-26"
-        end_date: str,  # e.g., "2025-11-26"
-        page: int,
-        language: str,
-        sort_by: str,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
-        """
-        Fetches popular movies in a specific season (date range) from TMDB.
-        """
-        date_param = "primary_release_date" if media_type == "movie" else "air_date"
-        url = f"{self.BASE_URL}/discover/{media_type}"
-        params = {
-            "sort_by": sort_by,
-            f"{date_param}.gte": start_date,
-            f"{date_param}.lte": end_date,
-            "without_keywords": "210024",
-            "language": language,
-            "page": page,
-        }
-        data = await perform_request(
-            client=self.client,
-            method="GET",
-            url=url,
-            headers=self.headers,
-            params=params,
-            action="get_popular_season",
-        )
-
-        results = [
-            TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
-        ]
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", 1),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
-        )
-        return results, page_info
 
     async def get_discover_movie(
         self,
@@ -370,51 +328,7 @@ class TMDBApi:
         tv_detail = TMDBTVDetail.model_validate(data)
         return tv_detail
 
-    async def get_bulk_movie_details(
-        self,
-        movie_ids: List[int],
-        language: str = "en-US",
-    ) -> List[TMDBMovieDetail]:
-        """
-        Fetches detailed information for multiple movies concurrently from TMDB, including keywords.
-        """
-        tasks = [self.get_movie_detail(movie_id, language) for movie_id in movie_ids]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        successful_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                logger.error("Failed to fetch movie detail", movie_id=movie_ids[i])
-            else:
-                successful_results.append(result)
-        logger.info(
-            "bulk_movie_details_completed",
-            len=len(successful_results),
-            successful_results=len(movie_ids),
-        )
-        return successful_results
-
-    async def get_bulk_tv_details(
-        self,
-        tv_ids: List[int],
-        language: str = "en-US",
-    ) -> List[TMDBTVDetail]:
-        """
-        Fetches detailed information for multiple TV shows concurrently from TMDB, including keywords.
-        """
-        tasks = [self.get_tv_detail(tv_id, language) for tv_id in tv_ids]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        successful_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                logger.error("Failed to fetch TV detail api", tv_id=tv_ids[i])
-            else:
-                successful_results.append(result)
-        logger.info(
-            "bulk_tv_details_completed",
-            len=len(successful_results),
-            successful_results=len(tv_ids),
-        )
-        return successful_results
+    
 
     async def get_collection_detail(
         self,
