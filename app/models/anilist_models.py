@@ -243,15 +243,3 @@ class AnilistPagination(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class AnilistFeaturedMediaResponse(BaseModel):
-    trending: Optional[List[AnilistMediaMinimal]] = None
-    popular_season: Optional[List[AnilistMediaMinimal]] = Field(
-        default=None, alias="popularSeason"
-    )
-    upcoming: Optional[List[AnilistMediaMinimal]] = None
-    all_time: Optional[List[AnilistMediaMinimal]] = Field(default=None, alias="allTime")
-    all_time_manhwa: Optional[List[AnilistMediaMinimal]] = Field(
-        default=None, alias="allTimeManhwa"
-    )
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
