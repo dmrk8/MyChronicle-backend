@@ -39,37 +39,51 @@ class ReviewBase(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class ReviewUpdate(ReviewBase):
+    def to_update_dict(self) -> dict:
+        data = self.model_dump(exclude_unset=True, by_alias=False)
+
+        if not data:
+            raise ValueError("No fields provided for update")
+        data["updated_at"] = datetime.now(timezone.utc)
+        return data
+
+
 class ReviewCreate(ReviewBase):
-    user_media_entry_id: str = Field(
-        ...,
-        alias="userMediaEntryId",
-    )
+    pass
 
 
-class ReviewInsert(ReviewCreate):
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
-    )
-    user_id: str = Field(..., alias="userId")
+class ReviewInsert(ReviewBase):
+    user_media_entry_id: str
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    user_id: str = Field(...)
 
 
 class ReviewDB(ReviewBase):
+    id: str = Field(..., alias="_id")
+    user_media_entry_id: str = Field(...)
+    user_id: str = Field(...)
+
+    created_at: datetime = Field(...)
+    updated_at: datetime = Field(...)
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def coerce_object_id(cls, v):
+        return str(v)
+
+
+class Review(ReviewBase):
     id: str
-    user_media_entry_id: str = Field(
-        ...,
-        alias="userMediaEntryId",
-    )
+    user_media_entry_id: str = Field(..., alias="userMediaEntryId")
     user_id: str = Field(..., alias="userId")
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="createdAt"
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt"
-    )
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
 
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-class ReviewUpdate(ReviewBase):
-    pass
+    @classmethod
+    def from_db(cls, review: ReviewDB) -> "Review":
+        return cls(**review.model_dump())
