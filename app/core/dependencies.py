@@ -22,7 +22,6 @@ from app.services.auth_service import AuthService
 from app.auth.password_handler import PasswordHandler
 
 from app.repositories.review_repository import ReviewRepository
-from app.services.review_service import ReviewService
 
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.user_media_entry_service import UserMediaEntryService
@@ -137,15 +136,10 @@ def get_user_media_entry_repository(
     )
 
 
-def get_review_service(
-    review_repository: ReviewRepository = Depends(get_review_repository),
-    event_bus: EventBus = Depends(get_event_bus),
-) -> ReviewService:
-    return ReviewService(review_repository=review_repository, event_bus=event_bus)
-
-
 def get_user_media_entry_service(
     repository: UserMediaEntryRepository = Depends(get_user_media_entry_repository),
-    review_service: ReviewService = Depends(get_review_service),
+    review_repository: ReviewRepository = Depends(get_review_repository),
 ) -> UserMediaEntryService:
-    return UserMediaEntryService(repository=repository, review_service=review_service)
+    return UserMediaEntryService(
+        repository=repository, review_repository=review_repository
+    )

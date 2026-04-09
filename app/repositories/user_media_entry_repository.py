@@ -79,7 +79,7 @@ class UserMediaEntryRepository:
                 entry_id=entry_id,
                 user_id=user_id,
             )
-            return UserMediaEntryDB(**doc)
+            return UserMediaEntryDB.model_validate(doc)
 
         self.logger.info(
             "mongo_user_media_entry_find_one_by_id_not_found",
@@ -118,7 +118,7 @@ class UserMediaEntryRepository:
                 external_id=external_id,
                 user_id=user_id,
             )
-            return UserMediaEntryDB(**doc)
+            return UserMediaEntryDB.model_validate(doc)
 
         self.logger.info(
             "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
@@ -153,7 +153,7 @@ class UserMediaEntryRepository:
                 entry_id=entry_id,
                 user_id=user_id,
             )
-            return UserMediaEntryDB(**doc)
+            return UserMediaEntryDB.model_validate(doc)
 
         self.logger.warning(
             "mongo_user_media_entry_update_not_found_or_forbidden",
