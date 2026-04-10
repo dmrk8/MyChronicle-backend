@@ -7,6 +7,7 @@ from app.core.infrastructure import state
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.core.validators.user_media_entry_access import UserMediaEntryAccessValidator
 from app.services.anilist_service import AnilistService
 from app.integrations.anilistApi import AnilistApi
 
@@ -127,8 +128,9 @@ def get_review_repository(
 ) -> ReviewRepository:
     return ReviewRepository(db=db, collection_name=settings.review_collection)
 
+
 def get_review_service(
-    review_repository: ReviewRepository = Depends(get_review_repository)
+    review_repository: ReviewRepository = Depends(get_review_repository),
 ) -> ReviewService:
     return ReviewService(review_repository=review_repository)
 
@@ -146,6 +148,12 @@ def get_user_media_entry_service(
     repository: UserMediaEntryRepository = Depends(get_user_media_entry_repository),
     review_service: ReviewService = Depends(get_review_service),
 ) -> UserMediaEntryService:
-    return UserMediaEntryService(
-        repository=repository, review_service=review_service
-    )
+    return UserMediaEntryService(repository=repository, review_service=review_service)
+
+
+def get_user_media_entry_access_validation(
+    user_media_entry_repository: UserMediaEntryRepository = Depends(
+        get_user_media_entry_repository
+    ),
+) -> UserMediaEntryAccessValidator:
+    return UserMediaEntryAccessValidator(entry_repository=user_media_entry_repository)

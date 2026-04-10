@@ -1,10 +1,12 @@
 from typing import List, Optional
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.validators.user_media_entry_access import UserMediaEntryAccessValidator
 from app.models.review_models import Review, ReviewCreate, ReviewInsert, ReviewUpdate
 from app.repositories.review_repository import ReviewRepository
 from pymongo.results import DeleteResult
 
 import structlog
+
 
 logger = structlog.get_logger().bind(service="ReviewService")
 
@@ -49,9 +51,7 @@ class ReviewService:
         logger.info("review_updated", review_id=review_id, user_id=user_id)
         return Review.from_db(updated_review)
 
-    async def delete_review(
-        self, entry_id: str, review_id: str, user_id: str
-    ) -> None:
+    async def delete_review(self, entry_id: str, review_id: str, user_id: str) -> None:
 
         result: DeleteResult = await self.review_repository.delete_review(
             review_id, user_id, entry_id
@@ -63,7 +63,7 @@ class ReviewService:
 
     async def get_reviews_for_user_media_entry(
         self, entry_id: str, user_id: str
-    ) -> Optional[List[Review]]:
+    ) -> List[Review]:
 
         reviews = (
             await self.review_repository.get_reviews_by_user_media_entry_id_and_user_id(
@@ -76,7 +76,7 @@ class ReviewService:
             user_id=user_id,
         )
         if not reviews:
-            return None
+            return []
 
         return [Review.from_db(review) for review in reviews]
 
@@ -84,43 +84,41 @@ class ReviewService:
         self, review_id: str, user_id: str, entry_id: str
     ) -> Review:
 
-        try:
-            res = await self.review_repository.get_review_by_id(
-                review_id, user_id, entry_id
-            )
-            if res is None:
-                raise NotFoundException(f"Review {review_id} not found")
-            return Review.from_db(res)
-        except Exception:
+        res = await self.review_repository.get_review_by_id(
+            review_id, user_id, entry_id
+        )
+        if res is None:
             raise NotFoundException(f"Review {review_id} not found")
+        return Review.from_db(res)
 
     async def count_reviews_for_user_media_entry(
-        self, user_media_entry_id: str, user_id: str
+        self, entry_id: str, user_id: str
     ) -> int:
+
         return await self.review_repository.count_reviews_by_user_media_entry_id(
-            user_media_entry_id, user_id
+            entry_id, user_id
         )
 
     async def delete_reviews_for_user_media_entry(
-        self, user_media_entry_id: str, user_id: str
+        self, entry_id: str, user_id: str
     ) -> None:
+
         result: DeleteResult = (
             await self.review_repository.delete_reviews_by_user_media_entry_id(
-                user_media_entry_id, user_id
+                entry_id, user_id
             )
         )
         if not result.acknowledged:
-            raise RuntimeError(
-                f"Failed to delete reviews for entry id: {user_media_entry_id}"
-            )
+            raise RuntimeError(f"Failed to delete reviews for entry id: {entry_id}")
         logger.info(
             "reviews_deleted",
-            user_media_entry_id=user_media_entry_id,
+            user_media_entry_id=entry_id,
             user_id=user_id,
             deleted_count=result.deleted_count,
         )
 
     async def delete_all_reviews_for_user(self, user_id: str) -> None:
+
         result: DeleteResult = await self.review_repository.delete_by_user_id(user_id)
         if not result.acknowledged:
             raise RuntimeError(

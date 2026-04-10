@@ -72,7 +72,7 @@ class ReviewRepository:
 
     async def update_review(
         self, review_id: str, user_media_entry_id: str, update: ReviewUpdate, user_id: str
-    ) -> Optional[ReviewDB]:
+    ) -> ReviewDB:
 
         update_dict = update.to_update_dict()
 
@@ -90,20 +90,22 @@ class ReviewRepository:
             error_event="mongo_review_update_one_error",
             context={"review_id": review_id, "user_id": user_id},
         )
-        if doc:
-            self.logger.info(
-                "mongo_user_media_entry_update_success",
-                review_id=review_id,
-                user_id=user_id,
-            )
-            return ReviewDB.model_validate(doc)
-
-        self.logger.warning(
+        if not doc:
+            self.logger.warning(
             "mongo_user_media_entry_update_not_found_or_forbidden",
             review_id=review_id,
             user_id=user_id,
         )
-        return None
+
+            raise
+        self.logger.info(
+                "mongo_user_media_entry_update_success",
+                review_id=review_id,
+                user_id=user_id,
+            )
+        return ReviewDB.model_validate(doc)
+
+               
 
     async def get_reviews_by_user_media_entry_id_and_user_id(
         self, user_media_entry_id: str, user_id: str

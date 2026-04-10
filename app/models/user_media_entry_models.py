@@ -8,27 +8,7 @@ from app.enums.user_media_entry_enums import (
 )
 
 
-class UserMediaEntryBase(BaseModel):
-    title: Optional[str] = None
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    is_adult: Optional[bool] = Field(None, alias="isAdult")
-
-    status: Optional[UserMediaEntryStatus] = Field(None)
-    repeat_count: Optional[int] = Field(None, alias="repeatCount")
-    is_favorite: Optional[bool] = Field(None, alias="isFavorite")
-    in_library: Optional[bool] = Field(None, alias="inLibrary")
-
-    @field_validator("repeat_count")
-    @classmethod
-    def repeat_count_non_negative(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("repeat_count must be non-negative")
-        return v
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class UserMediaEntryCreate(UserMediaEntryBase):
+class UserMediaEntryCreate(BaseModel):
     external_id: int = Field(
         ...,
         alias="externalId",
@@ -44,6 +24,42 @@ class UserMediaEntryCreate(UserMediaEntryBase):
         alias="mediaType",
         description="The type of media (e.g., anime, manga, game, movie, TV)",
     )
+    title: str = Field(..., alias="title", description="The title of the media")
+    cover_image: Optional[str] = Field(
+        None, alias="coverImage", description="The cover image URL of the media"
+    )
+    is_adult: Optional[bool] = Field(
+        False, alias="isAdult", description="Whether the media is adult content"
+    )
+    status: Optional[UserMediaEntryStatus] = Field(
+        UserMediaEntryStatus.PLANNING,
+        alias="status",
+        description="The user's consumption status for the media",
+    )
+    repeat_count: Optional[int] = Field(
+        0,
+        alias="repeatCount",
+        description="How many times the user has consumed the media",
+    )
+    is_favorite: Optional[bool] = Field(
+        False,
+        alias="isFavorite",
+        description="Whether the user has marked this media as a favorite",
+    )
+    in_library: Optional[bool] = Field(
+        True,
+        alias="inLibrary",
+        description="Whether the media is in the user's personal library",
+    )
+
+    @field_validator("repeat_count")
+    @classmethod
+    def repeat_count_non_negative(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("repeat_count must be non-negative")
+        return v
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class UserMediaEntryInsert(UserMediaEntryCreate):
@@ -61,17 +77,8 @@ class UserMediaEntryInsert(UserMediaEntryCreate):
         return values
 
 
-class UserMediaEntryDB(UserMediaEntryBase):
+class UserMediaEntryDB(UserMediaEntryInsert):
     id: str = Field(..., alias="_id")
-
-    external_id: int = Field(...)
-    external_source: MediaExternalSource = Field(...)
-    media_type: MediaType = Field(...)
-
-    user_id: str = Field(...)
-
-    created_at: datetime = Field(...)
-    updated_at: datetime = Field(...)
 
     @field_validator("id", mode="before")
     @classmethod
@@ -80,6 +87,8 @@ class UserMediaEntryDB(UserMediaEntryBase):
 
 
 class UserMediaEntryUpdate(BaseModel):
+    """User preference updates"""
+
     status: Optional[UserMediaEntryStatus] = Field(None, alias="status")
     repeat_count: Optional[int] = Field(None, alias="repeatCount")
     is_favorite: Optional[bool] = Field(None, alias="isFavorite")
@@ -87,7 +96,6 @@ class UserMediaEntryUpdate(BaseModel):
 
     def to_update_dict(self) -> dict:
         data = self.model_dump(exclude_unset=True, by_alias=False)
-
         if not data:
             raise ValueError("No fields provided for update")
         data["updated_at"] = datetime.now(timezone.utc)
@@ -99,6 +107,30 @@ class UserMediaEntryUpdate(BaseModel):
         if v is not None and v < 0:
             raise ValueError("repeat_count must be non-negative")
         return v
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class UserMediaEntrySyncMetadata(BaseModel):
+    """Metadata sync from external APIs"""
+
+    title: Optional[str] = Field(
+        None, alias="title", description="Synced title from external API"
+    )
+    cover_image: Optional[str] = Field(
+        None, alias="coverImage", description="Synced cover image URL"
+    )
+    is_adult: Optional[bool] = Field(
+        None, alias="isAdult", description="Synced adult status"
+    )
+    
+    def to_update_dict(self) -> dict:
+        data = self.model_dump(exclude_unset=True, by_alias=False)
+        if not data:
+            raise ValueError("No fields provided for update")
+        return data
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class UserMediaEntry(BaseModel):

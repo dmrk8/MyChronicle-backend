@@ -14,6 +14,7 @@ from app.models.user_media_entry_models import (
     UserMediaEntryInsert,
     UserMediaEntryPagination,
     UserMediaEntryUpdate,
+    UserMediaEntrySyncMetadata,
     UserMediaEntry,
 )
 
@@ -23,14 +24,16 @@ def test_user_media_entry_create_accepts_alias_fields():
         externalId=101,
         externalSource=MediaExternalSource.ANILIST,
         mediaType=MediaType.ANIME,
+        title="Test Anime",
         repeatCount=2,
         isFavorite=True,
         inLibrary=True,
-    ) # type: ignore
+    )  # type: ignore
 
     assert model.external_id == 101
     assert model.external_source == MediaExternalSource.ANILIST
     assert model.media_type == MediaType.ANIME
+    assert model.title == "Test Anime"
     assert model.repeat_count == 2
     assert model.is_favorite is True
     assert model.in_library is True
@@ -42,8 +45,25 @@ def test_user_media_entry_create_rejects_negative_repeat_count():
             externalId=101,
             externalSource=MediaExternalSource.ANILIST,
             mediaType=MediaType.ANIME,
+            title="Test",
             repeatCount=-1,
-        ) # type: ignore
+        )  # type: ignore
+
+
+def test_user_media_entry_create_has_default_values():
+    model = UserMediaEntryCreate(
+        externalId=101,
+        externalSource=MediaExternalSource.ANILIST,
+        mediaType=MediaType.ANIME,
+        title="Test Anime",
+    )  # type: ignore
+
+    assert model.cover_image is None
+    assert model.is_adult is False
+    assert model.status == UserMediaEntryStatus.PLANNING
+    assert model.repeat_count == 0
+    assert model.is_favorite is False
+    assert model.in_library is True
 
 
 def test_user_media_entry_insert_sets_timestamps_when_missing():
@@ -53,8 +73,9 @@ def test_user_media_entry_insert_sets_timestamps_when_missing():
         externalId=202,
         externalSource=MediaExternalSource.TMDB,
         mediaType=MediaType.MOVIE,
+        title="Test Movie",
         user_id="user_1",
-    ) # type: ignore
+    )  # type: ignore
 
     after = datetime.now(timezone.utc)
 
@@ -72,10 +93,11 @@ def test_user_media_entry_insert_keeps_explicit_timestamps():
         externalId=303,
         externalSource=MediaExternalSource.IGDB,
         mediaType=MediaType.GAME,
+        title="Test Game",
         user_id="user_2",
         created_at=created,
         updated_at=updated,
-    ) # type: ignore
+    )  # type: ignore
 
     assert model.created_at == created
     assert model.updated_at == updated
@@ -87,13 +109,14 @@ def test_user_media_entry_db_coerces_id_to_string():
 
     model = UserMediaEntryDB(
         _id=oid,
-        external_id=404,
-        external_source=MediaExternalSource.ANILIST,
-        media_type=MediaType.MANGA,
+        external_id=404, # type: ignore
+        external_source=MediaExternalSource.ANILIST, # type: ignore
+        media_type=MediaType.MANGA, # type: ignore
+        title="Test Manga",
         user_id="user_3",
         created_at=now,
         updated_at=now,
-    ) # type: ignore
+    )  # type: ignore
 
     assert model.id == str(oid)
     assert isinstance(model.id, str)
@@ -101,11 +124,11 @@ def test_user_media_entry_db_coerces_id_to_string():
 
 def test_user_media_entry_update_rejects_negative_repeat_count():
     with pytest.raises(ValidationError, match="repeat_count must be non-negative"):
-        UserMediaEntryUpdate(repeatCount=-3) # type: ignore
+        UserMediaEntryUpdate(repeatCount=-3)  # type: ignore
 
 
 def test_user_media_entry_update_to_update_dict_raises_for_empty_payload():
-    model = UserMediaEntryUpdate() # type: ignore
+    model = UserMediaEntryUpdate()  # type: ignore
 
     with pytest.raises(ValueError, match="No fields provided for update"):
         model.to_update_dict()
@@ -131,15 +154,49 @@ def test_user_media_entry_update_to_update_dict_adds_updated_at_and_snake_case_k
     assert before <= update_dict["updated_at"] <= after
 
 
+def test_user_media_entry_sync_metadata_accepts_alias_fields():
+    model = UserMediaEntrySyncMetadata(
+        title="Synced Title",
+        coverImage="https://example.com/cover.jpg",
+        isAdult=True,
+    )  # type: ignore
+
+    assert model.title == "Synced Title"
+    assert model.cover_image == "https://example.com/cover.jpg"
+    assert model.is_adult is True
+
+
+def test_user_media_entry_sync_metadata_to_update_dict():
+    model = UserMediaEntrySyncMetadata(
+        title="Updated Title",
+        coverImage="https://example.com/new_cover.jpg",
+    )  # type: ignore
+
+    update_dict = model.to_update_dict()
+
+    assert update_dict["title"] == "Updated Title"
+    assert update_dict["cover_image"] == "https://example.com/new_cover.jpg"
+    assert "is_adult" not in update_dict
+    # Note: updated_at is NOT added for metadata sync
+    assert "updated_at" not in update_dict
+
+
+def test_user_media_entry_sync_metadata_to_update_dict_raises_for_empty():
+    model = UserMediaEntrySyncMetadata()  # type: ignore
+
+    with pytest.raises(ValueError, match="No fields provided for update"):
+        model.to_update_dict()
+
+
 def test_user_media_entry_from_db_maps_fields_correctly():
     now = datetime.now(timezone.utc)
     db_entry = UserMediaEntryDB(
         _id="entry_1",
-        external_id=505,
-        external_source=MediaExternalSource.ANILIST,
-        media_type=MediaType.ANIME,
+        external_id=505, # type: ignore
+        external_source=MediaExternalSource.ANILIST, # type: ignore
+        media_type=MediaType.ANIME, # type: ignore
+        title="Sample Anime",
         user_id="user_9",
-        title="Sample",
         coverImage="https://example.com/cover.jpg",
         isAdult=False,
         status=UserMediaEntryStatus.COMPLETED,
@@ -148,7 +205,7 @@ def test_user_media_entry_from_db_maps_fields_correctly():
         inLibrary=True,
         created_at=now,
         updated_at=now,
-    )
+    )  # type: ignore
 
     result = UserMediaEntry.from_db(db_entry)
 
@@ -157,6 +214,7 @@ def test_user_media_entry_from_db_maps_fields_correctly():
     assert result.external_source == MediaExternalSource.ANILIST
     assert result.media_type == MediaType.ANIME
     assert result.user_id == "user_9"
+    assert result.title == "Sample Anime"
     assert result.cover_image == "https://example.com/cover.jpg"
     assert result.status == UserMediaEntryStatus.COMPLETED
     assert result.repeat_count == 1
@@ -170,9 +228,10 @@ def test_user_media_entry_pagination_accepts_alias_fields():
         externalSource=MediaExternalSource.TMDB,
         mediaType=MediaType.TV,
         userId="user_10",
+        title="Test Show",
         createdAt=now,
         updatedAt=now,
-    ) # type: ignore
+    )  # type: ignore
 
     page = UserMediaEntryPagination(
         results=[item],
@@ -190,7 +249,7 @@ def test_user_media_entry_pagination_accepts_alias_fields():
 
 
 def test_user_media_entry_update_updated_at_is_timezone_aware():
-    model = UserMediaEntryUpdate(status=UserMediaEntryStatus.PLANNING) # type: ignore
+    model = UserMediaEntryUpdate(status=UserMediaEntryStatus.PLANNING)  # type: ignore
 
     result = model.to_update_dict()
 

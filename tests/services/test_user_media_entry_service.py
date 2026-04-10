@@ -11,11 +11,11 @@ from app.enums.user_media_entry_enums import (
     UserMediaEntrySortOptions,
     UserMediaEntryStatus,
 )
-from app.models.review_models import ReviewCreate, ReviewDB, ReviewUpdate
 from app.models.user_media_entry_models import (
     UserMediaEntryCreate,
     UserMediaEntryDB,
     UserMediaEntryUpdate,
+    UserMediaEntrySyncMetadata,
 )
 from app.services.user_media_entry_service import UserMediaEntryService
 from app.services.review_service import ReviewService
@@ -53,22 +53,6 @@ def create_user_media_entry_db(**overrides):
     }
     defaults.update(overrides)
     return UserMediaEntryDB(**defaults)
-
-
-def create_review_db(**overrides):
-    defaults = {
-        "_id": "review-1",
-        "user_media_entry_id": "entry-1",
-        "user_id": "user-1",
-        "review": "Excellent watch",
-        "rating": 8,
-        "review_progress": 10,
-        "written_at": datetime.now(timezone.utc),
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
-    }
-    defaults.update(overrides)
-    return ReviewDB(**defaults)
 
 
 # --- Entry CRUD tests ---
@@ -131,20 +115,19 @@ async def test_get_entry_by_external_id_and_source_returns_entry(
 
 
 @pytest.mark.asyncio
-async def test_get_entry_by_external_id_and_source_returns_none_when_missing(
+async def test_get_entry_by_external_id_and_source_raises_when_missing(
     service, mock_repository
 ):
     mock_repository.get_entry_by_external_id_and_external_source_and_user_id = (
         AsyncMock(return_value=None)
     )
 
-    result = await service.get_entry_by_external_id_and_source(
-        external_id=1001,
-        external_source=MediaExternalSource.ANILIST,
-        user_id="user-1",
-    )
-
-    assert result is None
+    with pytest.raises(NotFoundException, match="Entry not found for external_id"):
+        await service.get_entry_by_external_id_and_source(
+            external_id=1001,
+            external_source=MediaExternalSource.ANILIST,
+            user_id="user-1",
+        )
 
 
 @pytest.mark.asyncio
@@ -343,111 +326,42 @@ async def test_get_entries_escapes_regex_title_search(service, mock_repository):
     assert passed_filters["title"]["$regex"] == "a\\.b\\*"
 
 
-# --- Review delegation tests ---
-
-
 @pytest.mark.asyncio
-async def test_create_review_delegates_to_review_service(service, mock_review_service):
-    """Test that create_review delegates to review_service."""
-    review_request = ReviewCreate(rating=8.5, review="Great!")  # type: ignore
-    expected_review = MagicMock()
-    mock_review_service.create_review = AsyncMock(return_value=expected_review)
-
-    result = await service.create_review(review_request, "entry-1", "user-1")
-
-    assert result == expected_review
-    mock_review_service.create_review.assert_called_once_with(
-        review_request, "entry-1", "user-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_reviews_for_user_media_entry_delegates_to_review_service(
-    service, mock_review_service
+async def test_sync_entry_metadata_verifies_ownership_and_returns_synced_entry(
+    service, mock_repository
 ):
-    """Test that get_reviews_for_user_media_entry delegates to review_service."""
-    reviews = [MagicMock(), MagicMock()]
-    mock_review_service.get_reviews_for_user_media_entry = AsyncMock(
-        return_value=reviews
+    existing = create_user_media_entry_db(user_id="user-1")
+    synced = create_user_media_entry_db(
+        user_id="user-1", title="Synced Title", coverImage="https://example.com/new.jpg"
     )
+    mock_repository.get_entry_by_id = AsyncMock(return_value=existing)
+    mock_repository.sync_entry_metadata = AsyncMock(return_value=synced)
 
-    result = await service.get_reviews_for_user_media_entry("entry-1", "user-1")
+    metadata = UserMediaEntrySyncMetadata(
+        title="Synced Title",
+        coverImage="https://example.com/new.jpg",
+    )  # type: ignore
 
-    assert result == reviews
-    mock_review_service.get_reviews_for_user_media_entry.assert_called_once_with(
-        "entry-1", "user-1"
+    result = await service.sync_entry_metadata("entry-1", metadata, "user-1")
+
+    assert result is not None
+    assert result.title == "Synced Title"
+    assert result.cover_image == "https://example.com/new.jpg"
+    mock_repository.get_entry_by_id.assert_awaited_once_with("entry-1", "user-1")
+    mock_repository.sync_entry_metadata.assert_awaited_once_with(
+        "entry-1", "user-1", metadata
     )
 
 
 @pytest.mark.asyncio
-async def test_get_review_by_id_delegates_to_review_service(
-    service, mock_review_service
+async def test_sync_entry_metadata_raises_when_entry_missing_after_sync(
+    service, mock_repository
 ):
-    """Test that get_review_by_id delegates to review_service."""
-    expected_review = MagicMock()
-    mock_review_service.get_review_by_id = AsyncMock(return_value=expected_review)
+    existing = create_user_media_entry_db(user_id="user-1")
+    mock_repository.get_entry_by_id = AsyncMock(return_value=existing)
+    mock_repository.sync_entry_metadata = AsyncMock(return_value=None)
 
-    result = await service.get_review_by_id("review-1", "user-1", "entry-1")
+    metadata = UserMediaEntrySyncMetadata(title="New Title")  # type: ignore
 
-    assert result == expected_review
-    mock_review_service.get_review_by_id.assert_called_once_with(
-        "review-1", "user-1", "entry-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_count_reviews_for_user_media_entry_delegates_to_review_service(
-    service, mock_review_service
-):
-    """Test that count_reviews_for_user_media_entry delegates to review_service."""
-    mock_review_service.count_reviews_for_user_media_entry = AsyncMock(return_value=3)
-
-    result = await service.count_reviews_for_user_media_entry("entry-1", "user-1")
-
-    assert result == 3
-    mock_review_service.count_reviews_for_user_media_entry.assert_called_once_with(
-        "entry-1", "user-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_update_review_delegates_to_review_service(service, mock_review_service):
-    """Test that update_review delegates to review_service."""
-    update_request = ReviewUpdate(rating=9.0)  # type: ignore
-    expected_review = MagicMock()
-    mock_review_service.update_review = AsyncMock(return_value=expected_review)
-
-    result = await service.update_review(
-        "review-1", "entry-1", update_request, "user-1"
-    )
-
-    assert result == expected_review
-    mock_review_service.update_review.assert_called_once_with(
-        "review-1", "entry-1", update_request, "user-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_delete_review_delegates_to_review_service(service, mock_review_service):
-    """Test that delete_review delegates to review_service."""
-    mock_review_service.delete_review = AsyncMock()
-
-    await service.delete_review("entry-1", "review-1", "user-1")
-
-    mock_review_service.delete_review.assert_called_once_with(
-        "entry-1", "review-1", "user-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_delete_reviews_for_user_media_entry_delegates_to_review_service(
-    service, mock_review_service
-):
-    """Test that delete_reviews_for_user_media_entry delegates to review_service."""
-    mock_review_service.delete_reviews_for_user_media_entry = AsyncMock()
-
-    await service.delete_reviews_for_user_media_entry("entry-1", "user-1")
-
-    mock_review_service.delete_reviews_for_user_media_entry.assert_called_once_with(
-        "entry-1", "user-1"
-    )
+    with pytest.raises(RuntimeError, match="missing after metadata sync"):
+        await service.sync_entry_metadata("entry-1", metadata, "user-1")

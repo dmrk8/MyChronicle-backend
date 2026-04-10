@@ -246,3 +246,58 @@ async def test_get_entries_scopes_filters_with_user_id_and_applies_pagination(
     cursor.skip.assert_called_once_with(5)
     cursor.limit.assert_called_once_with(5)
 
+
+@pytest.mark.asyncio
+async def test_sync_entry_metadata_applies_owner_scope_and_returns_synced_doc(
+    repository, mock_collection, passthrough_run_db_op
+):
+    from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
+    
+    entry_id = ObjectId()
+    metadata = UserMediaEntrySyncMetadata(
+        title="Updated Title",
+        coverImage="https://example.com/new_cover.jpg",
+        isAdult=True,
+    ) # type: ignore
+    synced_doc = {
+        "_id": entry_id,
+        "user_id": "user-1",
+        "external_id": 1001,
+        "external_source": MediaExternalSource.ANILIST,
+        "media_type": MediaType.ANIME,
+        "title": "Updated Title",
+        "cover_image": "https://example.com/new_cover.jpg",
+        "is_adult": True,
+        "status": UserMediaEntryStatus.CURRENT,
+        "created_at": "2025-01-01T00:00:00+00:00",
+        "updated_at": "2025-01-02T00:00:00+00:00",
+    }
+    mock_collection.find_one_and_update.return_value = synced_doc
+
+    result = await repository.sync_entry_metadata(str(entry_id), "user-1", metadata)
+
+    assert result is not None
+    assert result.title == "Updated Title"
+    assert result.cover_image == "https://example.com/new_cover.jpg"
+    assert result.is_adult is True
+
+    call = mock_collection.find_one_and_update.await_args
+    assert call.args[0] == {"_id": entry_id, "user_id": "user-1"}
+    assert "$set" in call.args[1]
+    assert call.kwargs["return_document"] == ReturnDocument.AFTER
+
+
+@pytest.mark.asyncio
+async def test_sync_entry_metadata_returns_none_when_not_found(
+    repository, mock_collection, passthrough_run_db_op
+):
+    from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
+    
+    entry_id = ObjectId()
+    metadata = UserMediaEntrySyncMetadata(title="New Title") # type: ignore
+    mock_collection.find_one_and_update.return_value = None
+
+    result = await repository.sync_entry_metadata(str(entry_id), "user-1", metadata)
+
+    assert result is None
+

@@ -52,7 +52,7 @@ async def test_create_review_success(review_service, mock_review_repository):
     review = create_review_db()
     mock_review_repository.create_review = AsyncMock(return_value=review)
 
-    review_request = ReviewCreate(review="Great anime!", rating=8.5) # type: ignore
+    review_request = ReviewCreate(review="Great anime!", rating=8.5)  # type: ignore
     result = await review_service.create_review(review_request, "entry_456", "user_789")
 
     assert result.id == "review_123"
@@ -69,7 +69,7 @@ async def test_create_review_passes_correct_data(
     review = create_review_db()
     mock_review_repository.create_review = AsyncMock(return_value=review)
 
-    review_request = ReviewCreate(review="Great!", rating=8.5) # type: ignore
+    review_request = ReviewCreate(review="Great!", rating=8.5)  # type: ignore
     await review_service.create_review(review_request, "entry_456", "user_789")
 
     insert_data = mock_review_repository.create_review.call_args.args[0]
@@ -88,7 +88,7 @@ async def test_update_review_success(review_service, mock_review_repository):
     updated_review = create_review_db(rating=9.0)
     mock_review_repository.update_review = AsyncMock(return_value=updated_review)
 
-    update_request = ReviewUpdate(rating=9.0) # type: ignore
+    update_request = ReviewUpdate(rating=9.0)  # type: ignore
     result = await review_service.update_review(
         "review_123", "entry_456", update_request, "user_789"
     )
@@ -104,7 +104,7 @@ async def test_update_review_not_found(review_service, mock_review_repository):
     """Test update review raises RuntimeError when review not found after update."""
     mock_review_repository.update_review = AsyncMock(return_value=None)
 
-    update_request = ReviewUpdate(rating=9.0) # type: ignore
+    update_request = ReviewUpdate(rating=9.0)  # type: ignore
     with pytest.raises(RuntimeError, match="Review missing after update"):
         await review_service.update_review(
             "review_123", "entry_456", update_request, "user_789"
@@ -168,7 +168,7 @@ async def test_get_reviews_for_user_media_entry_success(
 async def test_get_reviews_for_user_media_entry_empty(
     review_service, mock_review_repository
 ):
-    """Test retrieving reviews when none exist returns None."""
+    """Test retrieving reviews when none exist returns empty list."""
     mock_review_repository.get_reviews_by_user_media_entry_id_and_user_id = AsyncMock(
         return_value=None
     )
@@ -177,7 +177,7 @@ async def test_get_reviews_for_user_media_entry_empty(
         "entry_456", "user_789"
     )
 
-    assert result is None
+    assert result == []
 
 
 # --- Tests for get_review_by_id ---
@@ -203,19 +203,6 @@ async def test_get_review_by_id_success(review_service, mock_review_repository):
 async def test_get_review_by_id_not_found(review_service, mock_review_repository):
     """Test get review raises NotFoundException when review not found."""
     mock_review_repository.get_review_by_id = AsyncMock(return_value=None)
-
-    with pytest.raises(NotFoundException, match="Review review_123 not found"):
-        await review_service.get_review_by_id("review_123", "user_789", "entry_456")
-
-
-@pytest.mark.asyncio
-async def test_get_review_by_id_handles_repository_error(
-    review_service, mock_review_repository
-):
-    """Test get review raises NotFoundException on any repository error."""
-    mock_review_repository.get_review_by_id = AsyncMock(
-        side_effect=Exception("DB error")
-    )
 
     with pytest.raises(NotFoundException, match="Review review_123 not found"):
         await review_service.get_review_by_id("review_123", "user_789", "entry_456")

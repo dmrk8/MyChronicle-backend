@@ -7,6 +7,7 @@ from bson import ObjectId
 from app.models.user_media_entry_models import (
     UserMediaEntryDB,
     UserMediaEntryInsert,
+    UserMediaEntrySyncMetadata,
     UserMediaEntryUpdate,
 )
 from app.repositories._repo_observability import run_db_op
@@ -160,6 +161,31 @@ class UserMediaEntryRepository:
             entry_id=entry_id,
             user_id=user_id,
         )
+        return None
+
+    async def sync_entry_metadata(
+        self, entry_id: str, user_id: str, metadata: UserMediaEntrySyncMetadata
+    ) -> Optional[UserMediaEntryDB]:
+        """Sync metadata from external API"""
+        update_dict = metadata.to_update_dict()
+
+        async def _op():
+            return await self.collection.find_one_and_update(
+                {"_id": ObjectId(entry_id), "user_id": user_id},
+                {"$set": update_dict},
+                return_document=ReturnDocument.AFTER,
+            )
+
+        doc = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_sync_metadata",
+            error_event="mongo_user_media_entry_sync_metadata_error",
+            context={"entry_id": entry_id, "user_id": user_id},
+        )
+
+        if doc:
+            return UserMediaEntryDB.model_validate(doc)
         return None
 
     async def delete_entry(self, entry_id: str, user_id: str) -> DeleteResult:

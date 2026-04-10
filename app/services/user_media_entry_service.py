@@ -1,10 +1,11 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 from app.core.exceptions import ForbiddenException, NotFoundException
-from app.models.review_models import Review, ReviewCreate, ReviewUpdate
 from app.models.user_media_entry_models import (
     UserMediaEntry,
     UserMediaEntryCreate,
+    UserMediaEntryDB,
     UserMediaEntryInsert,
+    UserMediaEntrySyncMetadata,
     UserMediaEntryUpdate,
     UserMediaEntryPagination,
 )
@@ -39,11 +40,12 @@ class UserMediaEntryService:
             user_id=user_id,
         )
         res = await self.repository.create_entry(entry_data)
+        logger.info("entry_created", entry_id=res.id, user_id=user_id)
         return UserMediaEntry.from_db(res)
 
     async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntry:
-        return await self._verify_ownership(entry_id, user_id)
-
+        res =  await self._verify_ownership(entry_id, user_id)
+        return UserMediaEntry.from_db(res)
     async def update_entry(
         self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
     ) -> Optional[UserMediaEntry]:
@@ -53,6 +55,10 @@ class UserMediaEntryService:
             entry_id, user_id, update_data
         )
         if updated_entry is None:
+            logger.error(
+                "entry_update_failed_data_missing",
+                entry_id=entry_id,
+            )
             raise RuntimeError(
                 "UserMediaEntry missing after update - data integrity issue"
             )
@@ -67,6 +73,7 @@ class UserMediaEntryService:
             raise RuntimeError(
                 f"Delete operation not acknowledged for entry {entry_id}"
             )
+        logger.info("entry_deleted", entry_id=entry_id, user_id=user_id)
 
     async def get_entry_by_external_id_and_source(
         self, external_id: int, external_source: MediaExternalSource, user_id: str
@@ -74,9 +81,12 @@ class UserMediaEntryService:
         res = await self.repository.get_entry_by_external_id_and_external_source_and_user_id(
             external_id, external_source, user_id
         )
-        if res:
-            return UserMediaEntry.from_db(res)
-        return None
+        if not res:
+            raise NotFoundException(
+                f"Entry not found for external_id={external_id}, source={external_source}"
+            )
+
+        return UserMediaEntry.from_db(res)
 
     async def get_entries(
         self,
@@ -135,7 +145,7 @@ class UserMediaEntryService:
         count = await self.repository.count_entries_by_user_id(user_id)
         return count
 
-    async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntry:
+    async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
         entry = await self.repository.get_entry_by_id(entry_id, user_id)
         if not entry:
             raise NotFoundException(f"Entry {entry_id} not found")
@@ -144,56 +154,20 @@ class UserMediaEntryService:
                 "unauthorized_access_attempt", user_id=user_id, entry_id=entry_id
             )
             raise ForbiddenException("You do not have access to this entry")
-        return UserMediaEntry.from_db(entry)
+        return entry
 
-    # --- Review delegation methods ---
+    async def sync_entry_metadata(
+        self, entry_id: str, metadata: UserMediaEntrySyncMetadata, user_id: str
+    ) -> Optional[UserMediaEntry]:
+        """Sync metadata from external API"""
+        await self._verify_ownership(entry_id, user_id)
 
-    async def create_review(
-        self, review_request: ReviewCreate, entry_id: str, user_id: str
-    ) -> Review:
-        """Create a review for a user media entry."""
-        return await self.review_service.create_review(
-            review_request, entry_id, user_id
+        synced_entry = await self.repository.sync_entry_metadata(
+            entry_id, user_id, metadata
         )
-
-    async def get_reviews_for_user_media_entry(
-        self, entry_id: str, user_id: str
-    ) -> Optional[List[Review]]:
-        """Get all reviews for a user media entry."""
-        return await self.review_service.get_reviews_for_user_media_entry(
-            entry_id, user_id
-        )
-
-    async def get_review_by_id(
-        self, review_id: str, user_id: str, entry_id: str
-    ) -> Review:
-        """Get a specific review by ID."""
-        return await self.review_service.get_review_by_id(review_id, user_id, entry_id)
-
-    async def count_reviews_for_user_media_entry(
-        self, user_media_entry_id: str, user_id: str
-    ) -> int:
-        """Count reviews for a user media entry."""
-        return await self.review_service.count_reviews_for_user_media_entry(
-            user_media_entry_id, user_id
-        )
-
-    async def update_review(
-        self, review_id: str, entry_id: str, update_request: ReviewUpdate, user_id: str
-    ) -> Optional[Review]:
-        """Update a review."""
-        return await self.review_service.update_review(
-            review_id, entry_id, update_request, user_id
-        )
-
-    async def delete_review(self, entry_id: str, review_id: str, user_id: str) -> None:
-        """Delete a review."""
-        return await self.review_service.delete_review(entry_id, review_id, user_id)
-
-    async def delete_reviews_for_user_media_entry(
-        self, user_media_entry_id: str, user_id: str
-    ) -> None:
-        """Delete all reviews for a user media entry."""
-        return await self.review_service.delete_reviews_for_user_media_entry(
-            user_media_entry_id, user_id
-        )
+        if synced_entry is None:
+            raise RuntimeError(
+                "UserMediaEntry missing after metadata sync - data integrity issue"
+            )
+        logger.info("entry_synced", entry_id=entry_id)
+        return UserMediaEntry.from_db(synced_entry)
