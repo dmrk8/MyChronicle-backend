@@ -1,7 +1,10 @@
-from enum import Enum
-from typing import Any, Optional, Union, List
-from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.auth.password_validation import validate_password_strength
 
 
 class UserRole(str, Enum):
@@ -9,69 +12,34 @@ class UserRole(str, Enum):
     USER = "user"
 
 
-class UserDB(BaseModel):
-    id: str
-    username: str 
-    hash_password: str
-    created_at: datetime
-    updated_at: datetime
-    role: UserRole
-
 class UserInsert(BaseModel):
-    username: str
-    hash_password: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    role: UserRole = UserRole.USER
-
-
-class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(
-        ...,
-        min_length=8,
-        description="Password must contain at least one lowercase letter, one uppercase letter, and one digit",
-    )
+    role: UserRole = UserRole.USER
+    hash_password: str = Field(..., description="Hashed password")
+    created_at: Optional[datetime] = Field(default=None)
+    updated_at: Optional[datetime] = Field(default=None)
 
-    @field_validator("password")
+    @model_validator(mode="before")
     @classmethod
-    def validate_password_strength(cls, v):
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(not c.isalnum() for c in v):
-            raise ValueError("Password must contain at least one symbol")
-        return v
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    def set_timestamps(cls, values):
+        now = datetime.now(timezone.utc)
+        values.setdefault("created_at", now)
+        values.setdefault("updated_at", now)
+        return values
 
 
-class UserUpdateRequest(BaseModel):
-    username: Optional[str] = Field(None, min_length=3, max_length=50)
-    password: Optional[str] = Field(
-        None,
-        min_length=8,
-        description="Password must contain at least one lowercase letter, one uppercase letter, one digit, and one symbol",
-    )
+class UserDB(BaseModel):
+    id: str = Field(..., alias="_id")
+    username: str = Field(..., min_length=3, max_length=50)
+    role: UserRole = UserRole.USER
+    hash_password: str
+    created_at: datetime = Field(...)
+    updated_at: datetime = Field(...)
 
-    @field_validator("password")
+    @field_validator("id", mode="before")
     @classmethod
-    def validate_password_strength(cls, v):
-        if v is None:
-            return v
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(not c.isalnum() for c in v):
-            raise ValueError("Password must contain at least one symbol")
-        return v
+    def coerce_object_id(cls, v):
+        return str(v)
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -79,19 +47,35 @@ class UserUpdateRequest(BaseModel):
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     hash_password: Optional[str] = Field(None, description="Hashed password")
-    role: Optional[UserRole] = None
+
+    def to_update_dict(self) -> dict:
+        data = self.model_dump(exclude_unset=True, by_alias=False)
+        if not data:
+            raise ValueError("No fields provided for update")
+        data["updated_at"] = datetime.now(timezone.utc)
+        return data
+
+
+class UpdatePassword(BaseModel):
+    current_password: str = Field(..., alias="currentPassword")
+    new_password: str = Field(..., alias="newPassword")
+
+    @field_validator("new_password")
+    def validate_password(cls, v: str):
+        return validate_password_strength(v)
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
 
 class User(BaseModel):
     id: str
     username: str
+    role: UserRole
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
-    role: UserRole
 
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True, 
-    )
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+    @classmethod
+    def from_db(cls, user: UserDB) -> "User":
+        return cls(**user.model_dump())

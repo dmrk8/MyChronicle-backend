@@ -1,10 +1,14 @@
-﻿import pytest
-from unittest.mock import MagicMock, AsyncMock
+import pytest
 from datetime import datetime, timezone
-from app.services.user_service import UserService
-from app.repositories.user_repository import UserRepository
+from unittest.mock import AsyncMock, MagicMock
+
+from pymongo.errors import DuplicateKeyError
+
 from app.auth.password_handler import PasswordHandler
-from app.models.user_models import UserCreate, UserUpdateRequest, UserDB, UserRole
+from app.core.exceptions import AuthenticationError, ConflictException
+from app.models.user_models import UserDB, UserRole, UserUpdate
+from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
 
 
 @pytest.fixture
@@ -26,9 +30,8 @@ def user_service(mock_user_repository, mock_password_handler):
 
 
 def create_user_db(**overrides):
-    """Factory for UserDB instances with correct types."""
     defaults = {
-        "id": "user_123",
+        "_id": "507f1f77bcf86cd799439011",
         "username": "testuser",
         "hash_password": "hashed_pwd",
         "created_at": datetime.now(timezone.utc),
@@ -40,99 +43,168 @@ def create_user_db(**overrides):
 
 
 @pytest.mark.asyncio
-async def test_create_user_success(user_service, mock_user_repository, mock_password_handler):
-    """Test successful user creation."""
-    user_create = UserCreate(username="newuser", password="Secure@pass123")
-    
-    mock_user_repository.get_by_username = AsyncMock(return_value=None)
-    mock_password_handler.hash_password = MagicMock(return_value="hashed_pwd")
-    mock_user_repository.create = AsyncMock(return_value=MagicMock(
-        inserted_id="user_456",
-        acknowledged=True
-    ))
+async def test_create_user_success(
+    user_service, mock_user_repository, mock_password_handler
+):
+    created_user = create_user_db(username="newuser")
+    mock_password_handler.hash_password.return_value = "hashed_pwd"
+    mock_user_repository.create = AsyncMock(return_value=created_user)
 
-    result = await user_service.create_user(user_create)
+    result = await user_service.create_user("newuser", "plain_pwd")
 
-    assert result.id == "user_456"
+    assert result.id == "507f1f77bcf86cd799439011"
     assert result.username == "newuser"
     assert result.role == UserRole.USER
-    
-    mock_password_handler.hash_password.assert_called_once_with("Secure@pass123")
-    mock_user_repository.create.assert_called_once()
+    mock_password_handler.hash_password.assert_called_once_with("plain_pwd")
+
+    inserted_user = mock_user_repository.create.call_args.args[0]
+    assert inserted_user.username == "newuser"
+    assert inserted_user.hash_password == "hashed_pwd"
 
 
 @pytest.mark.asyncio
-async def test_create_user_already_exists(user_service, mock_user_repository):
-    """Test creating user with existing username raises error."""
-    user_create = UserCreate(username="existinguser", password="Passw@rd123")
-    existing_user = create_user_db(username="existinguser")
-    
-    mock_user_repository.get_by_username = AsyncMock(return_value=existing_user)
+async def test_create_user_duplicate_username_raises_conflict(
+    user_service, mock_user_repository, mock_password_handler
+):
+    mock_password_handler.hash_password.return_value = "hashed_pwd"
+    mock_user_repository.create = AsyncMock(side_effect=DuplicateKeyError("duplicate"))
 
-    with pytest.raises(ValueError, match="Username already exists"):
-        await user_service.create_user(user_create)
-
-
-@pytest.mark.asyncio
-async def test_update_user_not_found(user_service, mock_user_repository):
-    """Test updating non-existent user raises error."""
-    mock_user_repository.get_by_id = AsyncMock(return_value=None)
-    update_request = UserUpdateRequest(username=None, password=None)
-
-    with pytest.raises(ValueError, match="Cannot update nonexisting user"):
-        await user_service.update_user("nonexistent_id", update_request)
+    with pytest.raises(ConflictException, match="Username already exists"):
+        await user_service.create_user("existinguser", "plain_pwd")
 
 
 @pytest.mark.asyncio
 async def test_update_user_success(user_service, mock_user_repository):
-    """Test successful user update."""
-    existing_user = create_user_db()
-    mock_user_repository.get_by_id = AsyncMock(return_value=existing_user)
-    mock_user_repository.update = AsyncMock(return_value=MagicMock(
-        matched_count=1,
-        modified_count=1,
-        acknowledged=True
-    ))
+    updated_user = create_user_db(username="updateduser")
+    user_update = UserUpdate(username="updateduser") # type: ignore
+    mock_user_repository.update = AsyncMock(return_value=updated_user)
 
-    update_request = UserUpdateRequest(username="updateduser", password=None)
-    result = await user_service.update_user("user_123", update_request)
+    result = await user_service.update_user("507f1f77bcf86cd799439011", user_update)
 
-    assert result.id == "user_123"
-    assert result.username == "testuser"
-    assert result.role == UserRole.USER
-    mock_user_repository.update.assert_called_once()
+    assert result.id == "507f1f77bcf86cd799439011"
+    assert result.username == "updateduser"
+    mock_user_repository.update.assert_called_once_with(
+        "507f1f77bcf86cd799439011", user_update
+    )
 
 
 @pytest.mark.asyncio
-async def test_delete_user_not_found(user_service, mock_user_repository):
-    """Test deleting non-existent user raises error."""
+async def test_update_user_missing_raises_runtime_error(user_service, mock_user_repository):
+    user_update = UserUpdate(username="updateduser") # type: ignore
+    mock_user_repository.update = AsyncMock(return_value=None)
+
+    with pytest.raises(RuntimeError, match="User missing after update - data integrity issue"):
+        await user_service.update_user("missing_user", user_update)
+
+
+@pytest.mark.asyncio
+async def test_update_username_success(user_service, mock_user_repository):
+    updated_user = create_user_db(username="renamed")
+    mock_user_repository.update = AsyncMock(return_value=updated_user)
+
+    result = await user_service.update_username("507f1f77bcf86cd799439011", "renamed")
+
+    assert result is None
+    updated_payload = mock_user_repository.update.call_args.args[1]
+    assert isinstance(updated_payload, UserUpdate)
+    assert updated_payload.username == "renamed"
+
+
+@pytest.mark.asyncio
+async def test_update_username_missing_raises_runtime_error(user_service, mock_user_repository):
+    mock_user_repository.update = AsyncMock(return_value=None)
+
+    with pytest.raises(RuntimeError, match="User missing after update - data integrity issue"):
+        await user_service.update_username("missing_user", "renamed")
+
+
+@pytest.mark.asyncio
+async def test_change_password_success(
+    user_service, mock_user_repository, mock_password_handler
+):
+    user_db = create_user_db(hash_password="old_hash")
+    mock_user_repository.get_by_id = AsyncMock(return_value=user_db)
+    mock_password_handler.verify_password.return_value = True
+    mock_password_handler.hash_password.return_value = "new_hash"
+    mock_user_repository.update = AsyncMock(return_value=create_user_db(hash_password="new_hash"))
+
+    result = await user_service.change_password(
+        "507f1f77bcf86cd799439011", "current_pwd", "new_pwd"
+    )
+
+    assert result is None
+    mock_password_handler.verify_password.assert_called_once_with("current_pwd", "old_hash")
+    mock_password_handler.hash_password.assert_called_once_with("new_pwd")
+
+    updated_payload = mock_user_repository.update.call_args.args[1]
+    assert isinstance(updated_payload, UserUpdate)
+    assert updated_payload.hash_password == "new_hash"
+
+
+@pytest.mark.asyncio
+async def test_change_password_missing_user_raises_runtime_error(user_service, mock_user_repository):
     mock_user_repository.get_by_id = AsyncMock(return_value=None)
 
-    with pytest.raises(ValueError, match="User not found"):
-        await user_service.delete_user("nonexistent_id")
+    with pytest.raises(RuntimeError, match="User missing for password change"):
+        await user_service.change_password("missing_user", "current_pwd", "new_pwd")
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_current_password_raises_authentication_error(
+    user_service, mock_user_repository, mock_password_handler
+):
+    user_db = create_user_db(hash_password="old_hash")
+    mock_user_repository.get_by_id = AsyncMock(return_value=user_db)
+    mock_password_handler.verify_password.return_value = False
+
+    with pytest.raises(AuthenticationError, match="Current password is incorrect"):
+        await user_service.change_password(
+            "507f1f77bcf86cd799439011", "wrong_pwd", "new_pwd"
+        )
+
+    mock_user_repository.update.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_change_password_update_failed_raises_runtime_error(
+    user_service, mock_user_repository, mock_password_handler
+):
+    user_db = create_user_db(hash_password="old_hash")
+    mock_user_repository.get_by_id = AsyncMock(return_value=user_db)
+    mock_password_handler.verify_password.return_value = True
+    mock_password_handler.hash_password.return_value = "new_hash"
+    mock_user_repository.update = AsyncMock(return_value=None)
+
+    with pytest.raises(RuntimeError, match="Password update failed"):
+        await user_service.change_password(
+            "507f1f77bcf86cd799439011", "current_pwd", "new_pwd"
+        )
 
 
 @pytest.mark.asyncio
 async def test_delete_user_success(user_service, mock_user_repository):
-    """Test successful user deletion."""
-    existing_user = create_user_db()
-    mock_user_repository.get_by_id = AsyncMock(return_value=existing_user)
-    mock_user_repository.delete = AsyncMock(return_value=MagicMock(
-        deleted_count=1,
-        acknowledged=True
-    ))
+    delete_result = MagicMock(deleted_count=1)
+    mock_user_repository.delete = AsyncMock(return_value=delete_result)
 
-    result = await user_service.delete_user("user_123")
+    result = await user_service.delete_user("507f1f77bcf86cd799439011")
 
     assert result is None
-    mock_user_repository.delete.assert_called_once()
+    mock_user_repository.delete.assert_called_once_with("507f1f77bcf86cd799439011")
+
+
+@pytest.mark.asyncio
+async def test_delete_user_no_effect_raises_runtime_error(user_service, mock_user_repository):
+    delete_result = MagicMock(deleted_count=0)
+    mock_user_repository.delete = AsyncMock(return_value=delete_result)
+
+    with pytest.raises(RuntimeError, match="Delete operation had no effect for user missing_user"):
+        await user_service.delete_user("missing_user")
 
 
 @pytest.mark.asyncio
 async def test_get_by_username_found(user_service, mock_user_repository):
-    """Test getting user by username when user exists."""
-    user = create_user_db(username="testuser")
-    mock_user_repository.get_by_username = AsyncMock(return_value=user)
+    user_db = create_user_db(username="testuser")
+    mock_user_repository.get_by_username = AsyncMock(return_value=user_db)
 
     result = await user_service.get_by_username("testuser")
 
@@ -143,67 +215,80 @@ async def test_get_by_username_found(user_service, mock_user_repository):
 
 @pytest.mark.asyncio
 async def test_get_by_username_not_found(user_service, mock_user_repository):
-    """Test getting user by username when user doesn't exist."""
     mock_user_repository.get_by_username = AsyncMock(return_value=None)
 
-    result = await user_service.get_by_username("nonexistent")
+    result = await user_service.get_by_username("unknown")
 
     assert result is None
+    mock_user_repository.get_by_username.assert_called_once_with("unknown")
 
 
 @pytest.mark.asyncio
 async def test_get_by_id_found(user_service, mock_user_repository):
-    """Test getting user by ID when user exists."""
-    user = create_user_db()
-    mock_user_repository.get_by_id = AsyncMock(return_value=user)
+    user_db = create_user_db()
+    mock_user_repository.get_by_id = AsyncMock(return_value=user_db)
 
-    result = await user_service.get_by_id("user_123")
+    result = await user_service.get_by_id("507f1f77bcf86cd799439011")
 
     assert result is not None
-    assert result.id == "user_123"
+    assert result.id == "507f1f77bcf86cd799439011"
+    mock_user_repository.get_by_id.assert_called_once_with("507f1f77bcf86cd799439011")
 
 
 @pytest.mark.asyncio
 async def test_get_by_id_not_found(user_service, mock_user_repository):
-    """Test getting user by ID when user doesn't exist."""
     mock_user_repository.get_by_id = AsyncMock(return_value=None)
 
-    result = await user_service.get_by_id("nonexistent_id")
+    result = await user_service.get_by_id("missing_user")
 
     assert result is None
+    mock_user_repository.get_by_id.assert_called_once_with("missing_user")
 
 
 @pytest.mark.asyncio
-async def test_verify_credentials_invalid_username(user_service, mock_user_repository):
-    """Test verifying credentials with non-existent username."""
-    mock_user_repository.get_by_username = AsyncMock(return_value=None)
+async def test_verify_credentials_success(
+    user_service, mock_user_repository, mock_password_handler
+):
+    user_db = create_user_db(username="verified_user", hash_password="stored_hash")
+    mock_user_repository.get_by_username = AsyncMock(return_value=user_db)
+    mock_password_handler.verify_password.return_value = True
 
-    result = await user_service.verify_credentials("nonexistent", "password")
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_verify_credentials_invalid_password(user_service, mock_user_repository, mock_password_handler):
-    """Test verifying credentials with incorrect password."""
-    user = create_user_db()
-    mock_user_repository.get_by_username = AsyncMock(return_value=user)
-    mock_password_handler.verify_password = MagicMock(return_value=False)
-
-    result = await user_service.verify_credentials("testuser", "wrongpassword")
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_verify_credentials_success(user_service, mock_user_repository, mock_password_handler):
-    """Test successful credential verification."""
-    user = create_user_db()
-    mock_user_repository.get_by_username = AsyncMock(return_value=user)
-    mock_password_handler.verify_password = MagicMock(return_value=True)
-
-    result = await user_service.verify_credentials("testuser", "correctpassword")
+    result = await user_service.verify_credentials("verified_user", "plain_pwd")
 
     assert result is not None
-    assert result.id == "user_123"
-    mock_password_handler.verify_password.assert_called_once()
+    assert result.id == "507f1f77bcf86cd799439011"
+    assert result.username == "verified_user"
+    mock_user_repository.get_by_username.assert_called_once_with("verified_user")
+    mock_password_handler.verify_password.assert_called_once_with("plain_pwd", "stored_hash")
+
+
+@pytest.mark.asyncio
+async def test_verify_credentials_invalid_username_raises_authentication_error(
+    user_service, mock_user_repository
+):
+    mock_user_repository.get_by_username = AsyncMock(return_value=None)
+
+    with pytest.raises(AuthenticationError, match="Invalid username or password"):
+        await user_service.verify_credentials("missing_user", "plain_pwd")
+
+
+@pytest.mark.asyncio
+async def test_verify_credentials_invalid_password_raises_authentication_error(
+    user_service, mock_user_repository, mock_password_handler
+):
+    user_db = create_user_db(hash_password="stored_hash")
+    mock_user_repository.get_by_username = AsyncMock(return_value=user_db)
+    mock_password_handler.verify_password.return_value = False
+
+    with pytest.raises(AuthenticationError, match="Invalid username or password"):
+        await user_service.verify_credentials("testuser", "wrong_pwd")
+
+
+@pytest.mark.asyncio
+async def test_verify_credentials_repository_error_raises_runtime_error(
+    user_service, mock_user_repository
+):
+    mock_user_repository.get_by_username = AsyncMock(side_effect=Exception("db down"))
+
+    with pytest.raises(RuntimeError, match="Credential verification failed"):
+        await user_service.verify_credentials("testuser", "plain_pwd")

@@ -1,160 +1,91 @@
+﻿from pymongo.errors import DuplicateKeyError
 import structlog
 from typing import Optional
+
+from app.auth import password_handler
+from app.core.exceptions import AuthenticationError, ConflictException
+from app.models.user_models import User, UserInsert, UserUpdate
 from app.repositories.user_repository import UserRepository
-from app.models.user_models import (
-    UserDB,
-    UserInsert,
-    User,
-    UserUpdateRequest,
-    UserCreate,
-)
-from app.auth.password_handler import PasswordHandler
-from datetime import datetime, timezone
 
 logger = structlog.get_logger()
 
 
 class UserService:
     def __init__(
-        self, user_repository: UserRepository, password_handler: PasswordHandler
+        self,
+        user_repository: UserRepository,
+        password_handler: password_handler.PasswordHandler,
     ):
         self.user_repository = user_repository
         self.password_handler = password_handler
         self.logger = logger.bind(service="UserService")
 
-    async def create_user(self, user_create: UserCreate) -> User:
+    async def create_user(self, username: str, password: str) -> User:
         try:
-            existing = await self.user_repository.get_by_username(user_create.username)
-            if existing:
-                self.logger.warning(
-                    "create_user_failed_username_exists", username=user_create.username
-                )
-                raise ValueError("Username already exists")
+            hash_password = self.password_handler.hash_password(password)
+            user_insert = UserInsert(username=username, hash_password=hash_password)
+            res = await self.user_repository.create(user_insert)
+            return User.from_db(res)
+        except DuplicateKeyError:
+            raise ConflictException("Username already exists")
 
-            hash_password = self.password_handler.hash_password(user_create.password)
+    async def update_user(self, user_id: str, user_update: UserUpdate) -> User:
+        res = await self.user_repository.update(user_id, user_update)
+        if res is None:
+            raise RuntimeError("User missing after update - data integrity issue")
 
-            user_insert = UserInsert(
-                username=user_create.username,
-                hash_password=hash_password,
-            )
+        return User.from_db(res)
 
-            result = await self.user_repository.create(user_insert)
+    async def update_username(self, user_id: str, username: str) -> None:
+        update_data = UserUpdate(username=username)  # type: ignore
+        res = await self.user_repository.update(user_id, update_data)
+        if res is None:
+            raise RuntimeError("User missing after update - data integrity issue")
 
-            self.logger.info("user_registered", user_id=str(result.inserted_id))
-
-            return User(
-                id=str(result.inserted_id),
-                username=user_insert.username,
-                createdAt=user_insert.created_at,
-                updatedAt=user_insert.updated_at,
-                role=user_insert.role,
-            )
-
-        except ValueError as ve:
-            self.logger.error("validation_error_create_user", error=str(ve))
-            raise
-        except Exception as e:
-            self.logger.error("unexpected_error_create_user", error=str(e))
-            raise
-
-    async def update_user(
-        self, user_id: str, update_request: UserUpdateRequest
-    ) -> User:
-        exists = await self.user_repository.get_by_id(user_id)
-
-        if not exists:
-            self.logger.warning("update_nonexisting_user", user_id=user_id)
-            raise ValueError("Cannot update nonexisting user")
-
-        data_dict = update_request.model_dump()
-        data_dict["updated_at"] = datetime.now(timezone.utc)
-        update_data = {k: v for k, v in data_dict.items() if v is not None}
-
-        result = await self.user_repository.update(user_id, update_data)
-        self.logger.info(
-            "user_updated",
-            user_id=user_id,
-            matched_count=result.matched_count,
-            modified_count=result.modified_count,
-        )
-
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str
+    ) -> None:
         user = await self.user_repository.get_by_id(user_id)
-
         if user is None:
-            raise RuntimeError(
-                f"User {user_id} not found after update — data integrity issue"
-            )
+            raise RuntimeError("User missing for password change")
 
-        return User(
-            id=user.id,
-            username=user.username,
-            createdAt=user.created_at,
-            updatedAt=user.updated_at,
-            role=user.role,
-        )
+        if not self.password_handler.verify_password(
+            current_password, user.hash_password
+        ):
+            raise AuthenticationError("Current password is incorrect")
+
+        new_hash = self.password_handler.hash_password(new_password)
+        user_update = UserUpdate(hash_password=new_hash)  # type: ignore
+
+        res = await self.user_repository.update(user_id, user_update)
+        if res is None:
+            raise RuntimeError("Password update failed")
 
     async def delete_user(self, user_id: str) -> None:
-        try:
-            existing_user = await self.user_repository.get_by_id(user_id)
-            if not existing_user:
-                self.logger.warning("delete_failed_user_not_found", user_id=user_id)
-                raise ValueError("User not found")
-
-            result = await self.user_repository.delete(user_id)
-            self.logger.info(
-                "user_deleted", user_id=user_id, deleted_count=result.deleted_count
-            )
-            if result.deleted_count == 0:
-                self.logger.error("delete_user_failed_no_rows_deleted", user_id=user_id)
-                raise RuntimeError("Delete operation failed")
-
-            return
-        except ValueError as ve:
-            self.logger.error("validation_error_delete_user", error=str(ve))
-            raise
-        except Exception as e:
-            self.logger.error("unexpected_error_delete_user", error=str(e))
-            raise
+        result = await self.user_repository.delete(user_id)
+        if result.deleted_count == 0:
+            raise RuntimeError(f"Delete operation had no effect for user {user_id}")
+        self.logger.info("user_deleted", user_id=user_id)
 
     async def get_by_username(self, username: str) -> Optional[User]:
-        try:
-            user = await self.user_repository.get_by_username(username)
-            if user:
-                self.logger.info("user_retrieved_by_username", username=username)
-                return User(
-                    id=user.id,
-                    username=user.username,
-                    createdAt=user.created_at,
-                    updatedAt=user.updated_at,
-                    role=user.role,
-                )
-            self.logger.info("user_not_found_by_username", username=username)
+        user = await self.user_repository.get_by_username(username)
+        if not user:
+            self.logger.info("user_not_found", lookup="username", username=username)
             return None
-        except Exception as e:
-            self.logger.error("error_get_by_username", username=username, error=str(e))
-            raise
+
+        self.logger.info("user_retrieved", lookup="username", username=username)
+        return User.from_db(user)
 
     async def get_by_id(self, user_id: str) -> Optional[User]:
-        try:
-            user = await self.user_repository.get_by_id(user_id)
-            if user:
-                self.logger.info("user_retrieved_by_id", user_id=user_id)
-                return User(
-                    id=user.id,
-                    username=user.username,
-                    createdAt=user.created_at,
-                    updatedAt=user.updated_at,
-                    role=user.role,
-                )
-            self.logger.info("user_not_found_by_id", user_id=user_id)
+        user = await self.user_repository.get_by_id(user_id)
+        if not user:
+            self.logger.info("user_not_found", lookup="id", user_id=user_id)
             return None
-        except Exception as e:
-            self.logger.error("error_get_by_id", user_id=user_id, error=str(e))
-            raise
 
-    async def verify_credentials(
-        self, username: str, password: str
-    ) -> Optional[UserDB]:
+        self.logger.info("user_retrieved", lookup="id", user_id=user_id)
+        return User.from_db(user)
+
+    async def verify_credentials(self, username: str, password: str) -> Optional[User]:
         """
         Verify username and password combination.
         Returns user if credentials are valid, None otherwise.
@@ -165,15 +96,16 @@ class UserService:
 
             if not user:
                 self.logger.info("authentication_failed", reason="user_not_found")
-                return None
+                raise AuthenticationError("Invalid username or password")
 
             if not self.password_handler.verify_password(password, user.hash_password):
                 self.logger.warning("authentication_failed", reason="invalid_password")
-                return None
+                raise AuthenticationError("Invalid username or password")
 
             self.logger.info("credentials_verified", user_id=user.id)
-            return user
-
+            return User.from_db(user)
+        except AuthenticationError:
+            raise
         except Exception as e:
             self.logger.error("error_verifying_credentials", error=str(e))
-            raise
+            raise RuntimeError("Credential verification failed")
