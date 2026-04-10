@@ -1,8 +1,6 @@
 from typing import Any, List, Optional
 from app.core.exceptions import ForbiddenException, NotFoundException
-from app.models.review_models import Review, ReviewCreate, ReviewInsert, ReviewUpdate
-from app.repositories.review_repository import ReviewRepository
-from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.models.review_models import Review, ReviewCreate, ReviewUpdate
 from app.models.user_media_entry_models import (
     UserMediaEntry,
     UserMediaEntryCreate,
@@ -10,12 +8,14 @@ from app.models.user_media_entry_models import (
     UserMediaEntryUpdate,
     UserMediaEntryPagination,
 )
-from pymongo.results import DeleteResult
+from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.services.review_service import ReviewService
 from app.enums.user_media_entry_enums import (
     MediaExternalSource,
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
 )
+from pymongo.results import DeleteResult
 
 import structlog
 import re
@@ -25,10 +25,10 @@ logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
 class UserMediaEntryService:
     def __init__(
-        self, repository: UserMediaEntryRepository, review_repository: ReviewRepository
+        self, repository: UserMediaEntryRepository, review_service: ReviewService
     ):
         self.repository = repository
-        self.review_repository = review_repository
+        self.review_service = review_service
 
     async def create_entry(
         self, entry_request: UserMediaEntryCreate, user_id: str
@@ -61,9 +61,7 @@ class UserMediaEntryService:
 
     async def delete_entry(self, entry_id: str, user_id: str) -> None:
         await self._verify_ownership(entry_id, user_id)
-        await self.review_repository.delete_reviews_by_user_media_entry_id(
-            entry_id, user_id
-        )
+        await self.review_service.delete_reviews_for_user_media_entry(entry_id, user_id)
         result: DeleteResult = await self.repository.delete_entry(entry_id, user_id)
         if not result.acknowledged:
             raise RuntimeError(
@@ -148,118 +146,54 @@ class UserMediaEntryService:
             raise ForbiddenException("You do not have access to this entry")
         return UserMediaEntry.from_db(entry)
 
+    # --- Review delegation methods ---
+
     async def create_review(
         self, review_request: ReviewCreate, entry_id: str, user_id: str
     ) -> Review:
-        review_data = ReviewInsert(
-            **review_request.model_dump(), user_id=user_id, user_media_entry_id=entry_id
+        """Create a review for a user media entry."""
+        return await self.review_service.create_review(
+            review_request, entry_id, user_id
         )
-        result = await self.review_repository.create_review(review_data)
-
-        logger.info(
-            "review_created",
-            user_media_entry_id=entry_id,
-            review_id=result.id,
-            user_id=user_id,
-        )
-        return Review.from_db(result)
-
-    async def update_review(
-        self, review_id: str, entry_id: str, update_request: ReviewUpdate, user_id: str
-    ) -> Optional[Review]:
-        await self._verify_ownership(entry_id, user_id)
-
-        updated_review = await self.review_repository.update_review(
-            review_id, update_request, user_id
-        )
-
-        if updated_review is None:
-            raise RuntimeError("Review missing after update - data integrity issue")
-
-        logger.info("review_updated", review_id=review_id, user_id=user_id)
-        return Review.from_db(updated_review)
-
-    async def delete_review(self, entry_id: str, review_id: str, user_id: str) -> None:
-        await self._verify_ownership(entry_id, user_id)
-
-        result: DeleteResult = await self.review_repository.delete_review(
-            review_id, user_id
-        )
-        if not result.acknowledged:
-            raise RuntimeError(f"Failed to delete review {review_id}")
-
-        logger.info("review_deleted", review_id=review_id, user_id=user_id)
 
     async def get_reviews_for_user_media_entry(
         self, entry_id: str, user_id: str
     ) -> Optional[List[Review]]:
-        await self._verify_ownership(entry_id, user_id)
-
-        reviews = (
-            await self.review_repository.get_reviews_by_user_media_entry_id_and_user_id(
-                entry_id, user_id
-            )
+        """Get all reviews for a user media entry."""
+        return await self.review_service.get_reviews_for_user_media_entry(
+            entry_id, user_id
         )
-        logger.info(
-            "reviews_fetched",
-            user_media_entry_id=entry_id,
-            user_id=user_id,
-        )
-        if not reviews:
-            return None
-
-        return [Review.from_db(review) for review in reviews]
 
     async def get_review_by_id(
         self, review_id: str, user_id: str, entry_id: str
     ) -> Review:
-
-        await self._verify_ownership(entry_id, user_id)
-        try:
-            res = await self.review_repository.get_review_by_id(
-                review_id, user_id, entry_id
-            )
-            if res is None:
-                raise NotFoundException(f"Review {review_id} not found")
-            return Review.from_db(res)
-        except Exception:
-            raise NotFoundException(f"Review {review_id} not found")
+        """Get a specific review by ID."""
+        return await self.review_service.get_review_by_id(review_id, user_id, entry_id)
 
     async def count_reviews_for_user_media_entry(
         self, user_media_entry_id: str, user_id: str
     ) -> int:
-        return await self.review_repository.count_reviews_by_user_media_entry_id(
+        """Count reviews for a user media entry."""
+        return await self.review_service.count_reviews_for_user_media_entry(
             user_media_entry_id, user_id
         )
+
+    async def update_review(
+        self, review_id: str, entry_id: str, update_request: ReviewUpdate, user_id: str
+    ) -> Optional[Review]:
+        """Update a review."""
+        return await self.review_service.update_review(
+            review_id, entry_id, update_request, user_id
+        )
+
+    async def delete_review(self, entry_id: str, review_id: str, user_id: str) -> None:
+        """Delete a review."""
+        return await self.review_service.delete_review(entry_id, review_id, user_id)
 
     async def delete_reviews_for_user_media_entry(
         self, user_media_entry_id: str, user_id: str
     ) -> None:
-        result: DeleteResult = (
-            await self.review_repository.delete_reviews_by_user_media_entry_id(
-                user_media_entry_id, user_id
-            )
-        )
-        if not result.acknowledged:
-            raise RuntimeError(
-                f"Failed to delete reviews for entry id: {user_media_entry_id}"
-            )
-        logger.info(
-            "reviews_deleted",
-            user_media_entry_id=user_media_entry_id,
-            user_id=user_id,
-            deleted_count=result.deleted_count,
-        )
-
-    async def delete_all_reviews_for_user(self, user_id: str) -> None:
-        result: DeleteResult = await self.review_repository.delete_by_user_id(user_id)
-        if not result.acknowledged:
-            raise RuntimeError(
-                f"Deleting all reviews for user is not acknowledged {user_id}"
-            )
-
-        logger.info(
-            "reviews_deleted_by_user",
-            user_id=user_id,
-            deleted_count=result.deleted_count,
+        """Delete all reviews for a user media entry."""
+        return await self.review_service.delete_reviews_for_user_media_entry(
+            user_media_entry_id, user_id
         )

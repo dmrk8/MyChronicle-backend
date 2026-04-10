@@ -21,7 +21,7 @@ def test_review_create_accepts_alias_fields():
         rating=8.5,
         reviewProgress=12,
         writtenAt=now,
-    ) 
+    )
 
     assert model.review == "Great"
     assert model.rating == 8.5
@@ -32,7 +32,9 @@ def test_review_create_accepts_alias_fields():
 def test_review_base_rejects_future_written_at():
     future = datetime.now(timezone.utc) + timedelta(days=1)
 
-    with pytest.raises(ValidationError, match="Written at date cannot be in the future"):
+    with pytest.raises(
+        ValidationError, match="Written at date cannot be in the future"
+    ):
         ReviewCreate(
             writtenAt=future,
         )  # type: ignore
@@ -134,3 +136,119 @@ def test_review_response_model_accepts_alias_fields():
     assert model.created_at == now
     assert model.updated_at == now
     assert model.rating == 8
+
+
+def test_review_base_accepts_all_optional_fields():
+    """Test ReviewBase with all optional fields provided."""
+    now = datetime.now(timezone.utc)
+    model = ReviewCreate(
+        review="Excellent series",
+        rating=9.5,
+        reviewProgress=20,
+        writtenAt=now,
+    )
+    assert model.review == "Excellent series"
+    assert model.rating == 9.5
+    assert model.review_progress == 20
+    assert model.written_at == now
+
+
+def test_review_base_allows_partial_fields():
+    """Test ReviewBase with only some fields."""
+    model = ReviewCreate(rating=7.0) # type: ignore
+    assert model.review is None
+    assert model.rating == 7.0
+    assert model.review_progress is None
+    assert model.written_at is None
+
+
+def test_review_base_rejects_negative_rating():
+    """Test that negative ratings are rejected."""
+    with pytest.raises(ValidationError, match="greater than or equal to 0"):
+        ReviewCreate(rating=-1) # type: ignore
+
+
+def test_review_base_rejects_out_of_range_rating():
+    """Test that ratings over 10 are rejected."""
+    with pytest.raises(ValidationError, match="less than or equal to 10"):
+        ReviewCreate(rating=10.1) # type: ignore
+
+
+def test_review_insert_preserves_all_fields():
+    """Test ReviewInsert preserves all base fields."""
+    now = datetime.now(timezone.utc)
+    model = ReviewInsert(
+        user_media_entry_id="entry_1",
+        user_id="user_1",
+        review="Fantastic!",
+        rating=9.0,
+        review_progress=15, # type: ignore
+        written_at=now, # type: ignore
+    )
+    assert model.review == "Fantastic!"
+    assert model.rating == 9.0
+    assert model.review_progress == 15
+    assert model.written_at == now
+
+
+def test_review_db_round_trip():
+    """Test that ReviewDB can be created and converted."""
+    now = datetime.now(timezone.utc)
+    original = ReviewDB(
+        _id="rev_001",
+        user_media_entry_id="entry_1",
+        user_id="user_1",
+        review="Great!",
+        rating=8.5,
+        review_progress=10, # type: ignore
+        written_at=now, # type: ignore
+        created_at=now,
+        updated_at=now,
+    )
+
+    assert original.id == "rev_001"
+    assert original.user_id == "user_1"
+    assert original.user_media_entry_id == "entry_1"
+
+
+def test_review_api_model_uses_aliases():
+    """Test that Review API model uses proper aliases in JSON."""
+    now = datetime.now(timezone.utc)
+    api_model = Review(
+        id="rev_1",
+        userMediaEntryId="entry_1",
+        userId="user_1",
+        review="Good!",
+        rating=7.0,
+        createdAt=now,
+        updatedAt=now,
+    ) # type: ignore
+
+    assert api_model.user_media_entry_id == "entry_1"
+    assert api_model.user_id == "user_1"
+
+
+def test_review_update_excludes_unset_fields():
+    """Test that ReviewUpdate.to_update_dict excludes unset fields."""
+    model = ReviewUpdate(rating=8.0) # type: ignore
+    update_dict = model.to_update_dict()
+
+    assert "rating" in update_dict
+    assert "review" not in update_dict
+    assert "review_progress" not in update_dict
+    assert "written_at" not in update_dict
+    assert "updated_at" in update_dict
+
+
+def test_review_insert_custom_timestamps():
+    """Test ReviewInsert with custom timestamps."""
+    past = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    model = ReviewInsert(
+        user_media_entry_id="entry_1",
+        user_id="user_1",
+        created_at=past,
+        updated_at=past,
+    ) # type: ignore
+
+    assert model.created_at == past
+    assert model.updated_at == past

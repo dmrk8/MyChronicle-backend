@@ -18,10 +18,10 @@ class ReviewRepository:
             repository="ReviewRepository", collection=collection_name
         )
 
-    async def is_exists(self, review_id: str, user_id: str) -> bool:
+    async def is_exists(self, review_id: str, user_id: str, user_media_entry_id: str) -> bool:
         async def _op() -> int:
             return await self.collection.count_documents(
-                {"_id": ObjectId(review_id), "user_id": user_id}, limit=1
+                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id}, limit=1
             )
 
         count = await run_db_op(
@@ -49,10 +49,10 @@ class ReviewRepository:
         self.logger.info("mongo_review_inserted_id", review_id=str(result.inserted_id))
         return ReviewDB.model_validate({**data, "_id": result.inserted_id})
 
-    async def delete_review(self, review_id: str, user_id: str) -> DeleteResult:
+    async def delete_review(self, review_id: str, user_id: str, user_media_entry_id: str) -> DeleteResult:
         async def _op() -> DeleteResult:
             return await self.collection.delete_one(
-                {"_id": ObjectId(review_id), "user_id": user_id}
+                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id}
             )
 
         result = await run_db_op(
@@ -71,14 +71,14 @@ class ReviewRepository:
         return result
 
     async def update_review(
-        self, review_id: str, update: ReviewUpdate, user_id: str
+        self, review_id: str, user_media_entry_id: str, update: ReviewUpdate, user_id: str
     ) -> Optional[ReviewDB]:
 
         update_dict = update.to_update_dict()
 
         async def _op():
             return await self.collection.find_one_and_update(
-                {"_id": ObjectId(review_id), "user_id": user_id},
+                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id},
                 {"$set": update_dict},
                 return_document=ReturnDocument.AFTER,
             )

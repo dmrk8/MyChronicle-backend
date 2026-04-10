@@ -17,8 +17,8 @@ from app.models.user_media_entry_models import (
     UserMediaEntryDB,
     UserMediaEntryUpdate,
 )
-from app.repositories.review_repository import ReviewRepository
 from app.services.user_media_entry_service import UserMediaEntryService
+from app.services.review_service import ReviewService
 
 
 @pytest.fixture
@@ -27,13 +27,13 @@ def mock_repository():
 
 
 @pytest.fixture
-def mock_review_repository():
-    return MagicMock(spec=ReviewRepository)
+def mock_review_service():
+    return MagicMock(spec=ReviewService)
 
 
 @pytest.fixture
-def service(mock_repository, mock_review_repository):
-    return UserMediaEntryService(mock_repository, mock_review_repository)
+def service(mock_repository, mock_review_service):
+    return UserMediaEntryService(mock_repository, mock_review_service)
 
 
 def create_user_media_entry_db(**overrides):
@@ -62,13 +62,16 @@ def create_review_db(**overrides):
         "user_id": "user-1",
         "review": "Excellent watch",
         "rating": 8,
-        "reviewProgress": 10,
-        "writtenAt": datetime.now(timezone.utc),
+        "review_progress": 10,
+        "written_at": datetime.now(timezone.utc),
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
     defaults.update(overrides)
     return ReviewDB(**defaults)
+
+
+# --- Entry CRUD tests ---
 
 
 @pytest.mark.asyncio
@@ -177,16 +180,16 @@ async def test_update_entry_raises_when_entry_missing_after_update(
 
 @pytest.mark.asyncio
 async def test_delete_entry_deletes_reviews_then_entry(
-    service, mock_repository, mock_review_repository
+    service, mock_repository, mock_review_service
 ):
     entry = create_user_media_entry_db(user_id="user-1")
     mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.delete_reviews_by_user_media_entry_id = AsyncMock()
+    mock_review_service.delete_reviews_for_user_media_entry = AsyncMock()
     mock_repository.delete_entry = AsyncMock(return_value=MagicMock(acknowledged=True))
 
     await service.delete_entry("entry-1", "user-1")
 
-    mock_review_repository.delete_reviews_by_user_media_entry_id.assert_awaited_once_with(
+    mock_review_service.delete_reviews_for_user_media_entry.assert_awaited_once_with(
         "entry-1", "user-1"
     )
     mock_repository.delete_entry.assert_awaited_once_with("entry-1", "user-1")
@@ -194,11 +197,11 @@ async def test_delete_entry_deletes_reviews_then_entry(
 
 @pytest.mark.asyncio
 async def test_delete_entry_raises_when_delete_not_acknowledged(
-    service, mock_repository, mock_review_repository
+    service, mock_repository, mock_review_service
 ):
     entry = create_user_media_entry_db(user_id="user-1")
     mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.delete_reviews_by_user_media_entry_id = AsyncMock()
+    mock_review_service.delete_reviews_for_user_media_entry = AsyncMock()
     mock_repository.delete_entry = AsyncMock(return_value=MagicMock(acknowledged=False))
 
     with pytest.raises(RuntimeError, match="Delete operation not acknowledged"):
@@ -340,217 +343,111 @@ async def test_get_entries_escapes_regex_title_search(service, mock_repository):
     assert passed_filters["title"]["$regex"] == "a\\.b\\*"
 
 
+# --- Review delegation tests ---
+
+
 @pytest.mark.asyncio
-async def test_create_review_returns_created_review(service, mock_review_repository):
-    review_request = ReviewCreate(review="nice", rating=8)  # type: ignore
-    created = create_review_db(_id="review-99", user_media_entry_id="entry-1")
-    mock_review_repository.create_review = AsyncMock(return_value=created)
+async def test_create_review_delegates_to_review_service(service, mock_review_service):
+    """Test that create_review delegates to review_service."""
+    review_request = ReviewCreate(rating=8.5, review="Great!")  # type: ignore
+    expected_review = MagicMock()
+    mock_review_service.create_review = AsyncMock(return_value=expected_review)
 
     result = await service.create_review(review_request, "entry-1", "user-1")
 
-    assert result.id == "review-99"
-    assert result.user_media_entry_id == "entry-1"
-    inserted = mock_review_repository.create_review.call_args.args[0]
-    assert inserted.user_id == "user-1"
-
-
-@pytest.mark.asyncio
-async def test_update_review_returns_updated_review(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    updated = create_review_db(_id="review-2", rating=9)
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.update_review = AsyncMock(return_value=updated)
-
-    result = await service.update_review(
-        "review-2",
-        "entry-1",
-        ReviewUpdate(rating=9),  # type: ignore
-        "user-1",
+    assert result == expected_review
+    mock_review_service.create_review.assert_called_once_with(
+        review_request, "entry-1", "user-1"
     )
 
-    assert result is not None
-    assert result.rating == 9
-    mock_review_repository.update_review.assert_awaited_once()
-
 
 @pytest.mark.asyncio
-async def test_update_review_raises_when_missing_after_update(
-    service, mock_repository, mock_review_repository
+async def test_get_reviews_for_user_media_entry_delegates_to_review_service(
+    service, mock_review_service
 ):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.update_review = AsyncMock(return_value=None)
-
-    with pytest.raises(RuntimeError, match="Review missing after update"):
-        await service.update_review(
-            "review-1", "entry-1", ReviewUpdate(rating=7), "user-1"  # type: ignore
-        )
-
-
-@pytest.mark.asyncio
-async def test_delete_review_raises_when_delete_not_acknowledged(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.delete_review = AsyncMock(
-        return_value=MagicMock(acknowledged=False)
-    )
-
-    with pytest.raises(RuntimeError, match="Failed to delete review"):
-        await service.delete_review("entry-1", "review-1", "user-1")
-
-
-@pytest.mark.asyncio
-async def test_delete_review_succeeds_when_acknowledged(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.delete_review = AsyncMock(
-        return_value=MagicMock(acknowledged=True)
-    )
-
-    await service.delete_review("entry-1", "review-1", "user-1")
-
-    mock_review_repository.delete_review.assert_awaited_once_with("review-1", "user-1")
-
-
-@pytest.mark.asyncio
-async def test_get_reviews_for_user_media_entry_returns_none_when_empty(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.get_reviews_by_user_media_entry_id_and_user_id = AsyncMock(
-        return_value=[]
-    )
-
-    result = await service.get_reviews_for_user_media_entry("entry-1", "user-1")
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_get_reviews_for_user_media_entry_returns_reviews(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    reviews = [create_review_db(_id="review-1"), create_review_db(_id="review-2")]
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.get_reviews_by_user_media_entry_id_and_user_id = AsyncMock(
+    """Test that get_reviews_for_user_media_entry delegates to review_service."""
+    reviews = [MagicMock(), MagicMock()]
+    mock_review_service.get_reviews_for_user_media_entry = AsyncMock(
         return_value=reviews
     )
 
     result = await service.get_reviews_for_user_media_entry("entry-1", "user-1")
 
-    assert result is not None
-    assert len(result) == 2
-    assert [review.id for review in result] == ["review-1", "review-2"]
-
-
-@pytest.mark.asyncio
-async def test_get_review_by_id_returns_review(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    review = create_review_db(_id="review-5")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.get_review_by_id = AsyncMock(return_value=review)
-
-    result = await service.get_review_by_id("review-5", "user-1", "entry-1")
-
-    assert result.id == "review-5"
-    mock_review_repository.get_review_by_id.assert_awaited_once_with(
-        "review-5", "user-1", "entry-1"
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_review_by_id_raises_not_found_when_repository_returns_none(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.get_review_by_id = AsyncMock(return_value=None)
-
-    with pytest.raises(NotFoundException, match="Review review-5 not found"):
-        await service.get_review_by_id("review-5", "user-1", "entry-1")
-
-
-@pytest.mark.asyncio
-async def test_get_review_by_id_raises_not_found_on_repository_error(
-    service, mock_repository, mock_review_repository
-):
-    entry = create_user_media_entry_db(user_id="user-1")
-    mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
-    mock_review_repository.get_review_by_id = AsyncMock(side_effect=Exception("boom"))
-
-    with pytest.raises(NotFoundException, match="Review review-5 not found"):
-        await service.get_review_by_id("review-5", "user-1", "entry-1")
-
-
-@pytest.mark.asyncio
-async def test_count_reviews_for_user_media_entry_returns_count(
-    service, mock_review_repository
-):
-    mock_review_repository.count_reviews_by_user_media_entry_id = AsyncMock(
-        return_value=4
-    )
-
-    count = await service.count_reviews_for_user_media_entry("entry-1", "user-1")
-
-    assert count == 4
-    mock_review_repository.count_reviews_by_user_media_entry_id.assert_awaited_once_with(
+    assert result == reviews
+    mock_review_service.get_reviews_for_user_media_entry.assert_called_once_with(
         "entry-1", "user-1"
     )
 
 
 @pytest.mark.asyncio
-async def test_delete_reviews_for_user_media_entry_returns_true_when_acknowledged(
-    service, mock_review_repository
+async def test_get_review_by_id_delegates_to_review_service(
+    service, mock_review_service
 ):
-    mock_review_repository.delete_reviews_by_user_media_entry_id = AsyncMock(
-        return_value=MagicMock(acknowledged=True, deleted_count=3)
+    """Test that get_review_by_id delegates to review_service."""
+    expected_review = MagicMock()
+    mock_review_service.get_review_by_id = AsyncMock(return_value=expected_review)
+
+    result = await service.get_review_by_id("review-1", "user-1", "entry-1")
+
+    assert result == expected_review
+    mock_review_service.get_review_by_id.assert_called_once_with(
+        "review-1", "user-1", "entry-1"
     )
-
-    result = await service.delete_reviews_for_user_media_entry("entry-1", "user-1")
-
-    assert result is None
 
 
 @pytest.mark.asyncio
-async def test_delete_reviews_for_user_media_entry_raises_when_not_acknowledged(
-    service, mock_review_repository
+async def test_count_reviews_for_user_media_entry_delegates_to_review_service(
+    service, mock_review_service
 ):
-    mock_review_repository.delete_reviews_by_user_media_entry_id = AsyncMock(
-        return_value=MagicMock(acknowledged=False, deleted_count=0)
-    )
+    """Test that count_reviews_for_user_media_entry delegates to review_service."""
+    mock_review_service.count_reviews_for_user_media_entry = AsyncMock(return_value=3)
 
-    with pytest.raises(RuntimeError, match="Failed to delete reviews for entry id"):
-        await service.delete_reviews_for_user_media_entry("entry-1", "user-1")
+    result = await service.count_reviews_for_user_media_entry("entry-1", "user-1")
+
+    assert result == 3
+    mock_review_service.count_reviews_for_user_media_entry.assert_called_once_with(
+        "entry-1", "user-1"
+    )
 
 
 @pytest.mark.asyncio
-async def test_delete_all_reviews_for_user_succeeds(service, mock_review_repository):
-    mock_review_repository.delete_by_user_id = AsyncMock(
-        return_value=MagicMock(acknowledged=True, deleted_count=2)
+async def test_update_review_delegates_to_review_service(service, mock_review_service):
+    """Test that update_review delegates to review_service."""
+    update_request = ReviewUpdate(rating=9.0)  # type: ignore
+    expected_review = MagicMock()
+    mock_review_service.update_review = AsyncMock(return_value=expected_review)
+
+    result = await service.update_review(
+        "review-1", "entry-1", update_request, "user-1"
     )
 
-    await service.delete_all_reviews_for_user("user-1")
-
-    mock_review_repository.delete_by_user_id.assert_awaited_once_with("user-1")
+    assert result == expected_review
+    mock_review_service.update_review.assert_called_once_with(
+        "review-1", "entry-1", update_request, "user-1"
+    )
 
 
 @pytest.mark.asyncio
-async def test_delete_all_reviews_for_user_raises_when_not_acknowledged(
-    service, mock_review_repository
-):
-    mock_review_repository.delete_by_user_id = AsyncMock(
-        return_value=MagicMock(acknowledged=False, deleted_count=0)
+async def test_delete_review_delegates_to_review_service(service, mock_review_service):
+    """Test that delete_review delegates to review_service."""
+    mock_review_service.delete_review = AsyncMock()
+
+    await service.delete_review("entry-1", "review-1", "user-1")
+
+    mock_review_service.delete_review.assert_called_once_with(
+        "entry-1", "review-1", "user-1"
     )
 
-    with pytest.raises(RuntimeError, match="not acknowledged"):
-        await service.delete_all_reviews_for_user("user-1")
+
+@pytest.mark.asyncio
+async def test_delete_reviews_for_user_media_entry_delegates_to_review_service(
+    service, mock_review_service
+):
+    """Test that delete_reviews_for_user_media_entry delegates to review_service."""
+    mock_review_service.delete_reviews_for_user_media_entry = AsyncMock()
+
+    await service.delete_reviews_for_user_media_entry("entry-1", "user-1")
+
+    mock_review_service.delete_reviews_for_user_media_entry.assert_called_once_with(
+        "entry-1", "user-1"
+    )

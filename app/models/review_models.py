@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Any, Optional, List
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 
 class ReviewBase(BaseModel):
@@ -59,6 +59,14 @@ class ReviewInsert(ReviewBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str = Field(...)
+    
+    @model_validator(mode="before")
+    @classmethod
+    def set_timestamps(cls, values):
+        now = datetime.now(timezone.utc)
+        values.setdefault("created_at", now)
+        values.setdefault("updated_at", now)
+        return values
 
 
 class ReviewDB(ReviewBase):

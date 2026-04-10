@@ -1,26 +1,17 @@
-﻿from types import SimpleNamespace
-from typing import Any
-from unittest.mock import MagicMock, AsyncMock
+﻿from typing import Any
+from unittest.mock import MagicMock
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from httpx import AsyncClient
 import pytest
 
 from app.core import dependencies as deps
-from app.core.config import Settings
-from app.core.event_bus import EventBus
 from app.integrations.anilistApi import AnilistApi
 from app.integrations.tmdb_api import TMDBApi
-from app.services.anilist_service import AnilistService
-from app.services.tmdb_service import TMDBService
-from app.services.redis_service import RedisService
 from app.repositories.user_repository import UserRepository
 from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.user_service import UserService
-from app.services.auth_service import AuthService
 from app.services.review_service import ReviewService
-from app.services.user_media_entry_service import UserMediaEntryService
 from app.auth.jwt_handler import JWTHandler
 from app.auth.password_handler import PasswordHandler
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -213,15 +204,12 @@ def test_get_auth_service_wires_dependencies():
 
 def test_get_review_service_wires_dependencies():
     review_repository = MagicMock(spec=ReviewRepository)
-    event_bus = MagicMock(spec=EventBus)
 
     service = deps.get_review_service(
         review_repository=review_repository,
-        event_bus=event_bus,
     )
 
-    assert service.repository is review_repository
-    assert service.event_bus is event_bus
+    assert service.review_repository is review_repository
 
 
 def test_get_user_media_entry_service_wires_dependencies():

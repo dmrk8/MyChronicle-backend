@@ -49,17 +49,17 @@ def passthrough_run_db_op(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_is_exists_scopes_by_review_and_user_id(
+async def test_is_exists_scopes_by_review_user_and_entry_id(
     repository, mock_collection, passthrough_run_db_op
 ):
     review_id = ObjectId()
     mock_collection.count_documents.return_value = 1
 
-    exists = await repository.is_exists(str(review_id), "user-1")
+    exists = await repository.is_exists(str(review_id), "user-1", "entry-1")
 
     assert exists is True
     mock_collection.count_documents.assert_awaited_once_with(
-        {"_id": review_id, "user_id": "user-1"},
+        {"_id": review_id, "user_id": "user-1", "user_media_entry_id": "entry-1"},
         limit=1,
     )
 
@@ -71,7 +71,7 @@ async def test_is_exists_returns_false_when_missing(
     review_id = ObjectId()
     mock_collection.count_documents.return_value = 0
 
-    exists = await repository.is_exists(str(review_id), "user-1")
+    exists = await repository.is_exists(str(review_id), "user-1", "entry-1")
 
     assert exists is False
 
@@ -94,29 +94,29 @@ async def test_create_review_inserts_dumped_payload(
 
 
 @pytest.mark.asyncio
-async def test_delete_review_scopes_by_review_and_user_id(
+async def test_delete_review_scopes_by_review_user_and_entry_id(
     repository, mock_collection, passthrough_run_db_op
 ):
     review_id = ObjectId()
     delete_result = MagicMock(deleted_count=1)
     mock_collection.delete_one.return_value = delete_result
 
-    result = await repository.delete_review(str(review_id), "user-1")
+    result = await repository.delete_review(str(review_id), "user-1", "entry-1")
 
     assert result.deleted_count == 1
     mock_collection.delete_one.assert_awaited_once_with(
-        {"_id": review_id, "user_id": "user-1"}
+        {"_id": review_id, "user_id": "user-1", "user_media_entry_id": "entry-1"}
     )
 
 
 @pytest.mark.asyncio
-async def test_update_review_scopes_by_review_and_user_id(
+async def test_update_review_scopes_by_review_user_and_entry_id(
     repository, mock_collection, passthrough_run_db_op
 ):
     review_id = ObjectId()
     now = datetime.now(timezone.utc)
     update = ReviewUpdate(rating=9.0, reviewProgress=20)  # type: ignore
-    
+
     updated_doc = {
         "_id": review_id,
         "user_media_entry_id": "entry-1",
@@ -129,10 +129,8 @@ async def test_update_review_scopes_by_review_and_user_id(
     }
     mock_collection.find_one_and_update.return_value = updated_doc
 
-    result = await repository.update_review(str(review_id), update, "user-1")
+    result = await repository.update_review(str(review_id), "entry-1", update, "user-1")
 
-    
-    
     assert result is not None
     assert result.id == str(review_id)
     assert result.user_id == "user-1"
@@ -140,7 +138,11 @@ async def test_update_review_scopes_by_review_and_user_id(
     assert result.review_progress == 20
 
     call = mock_collection.find_one_and_update.await_args
-    assert call.args[0] == {"_id": review_id, "user_id": "user-1"}
+    assert call.args[0] == {
+        "_id": review_id,
+        "user_id": "user-1",
+        "user_media_entry_id": "entry-1",
+    }
     assert "$set" in call.args[1]
     assert call.args[1]["$set"]["rating"] == 9.0
     assert call.args[1]["$set"]["review_progress"] == 20
@@ -148,7 +150,7 @@ async def test_update_review_scopes_by_review_and_user_id(
 
 
 @pytest.mark.asyncio
-async def test_get_review_by_id_scopes_by_user_and_maps_model(
+async def test_get_review_by_id_scopes_by_user_and_entry_and_maps_model(
     repository, mock_collection, passthrough_run_db_op
 ):
     review_id = ObjectId()
@@ -170,9 +172,9 @@ async def test_get_review_by_id_scopes_by_user_and_maps_model(
     assert result.id == str(review_id)
     assert result.user_id == "user-1"
     mock_collection.find_one.assert_awaited_once_with(
-    {"_id": review_id, "user_id": "user-1", "user_media_entry_id": "entry-1"}
-)
-    
+        {"_id": review_id, "user_id": "user-1", "user_media_entry_id": "entry-1"}
+    )
+
 
 @pytest.mark.asyncio
 async def test_get_review_by_id_returns_none_when_missing(
