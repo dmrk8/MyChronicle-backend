@@ -1,5 +1,5 @@
 ﻿from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -34,29 +34,16 @@ class FakeAsyncClient:
         self.closed = True
 
 
-class FakeUserMediaEntryRepository:
-    instances = []
-
-    def __init__(self, db, collection_name):
-        self.db = db
-        self.collection_name = collection_name
-        self.init_indexes_called = False
-        FakeUserMediaEntryRepository.instances.append(self)
-
-    async def init_indexes(self):
-        self.init_indexes_called = True
-
-
 @pytest.fixture(autouse=True)
 def reset_state():
     FakeAsyncClient.instances = []
-    FakeUserMediaEntryRepository.instances = []
 
     infra.state.settings = None
     infra.state.mongo_client = None
     infra.state.anilist_client = None
     infra.state.tmdb_client = None
     infra.state.event_bus = infra.EventBus()
+    infra.state.repos = None
 
     yield
 
@@ -65,6 +52,7 @@ def reset_state():
     infra.state.anilist_client = None
     infra.state.tmdb_client = None
     infra.state.event_bus = infra.EventBus()
+    infra.state.repos = None
 
 
 @pytest.mark.asyncio
@@ -77,12 +65,18 @@ async def test_lifespan_initializes_and_closes_clients(monkeypatch):
         user_media_entry_collection="user_media_entries",
     )
     setup_calls = []
+    mock_repos = MagicMock()
+    init_repos_calls = []
+
+    async def mock_init_repositories(db, settings):
+        init_repos_calls.append((db, settings))
+        return mock_repos
 
     monkeypatch.setattr(infra, "get_settings", lambda: settings)
     monkeypatch.setattr(infra, "setup_logging", lambda s: setup_calls.append(s))
     monkeypatch.setattr(infra, "AsyncIOMotorClient", FakeMongoClient)
     monkeypatch.setattr(infra, "AsyncClient", FakeAsyncClient)
-    monkeypatch.setattr(infra, "UserMediaEntryRepository", FakeUserMediaEntryRepository)
+    monkeypatch.setattr(infra, "init_repositories", mock_init_repositories)
 
     async with infra.lifespan(app=None):
         assert infra.state.settings is settings
@@ -94,10 +88,8 @@ async def test_lifespan_initializes_and_closes_clients(monkeypatch):
         assert all(client.timeout == 10.0 for client in FakeAsyncClient.instances)
         assert setup_calls == [settings]
 
-        assert len(FakeUserMediaEntryRepository.instances) == 1
-        repo = FakeUserMediaEntryRepository.instances[0]
-        assert repo.collection_name == settings.user_media_entry_collection
-        assert repo.init_indexes_called is True
+        assert len(init_repos_calls) == 1
+        assert infra.state.repos is mock_repos
 
     assert infra.state.mongo_client.closed is True
     assert all(client.closed is True for client in FakeAsyncClient.instances)

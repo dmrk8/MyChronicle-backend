@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from redis.asyncio import Redis
 from httpx import AsyncClient
 
-from app.repositories.user_media_entry_repository import UserMediaEntryRepository
+from app.core.repositories import Repositories, init_repositories
 
 logger = structlog.get_logger()
 
@@ -19,6 +19,8 @@ class AppState:
     anilist_client: AsyncClient | None = None
     tmdb_client: AsyncClient | None = None
     event_bus: EventBus = EventBus()
+
+    repos: Repositories | None = None
 
 
 state = AppState()
@@ -70,12 +72,7 @@ async def lifespan(app):
 
     db = state.mongo_client[state.settings.database_name]
 
-    user_media_entry_repo = UserMediaEntryRepository(
-        db=db,
-        collection_name=state.settings.user_media_entry_collection,
-    )
-
-    await user_media_entry_repo.init_indexes()
+    state.repos = await init_repositories(db, state.settings)
 
     yield
 
