@@ -1,25 +1,24 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from app.models.user_models import (
     User,
-    UserCreate,
     UserDB,
     UserInsert,
     UserRole,
     UserUpdate,
-    UserUpdateRequest,
+    UpdatePassword,
 )
 
 
-def test_user_create_accepts_strong_password():
-    model = UserCreate(username="newuser", password="Str0ng@Pass")
+def test_user_insert_accepts_valid_input():
+    model = UserInsert(username="newuser", hash_password="hashed_pwd")
 
     assert model.username == "newuser"
-    assert model.password == "Str0ng@Pass"
+    assert model.hash_password == "hashed_pwd"
 
 
 @pytest.mark.parametrize(
@@ -31,9 +30,9 @@ def test_user_create_accepts_strong_password():
         ("passNoSymbol1", "at least one symbol"),
     ],
 )
-def test_user_create_rejects_weak_password(password, expected_error):
+def test_update_password_rejects_weak_password(password, expected_error):
     with pytest.raises(ValidationError, match=expected_error):
-        UserCreate(username="newuser", password=password)
+        UpdatePassword(currentPassword="Current@Pass1", newPassword=password)
 
 
 def test_user_insert_sets_timestamps_when_missing():
@@ -75,7 +74,7 @@ def test_user_db_coerces_object_id_to_string():
     oid = ObjectId()
 
     model = UserDB(
-        _id=oid, # type: ignore
+        _id=oid,  # type: ignore
         username="db_user",
         role=UserRole.USER,
         hash_password="hashed_pwd",
@@ -87,34 +86,8 @@ def test_user_db_coerces_object_id_to_string():
     assert isinstance(model.id, str)
 
 
-def test_user_update_request_rejects_weak_password():
-    with pytest.raises(ValidationError, match="at least one uppercase letter"):
-        UserUpdateRequest(password="weak1@pw") # type: ignore
-
-
-def test_user_update_request_to_update_dict_raises_for_empty_payload():
-    model = UserUpdateRequest() # type: ignore
-
-    with pytest.raises(ValueError, match="No fields provided for update"):
-        model.to_update_dict()
-
-
-def test_user_update_request_to_update_dict_adds_updated_at():
-    before = datetime.now(timezone.utc)
-
-    model = UserUpdateRequest(username="updated_name", password="Strong1@Pwd")
-    update_dict = model.to_update_dict()
-
-    after = datetime.now(timezone.utc)
-
-    assert update_dict["username"] == "updated_name"
-    assert update_dict["password"] == "Strong1@Pwd"
-    assert before <= update_dict["updated_at"] <= after
-    assert update_dict["updated_at"].tzinfo is not None
-
-
 def test_user_update_to_update_dict_raises_for_empty_payload():
-    model = UserUpdate() # type: ignore
+    model = UserUpdate()  # type: ignore
 
     with pytest.raises(ValueError, match="No fields provided for update"):
         model.to_update_dict()
@@ -123,14 +96,13 @@ def test_user_update_to_update_dict_raises_for_empty_payload():
 def test_user_update_to_update_dict_adds_updated_at():
     before = datetime.now(timezone.utc)
 
-    model = UserUpdate(username="renamed", hash_password="new_hash", role=UserRole.ADMIN)
+    model = UserUpdate(username="renamed", hash_password="new_hash")
     update_dict = model.to_update_dict()
 
     after = datetime.now(timezone.utc)
 
     assert update_dict["username"] == "renamed"
     assert update_dict["hash_password"] == "new_hash"
-    assert update_dict["role"] == UserRole.ADMIN
     assert before <= update_dict["updated_at"] <= after
 
 
