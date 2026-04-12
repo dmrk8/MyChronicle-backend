@@ -76,7 +76,7 @@ async def test_create_user_duplicate_username_raises_conflict(
 @pytest.mark.asyncio
 async def test_update_user_success(user_service, mock_user_repository):
     updated_user = create_user_db(username="updateduser")
-    user_update = UserUpdate(username="updateduser") # type: ignore
+    user_update = UserUpdate(username="updateduser")  # type: ignore
     mock_user_repository.update = AsyncMock(return_value=updated_user)
 
     result = await user_service.update_user("507f1f77bcf86cd799439011", user_update)
@@ -89,11 +89,15 @@ async def test_update_user_success(user_service, mock_user_repository):
 
 
 @pytest.mark.asyncio
-async def test_update_user_missing_raises_runtime_error(user_service, mock_user_repository):
-    user_update = UserUpdate(username="updateduser") # type: ignore
+async def test_update_user_missing_raises_runtime_error(
+    user_service, mock_user_repository
+):
+    user_update = UserUpdate(username="updateduser")  # type: ignore
     mock_user_repository.update = AsyncMock(return_value=None)
 
-    with pytest.raises(RuntimeError, match="User missing after update - data integrity issue"):
+    with pytest.raises(
+        RuntimeError, match="User missing after update - data integrity issue"
+    ):
         await user_service.update_user("missing_user", user_update)
 
 
@@ -111,10 +115,14 @@ async def test_update_username_success(user_service, mock_user_repository):
 
 
 @pytest.mark.asyncio
-async def test_update_username_missing_raises_runtime_error(user_service, mock_user_repository):
+async def test_update_username_missing_raises_runtime_error(
+    user_service, mock_user_repository
+):
     mock_user_repository.update = AsyncMock(return_value=None)
 
-    with pytest.raises(RuntimeError, match="User missing after update - data integrity issue"):
+    with pytest.raises(
+        RuntimeError, match="User missing after update - data integrity issue"
+    ):
         await user_service.update_username("missing_user", "renamed")
 
 
@@ -126,14 +134,18 @@ async def test_change_password_success(
     mock_user_repository.get_by_id = AsyncMock(return_value=user_db)
     mock_password_handler.verify_password.return_value = True
     mock_password_handler.hash_password.return_value = "new_hash"
-    mock_user_repository.update = AsyncMock(return_value=create_user_db(hash_password="new_hash"))
+    mock_user_repository.update = AsyncMock(
+        return_value=create_user_db(hash_password="new_hash")
+    )
 
     result = await user_service.change_password(
         "507f1f77bcf86cd799439011", "current_pwd", "new_pwd"
     )
 
     assert result is None
-    mock_password_handler.verify_password.assert_called_once_with("current_pwd", "old_hash")
+    mock_password_handler.verify_password.assert_called_once_with(
+        "current_pwd", "old_hash"
+    )
     mock_password_handler.hash_password.assert_called_once_with("new_pwd")
 
     updated_payload = mock_user_repository.update.call_args.args[1]
@@ -142,7 +154,9 @@ async def test_change_password_success(
 
 
 @pytest.mark.asyncio
-async def test_change_password_missing_user_raises_runtime_error(user_service, mock_user_repository):
+async def test_change_password_missing_user_raises_runtime_error(
+    user_service, mock_user_repository
+):
     mock_user_repository.get_by_id = AsyncMock(return_value=None)
 
     with pytest.raises(RuntimeError, match="User missing for password change"):
@@ -193,11 +207,15 @@ async def test_delete_user_success(user_service, mock_user_repository):
 
 
 @pytest.mark.asyncio
-async def test_delete_user_no_effect_raises_runtime_error(user_service, mock_user_repository):
+async def test_delete_user_no_effect_raises_runtime_error(
+    user_service, mock_user_repository
+):
     delete_result = MagicMock(deleted_count=0)
     mock_user_repository.delete = AsyncMock(return_value=delete_result)
 
-    with pytest.raises(RuntimeError, match="Delete operation had no effect for user missing_user"):
+    with pytest.raises(
+        RuntimeError, match="Delete operation had no effect for user missing_user"
+    ):
         await user_service.delete_user("missing_user")
 
 
@@ -259,7 +277,9 @@ async def test_verify_credentials_success(
     assert result.id == "507f1f77bcf86cd799439011"
     assert result.username == "verified_user"
     mock_user_repository.get_by_username.assert_called_once_with("verified_user")
-    mock_password_handler.verify_password.assert_called_once_with("plain_pwd", "stored_hash")
+    mock_password_handler.verify_password.assert_called_once_with(
+        "plain_pwd", "stored_hash"
+    )
 
 
 @pytest.mark.asyncio
@@ -292,3 +312,64 @@ async def test_verify_credentials_repository_error_raises_runtime_error(
 
     with pytest.raises(RuntimeError, match="Credential verification failed"):
         await user_service.verify_credentials("testuser", "plain_pwd")
+
+
+@pytest.mark.asyncio
+async def test_user_service_initializes_with_event_bus(
+    mock_user_repository, mock_password_handler
+):
+    from app.core.event_bus import EventBus
+
+    mock_event_bus = MagicMock(spec=EventBus)
+    service = UserService(
+        user_repository=mock_user_repository,
+        password_handler=mock_password_handler,
+        event_bus=mock_event_bus,
+    )
+
+    assert service.event_bus is mock_event_bus
+
+
+@pytest.mark.asyncio
+async def test_user_service_initializes_without_event_bus(
+    mock_user_repository, mock_password_handler
+):
+    service = UserService(
+        user_repository=mock_user_repository,
+        password_handler=mock_password_handler,
+        event_bus=None,
+    )
+
+    assert service.event_bus is None
+
+
+@pytest.mark.asyncio
+async def test_delete_user_publishes_event(user_service, mock_user_repository):
+    from app.core.event_bus import EventBus
+
+    delete_result = MagicMock(deleted_count=1)
+    mock_user_repository.delete = AsyncMock(return_value=delete_result)
+
+    mock_event_bus = MagicMock(spec=EventBus)
+    mock_event_bus.publish = AsyncMock()
+    user_service.event_bus = mock_event_bus
+
+    await user_service.delete_user("507f1f77bcf86cd799439011")
+
+    mock_event_bus.publish.assert_awaited_once_with(
+        "user.deleted", user_id="507f1f77bcf86cd799439011"
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_user_without_event_bus_succeeds(
+    user_service, mock_user_repository
+):
+    delete_result = MagicMock(deleted_count=1)
+    mock_user_repository.delete = AsyncMock(return_value=delete_result)
+    user_service.event_bus = None
+
+    result = await user_service.delete_user("507f1f77bcf86cd799439011")
+
+    assert result is None
+    mock_user_repository.delete.assert_called_once_with("507f1f77bcf86cd799439011")

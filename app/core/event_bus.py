@@ -1,10 +1,18 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, DefaultDict
 import asyncio
 import structlog
 
 logger = structlog.get_logger()
 Handler = Callable[..., Awaitable[None]]
+
+
+@dataclass
+class UserDeleted:
+    """Event emitted when a user account is deleted."""
+
+    user_id: str
 
 
 class EventBus:

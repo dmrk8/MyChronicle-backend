@@ -3,6 +3,7 @@ import structlog
 from typing import Optional
 
 from app.auth import password_handler
+from app.core.event_bus import EventBus
 from app.core.exceptions import AuthenticationError, ConflictException
 from app.models.user_models import User, UserInsert, UserUpdate
 from app.repositories.user_repository import UserRepository
@@ -15,9 +16,11 @@ class UserService:
         self,
         user_repository: UserRepository,
         password_handler: password_handler.PasswordHandler,
+        event_bus: EventBus | None = None
     ):
         self.user_repository = user_repository
         self.password_handler = password_handler
+        self.event_bus = event_bus
         self.logger = logger.bind(service="UserService")
 
     async def create_user(self, username: str, password: str) -> User:
@@ -65,7 +68,11 @@ class UserService:
         result = await self.user_repository.delete(user_id)
         if result.deleted_count == 0:
             raise RuntimeError(f"Delete operation had no effect for user {user_id}")
+
         self.logger.info("user_deleted", user_id=user_id)
+
+        if self.event_bus:
+            await self.event_bus.publish("user.deleted", user_id=user_id)
 
     async def get_by_username(self, username: str) -> Optional[User]:
         user = await self.user_repository.get_by_username(username)
