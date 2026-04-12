@@ -79,6 +79,7 @@ jobs:
           REVIEW_COLLECTION=${{ vars.REVIEW_COLLECTION }},\
           USER_COLLECTION=${{ vars.USER_COLLECTION }},\
           USER_MEDIA_ENTRY_COLLECTION=${{ vars.USER_MEDIA_ENTRY_COLLECTION }},\
+          REDIS_URL=${{ secrets.REDIS_URL }},\
           JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},\
           JWT_ALGORITHM=${{ vars.JWT_ALGORITHM }},\
           JWT_ACCESS_TOKEN_EXPIRE_DAYS=${{ vars.JWT_ACCESS_TOKEN_EXPIRE_DAYS }},\
@@ -87,7 +88,7 @@ jobs:
           TMDB_API_KEY=${{ secrets.TMDB_API_KEY }},\
           TMDB_ACCESS_TOKEN=${{ secrets.TMDB_ACCESS_TOKEN }},\
           SAMESITE=${{ vars.SAMESITE }},\
-          ALLOW_ORIGINS_STR=${{ vars.ALLOW_ORIGINS_STR }}"
+          ALLOW_ORIGINS=${{ vars.ALLOW_ORIGINS }}"
                 
       - name: Clean up old images
         run: |

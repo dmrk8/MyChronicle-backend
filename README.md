@@ -1,13 +1,14 @@
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-brightgreen)
+![Redis](https://img.shields.io/badge/Cache-Redis-red)
 ![Docker](https://img.shields.io/badge/Deployment-Docker-blue)
 
 # MyChronicle — Backend
 
 Backend API for **MyChronicle**, a media tracking application for anime, movies, TV shows.
 
-This service retrieves media data from external APIs and stores user tracking data in MongoDB.
+This service retrieves media data from external APIs and stores user tracking data in MongoDB. Redis is used for caching frequently accessed data.
 
 ⚠️ This project is primarily intended for personal use due to rate limits imposed by third-party APIs.
 
@@ -23,6 +24,7 @@ https://github.com/dmrk8/MyChronicle-frontend
 - Track media entries with status, ratings, and progress
 - Write and manage media reviews
 - Integration with multiple external media APIs
+- Redis caching for improved performance
 - Role-based access control (admin / user)
 
 ## Tech Stack
@@ -32,13 +34,14 @@ https://github.com/dmrk8/MyChronicle-frontend
 | Framework | FastAPI |
 | Language | Python 3.13 |
 | Database | MongoDB (Motor async driver) |
+| Cache | Redis |
 | HTTP Client | HTTPX (async) |
 | Deployment | Docker / Docker Compose |
 
 ## External API Integrations
 | API | Purpose |
 |---|---|
-| [AniList](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime & Manga 
+| [AniList](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime & Manga |
 | [TMDB](https://developer.themoviedb.org/docs) | Movies & TV shows |
 
 ## Architecture
@@ -48,6 +51,7 @@ Client
    ▼
 FastAPI Backend
    │
+   ├── Redis (cache)
    ├── MongoDB (user data)
    ├── AniList API
    └── TMDB API
@@ -81,22 +85,21 @@ REVIEW_COLLECTION=Reviews
 USER_COLLECTION=Users
 USER_MEDIA_ENTRY_COLLECTION=UserMediaEntries
 
+REDIS_URL=redis://localhost:6379/0
+
 JWT_SECRET_KEY=your_jwt_secret
 JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-JWT_REFRESH_TOKEN_EXPIRE_DAYS_DEFAULT=60
+JWT_ACCESS_TOKEN_EXPIRE_DAYS=60
 JWT_ISSUER=ISSUER
 JWT_AUDIENCE=AUDIENCE
-
-API_URL=http://localhost:8000
 
 TMDB_API_KEY=your_tmdb_api_key
 TMDB_ACCESS_TOKEN=your_tmdb_access_token
 
-ALLOW_ORIGINS_STR=http://localhost:5173
-SAMESITE=lax
-
+ALLOW_ORIGINS=http://localhost:5173
+SAMESITE=none
 ```
+
 ## Installation & Running Locally
 
 ### Without Docker
