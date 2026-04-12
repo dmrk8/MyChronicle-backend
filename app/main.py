@@ -54,6 +54,3 @@ app.include_router(anilist_router)
 app.include_router(tmdb_router)
 app.include_router(user_media_entry_router)
 
-@app.get("/")
-async def root(q: str):
-    return {"msg": "root is running"}
