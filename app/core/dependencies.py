@@ -1,4 +1,5 @@
 from fastapi import Depends, Request
+from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
@@ -45,14 +46,23 @@ def get_mongo(request: Request) -> AsyncIOMotorDatabase:
     return request.app.state.mongo_client[settings.database_name]
 
 
+def get_redis(request: Request) -> Redis:
+    return request.app.state.redis_client
+
+
+def get_redis_service(redis_client: Redis = Depends(get_redis)) -> RedisService:
+    return RedisService(redis_client=redis_client)
+
+
 def get_event_bus(request: Request) -> EventBus:
     return request.app.state.event_bus
 
 
 def get_anilist_service(
     anilist_api: AnilistApi = Depends(get_anilist_api),
+    redis_service: RedisService = Depends(get_redis_service)
 ) -> AnilistService:
-    return AnilistService(anilist_api=anilist_api)
+    return AnilistService(anilist_api=anilist_api, redis_service=redis_service)
 
 
 def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:

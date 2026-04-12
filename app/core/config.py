@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator, computed_field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 
@@ -51,26 +51,14 @@ class Settings(BaseSettings):
     # steam_web_api_key: str = Field(description="API key for Steam Web API")
     # omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
 
-    allow_origins_str: str = Field(
+    allow_origins: str = Field(
         default="http://localhost:5173",
-        description="Comma-separated list of allowed origins",
+        description="Allowed origin for CORS",
     )
-
-    @computed_field
-    @property
-    def allow_origins(self) -> list[str]:
-        return [origin.strip() for origin in self.allow_origins_str.split(",")]
 
     samesite: Literal["lax", "strict", "none"] = Field(
         default="none", description="SameSite attribute for cookies (none, lax, strict)"
     )
-
-    @field_validator("allow_origins", mode="before")
-    @classmethod
-    def parse_allow_origins(cls, v, info):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
 
 
 _settings: Settings | None = None

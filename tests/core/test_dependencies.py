@@ -9,9 +9,11 @@ from app.core.event_bus import EventBus
 from app.integrations.anilistApi import AnilistApi
 from app.integrations.tmdb_api import TMDBApi
 from app.repositories.user_repository import UserRepository
+from app.services.redis_service import RedisService
 from app.services.user_service import UserService
 from app.auth.jwt_handler import JWTHandler
 from app.auth.password_handler import PasswordHandler
+from redis.asyncio import Redis 
 
 
 def create_mock_motor_client() -> Any:
@@ -189,3 +191,30 @@ def test_get_auth_service_wires_dependencies():
 
     assert service.jwt_handler is jwt_handler
     assert service.user_service is user_service
+
+
+def test_get_redis_returns_from_state(mock_request):
+    redis_client = MagicMock(spec=Redis)
+    mock_request.app.state.redis_client = redis_client
+
+    result = deps.get_redis(request=mock_request)
+
+    assert result is redis_client
+
+
+def test_get_redis_service_wires_redis_client():
+    redis_client = MagicMock(spec=Redis)
+
+    service = deps.get_redis_service(redis_client=redis_client)
+
+    assert service.redis_client is redis_client
+
+
+def test_get_anilist_service_wires_dependencies():
+    api = MagicMock(spec=AnilistApi)
+    redis_service = MagicMock(spec=RedisService)
+
+    service = deps.get_anilist_service(anilist_api=api, redis_service=redis_service)
+
+    assert service.anilist_api is api
+    assert service.redis_service is redis_service
