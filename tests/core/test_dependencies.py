@@ -5,16 +5,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import pytest
 
 from app.core import dependencies as deps
+from app.core.event_bus import EventBus
 from app.integrations.anilistApi import AnilistApi
 from app.integrations.tmdb_api import TMDBApi
 from app.repositories.user_repository import UserRepository
-from app.repositories.review_repository import ReviewRepository
-from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.user_service import UserService
-from app.services.review_service import ReviewService
 from app.auth.jwt_handler import JWTHandler
 from app.auth.password_handler import PasswordHandler
-from motor.motor_asyncio import AsyncIOMotorClient
 
 
 def create_mock_motor_client() -> Any:
@@ -47,68 +44,59 @@ def create_mock_settings(**overrides: Any) -> Any:
     return settings
 
 
-@pytest.fixture(autouse=True)
-def reset_dependency_singletons():
-    deps._anilist_api = None
-    deps._tmdb_api = None
-    deps._password_handler = None
-    deps._jwt_handler = None
-
-    deps.state.anilist_client = None
-    deps.state.tmdb_client = None
-    deps.state.mongo_client = None
-
-    yield
-
-    deps._anilist_api = None
-    deps._tmdb_api = None
-    deps._password_handler = None
-    deps._jwt_handler = None
+@pytest.fixture
+def mock_request():
+    """Create a mock request with app.state."""
+    request = MagicMock()
+    request.app = MagicMock()
+    request.app.state = MagicMock()
+    return request
 
 
-def test_get_anilist_api_caches_instance():
+def test_get_anilist_api_returns_instance(mock_request):
     client = MagicMock()
-    deps.state.anilist_client = client
+    mock_request.app.state.anilist_client = client
 
-    first = deps.get_anilist_api()
-    second = deps.get_anilist_api()
+    result = deps.get_anilist_api(request=mock_request)
 
-    assert first is second
-    assert first.client is client
+    assert isinstance(result, AnilistApi)
+    assert result.client is client
 
 
-def test_get_tmdb_api_caches_instance_from_settings():
+def test_get_tmdb_api_returns_instance(mock_request):
     client = MagicMock()
     settings = create_mock_settings(tmdb_access_token="abc123")
-    deps.state.tmdb_client = client
+    mock_request.app.state.tmdb_client = client
 
-    first = deps.get_tmdb_api(settings=settings)
-    second = deps.get_tmdb_api(settings=settings)
+    result = deps.get_tmdb_api(request=mock_request, settings=settings)
 
-    assert first is second
-    assert first.client is client
-    assert first.tmdb_access_token == "abc123"
-
-
-def test_get_password_handler_caches_instance():
-    first = deps.get_password_handler()
-    second = deps.get_password_handler()
-
-    assert first is second
+    assert isinstance(result, TMDBApi)
+    assert result.client is client
+    assert result.tmdb_access_token == "abc123"
 
 
-def test_get_mongo_uses_database_name_from_settings(monkeypatch):
+def test_get_password_handler_returns_instance(mock_request):
+    password_handler = MagicMock(spec=PasswordHandler)
+    mock_request.app.state.password_handler = password_handler
+
+    result = deps.get_password_handler(request=mock_request)
+
+    assert result is password_handler
+
+
+def test_get_mongo_uses_database_name_from_settings(mock_request, monkeypatch):
     database = MagicMock()
     db = create_mock_motor_client()
-    db.__getitem__.return_value = database
+    db.__getitem__ = MagicMock(return_value=database)
 
     settings = create_mock_settings(database_name="otakutime")
+    mock_request.app.state.mongo_client = db
     monkeypatch.setattr(deps, "get_settings", lambda: settings)
 
-    deps.state.mongo_client = db  
-    resolved = deps.get_mongo()
+    resolved = deps.get_mongo(request=mock_request)
 
     assert resolved is database
+    db.__getitem__.assert_called_with("otakutime")
 
 
 def test_get_anilist_service_wires_api():
@@ -132,7 +120,6 @@ def test_get_user_repository_uses_user_collection():
     db = create_mock_motor_client()
     db.__getitem__.return_value = users_collection
 
-    deps.state.mongo_client = db  
     repository = deps.get_user_repository(
         db=db, settings=create_mock_settings(user_collection="users")
     )
@@ -166,27 +153,29 @@ def test_get_user_media_entry_repository_uses_configured_collection():
     assert repository.collection is entries_collection
 
 
-def test_get_jwt_handler_caches_first_instance():
-    first = deps.get_jwt_handler(settings=create_mock_settings(jwt_secret_key="first"))
-    second = deps.get_jwt_handler(
-        settings=create_mock_settings(jwt_secret_key="second")
-    )
+def test_get_jwt_handler_returns_from_state(mock_request):
+    jwt_handler = MagicMock(spec=JWTHandler)
+    mock_request.app.state.jwt_handler = jwt_handler
 
-    assert first is second
-    assert first.secret_key == "first"
+    result = deps.get_jwt_handler(request=mock_request)
+
+    assert result is jwt_handler
 
 
 def test_get_user_service_wires_dependencies():
     repository = MagicMock(spec=UserRepository)
     password_handler = MagicMock(spec=PasswordHandler)
+    event_bus = MagicMock(spec=EventBus)
 
     service = deps.get_user_service(
         user_repository=repository,
         password_handler=password_handler,
+        event_bus=event_bus,
     )
 
     assert service.user_repository is repository
     assert service.password_handler is password_handler
+    assert service.event_bus is event_bus
 
 
 def test_get_auth_service_wires_dependencies():
@@ -200,26 +189,3 @@ def test_get_auth_service_wires_dependencies():
 
     assert service.jwt_handler is jwt_handler
     assert service.user_service is user_service
-
-
-def test_get_review_service_wires_dependencies():
-    review_repository = MagicMock(spec=ReviewRepository)
-
-    service = deps.get_review_service(
-        review_repository=review_repository,
-    )
-
-    assert service.review_repository is review_repository
-
-
-def test_get_user_media_entry_service_wires_dependencies():
-    repository = MagicMock(spec=UserMediaEntryRepository)
-    review_service = MagicMock(spec=ReviewService)
-
-    service = deps.get_user_media_entry_service(
-        repository=repository,
-        review_service=review_service,
-    )
-
-    assert service.repository is repository
-    assert service.review_service is review_service
