@@ -298,3 +298,22 @@ class UserMediaEntryRepository:
             count=len(results),
         )
         return results
+    
+    async def delete_by_user_id(self, user_id: str) -> DeleteResult:
+        async def _op() -> DeleteResult:
+            return await self.collection.delete_many({"user_id": user_id})
+
+        result = await run_db_op(
+            self.logger,
+            _op,
+            success_event="mongo_user_media_entry_delete_by_user_id",
+            error_event="mongo_user_media_entry_delete_by_user_id_error",
+            context={"user_id": user_id},
+        )
+
+        self.logger.info(
+            "mongo_user_media_entry_delete_by_user_id_result",
+            user_id=user_id,
+            deleted_count=result.deleted_count,
+        )
+        return result

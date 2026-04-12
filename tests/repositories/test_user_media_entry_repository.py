@@ -11,7 +11,10 @@ from app.enums.user_media_entry_enums import (
     MediaType,
     UserMediaEntryStatus,
 )
-from app.models.user_media_entry_models import UserMediaEntryInsert, UserMediaEntryUpdate
+from app.models.user_media_entry_models import (
+    UserMediaEntryInsert,
+    UserMediaEntryUpdate,
+)
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 
 
@@ -23,6 +26,7 @@ def mock_collection():
     collection.find_one = AsyncMock()
     collection.find_one_and_update = AsyncMock()
     collection.delete_one = AsyncMock()
+    collection.delete_many = AsyncMock()
     collection.count_documents = AsyncMock()
     return collection
 
@@ -43,7 +47,7 @@ def sample_entry_insert():
         mediaType=MediaType.ANIME,
         title="Steins;Gate",
         status=UserMediaEntryStatus.PLANNING,
-    ) # type: ignore
+    )  # type: ignore
 
 
 @pytest.fixture
@@ -134,7 +138,7 @@ async def test_update_entry_applies_owner_scope_and_returns_updated_doc(
     repository, mock_collection, passthrough_run_db_op
 ):
     entry_id = ObjectId()
-    update = UserMediaEntryUpdate(status=UserMediaEntryStatus.COMPLETED) # type: ignore
+    update = UserMediaEntryUpdate(status=UserMediaEntryStatus.COMPLETED)  # type: ignore
     updated_doc = {
         "_id": entry_id,
         "user_id": "user-1",
@@ -162,7 +166,9 @@ async def test_update_entry_applies_owner_scope_and_returns_updated_doc(
 
 
 @pytest.mark.asyncio
-async def test_delete_entry_uses_owner_scope(repository, mock_collection, passthrough_run_db_op):
+async def test_delete_entry_uses_owner_scope(
+    repository, mock_collection, passthrough_run_db_op
+):
     entry_id = ObjectId()
     delete_result = MagicMock(deleted_count=1)
     mock_collection.delete_one.return_value = delete_result
@@ -176,7 +182,9 @@ async def test_delete_entry_uses_owner_scope(repository, mock_collection, passth
 
 
 @pytest.mark.asyncio
-async def test_count_entries_by_user_id(repository, mock_collection, passthrough_run_db_op):
+async def test_count_entries_by_user_id(
+    repository, mock_collection, passthrough_run_db_op
+):
     mock_collection.count_documents.return_value = 3
 
     result = await repository.count_entries_by_user_id("user-1")
@@ -199,6 +207,8 @@ async def test_count_entries_scopes_filters_with_user_id(
     mock_collection.count_documents.assert_awaited_once_with(
         {"status": UserMediaEntryStatus.CURRENT, "user_id": "user-1"}
     )
+
+
 @pytest.mark.asyncio
 async def test_get_entries_scopes_filters_with_user_id_and_applies_pagination(
     repository, mock_collection, passthrough_run_db_op
@@ -252,13 +262,13 @@ async def test_sync_entry_metadata_applies_owner_scope_and_returns_synced_doc(
     repository, mock_collection, passthrough_run_db_op
 ):
     from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
-    
+
     entry_id = ObjectId()
     metadata = UserMediaEntrySyncMetadata(
         title="Updated Title",
         coverImage="https://example.com/new_cover.jpg",
         isAdult=True,
-    ) # type: ignore
+    )  # type: ignore
     synced_doc = {
         "_id": entry_id,
         "user_id": "user-1",
@@ -292,12 +302,75 @@ async def test_sync_entry_metadata_returns_none_when_not_found(
     repository, mock_collection, passthrough_run_db_op
 ):
     from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
-    
+
     entry_id = ObjectId()
-    metadata = UserMediaEntrySyncMetadata(title="New Title") # type: ignore
+    metadata = UserMediaEntrySyncMetadata(title="New Title")  # type: ignore
     mock_collection.find_one_and_update.return_value = None
 
     result = await repository.sync_entry_metadata(str(entry_id), "user-1", metadata)
 
     assert result is None
 
+
+@pytest.mark.asyncio
+async def test_get_entry_by_external_id_and_external_source_and_user_id_returns_entry_when_found(
+    repository, mock_collection, passthrough_run_db_op
+):
+    entry_id = ObjectId()
+    doc = {
+        "_id": entry_id,
+        "user_id": "user-1",
+        "external_id": 1001,
+        "external_source": MediaExternalSource.ANILIST,
+        "media_type": MediaType.ANIME,
+        "title": "Steins;Gate",
+        "status": UserMediaEntryStatus.CURRENT,
+        "created_at": "2025-01-01T00:00:00+00:00",
+        "updated_at": "2025-01-01T00:00:00+00:00",
+    }
+    mock_collection.find_one.return_value = doc
+
+    result = await repository.get_entry_by_external_id_and_external_source_and_user_id(
+        external_id=1001,
+        external_source=MediaExternalSource.ANILIST,
+        user_id="user-1",
+    )
+
+    assert result is not None
+    assert result.id == str(entry_id)
+    assert result.external_id == 1001
+    mock_collection.find_one.assert_awaited_once_with(
+        {
+            "external_id": 1001,
+            "external_source": MediaExternalSource.ANILIST,
+            "user_id": "user-1",
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_entry_by_external_id_and_external_source_and_user_id_returns_none_when_missing(
+    repository, mock_collection, passthrough_run_db_op
+):
+    mock_collection.find_one.return_value = None
+
+    result = await repository.get_entry_by_external_id_and_external_source_and_user_id(
+        external_id=1001,
+        external_source=MediaExternalSource.ANILIST,
+        user_id="user-1",
+    )
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_delete_by_user_id_deletes_all_entries_for_user(
+    repository, mock_collection, passthrough_run_db_op
+):
+    delete_result = MagicMock(deleted_count=5)
+    mock_collection.delete_many.return_value = delete_result
+
+    result = await repository.delete_by_user_id("user-1")
+
+    assert result.deleted_count == 5
+    mock_collection.delete_many.assert_awaited_once_with({"user_id": "user-1"})
