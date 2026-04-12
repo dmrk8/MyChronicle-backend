@@ -10,7 +10,6 @@ from app.repositories.user_repository import UserRepository
 
 logger = structlog.get_logger()
 
-
 class UserService:
     def __init__(
         self,
@@ -77,19 +76,19 @@ class UserService:
     async def get_by_username(self, username: str) -> Optional[User]:
         user = await self.user_repository.get_by_username(username)
         if not user:
-            self.logger.info("user_not_found", lookup="username", username=username)
+            self.logger.debug("user_not_found", lookup="username", username=username)
             return None
 
-        self.logger.info("user_retrieved", lookup="username", username=username)
+        self.logger.debug("user_retrieved", lookup="username", username=username)
         return User.from_db(user)
 
     async def get_by_id(self, user_id: str) -> Optional[User]:
         user = await self.user_repository.get_by_id(user_id)
         if not user:
-            self.logger.info("user_not_found", lookup="id", user_id=user_id)
+            self.logger.debug("user_not_found", lookup="id", user_id=user_id)
             return None
 
-        self.logger.info("user_retrieved", lookup="id", user_id=user_id)
+        self.logger.debug("user_retrieved", lookup="id", user_id=user_id)
         return User.from_db(user)
 
     async def verify_credentials(self, username: str, password: str) -> Optional[User]:
@@ -109,7 +108,7 @@ class UserService:
                 self.logger.warning("authentication_failed", reason="invalid_password")
                 raise AuthenticationError("Invalid username or password")
 
-            self.logger.info("credentials_verified", user_id=user.id)
+            self.logger.debug("credentials_verified", user_id=user.id)
             return User.from_db(user)
         except AuthenticationError:
             raise

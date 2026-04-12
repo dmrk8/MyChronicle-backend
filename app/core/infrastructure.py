@@ -1,3 +1,4 @@
+from redis.asyncio import Redis
 import structlog
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import get_settings
@@ -34,9 +35,22 @@ async def lifespan(app):
             maxPoolSize=10,
             minPoolSize=2,
         )
+        await app.state.mongo_client.admin.command("ping")
         logger.info("mongodb_connected")
     except Exception:
         logger.critical("mongodb_connection_failed", exc_info=True)
+        raise
+
+    logger.info("connecting_to_redis")
+    try:
+        app.state.redis_client = Redis.from_url(
+            app.state.settings.redis_url, decode_responses=True
+        )
+
+        await app.state.redis_client.ping()
+        logger.info("redis_connected")
+    except Exception:
+        logger.critical("redis_connection_failed", exc_info=True)
         raise
 
     logger.info("opening httpx connections")
@@ -58,12 +72,13 @@ async def lifespan(app):
     db = app.state.mongo_client[app.state.settings.database_name]
     app.state.repos = await init_repositories(db, app.state.settings)
 
-
     yield
 
     logger.info("closing_connections")
     if app.state.mongo_client:
         app.state.mongo_client.close()
+    if app.state.redis_client:
+        await app.state.redis_client.close()
     if app.state.anilist_client:
         await app.state.anilist_client.aclose()
     if app.state.tmdb_client:

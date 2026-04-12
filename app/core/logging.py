@@ -47,20 +47,8 @@ def rich_renderer(_, __, event_dict):
 
     console.print(header)
 
-    for k, v in event_dict.items():
-        line = Text()
-        line.append(f"{k}: ", style="bold orange1")
-        line.append(str(v), style="white")
-        console.print(line)
-
+    # Only print details if there are any
     if event_dict:
-        console.print(Pretty(event_dict, expand_all=True))
-
-    if len(event_dict) <= 3:
-        inline = " ".join(f"{k}={v}" for k, v in event_dict.items())
-        console.print(f"{header} {inline}")
-    else:
-        console.print(header)
         console.print(Pretty(event_dict, expand_all=True))
 
     return ""
@@ -70,10 +58,16 @@ def setup_logging(settings: Settings):
     env = settings.env
     log_level = settings.log_level.upper()
 
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-    )
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    # Remove any existing handlers to prevent duplicates
+    root_logger.handlers = []
+
+    # Create console handler with no formatting
+    handler = logging.StreamHandler()
+    handler.setLevel(log_level)
+    root_logger.addHandler(handler)
 
     shared_processors = [
         structlog.stdlib.filter_by_level,
