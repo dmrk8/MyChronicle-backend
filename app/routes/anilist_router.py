@@ -1,15 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from fastapi import (
     APIRouter,
     Path,
     Query,
-    HTTPException,
     Depends,
-    status as http_status,
 )
-import httpx
 
-from app.models.anilist_models import AnilistPagination
+from app.models.media_models import AnimeDetailed, MangaDetailed, MediaPagination
 from app.services.anilist_service import AnilistService
 from app.enums.anilist_enums import SortOption, AnilistMediaType
 from app.core.dependencies import get_anilist_service
@@ -18,7 +15,7 @@ from app.core.dependencies import get_anilist_service
 anilist_router = APIRouter(prefix="/anilist")
 
 
-@anilist_router.get("/search/{media_type}")
+@anilist_router.get("/search/{media_type}", response_model=MediaPagination)
 async def search_anilist(
     media_type: AnilistMediaType = Path(...),
     page: int = Query(1, ge=1),
@@ -41,108 +38,31 @@ async def search_anilist(
     tag_not_in: Optional[List[str]] = Query(None, alias="tagNotIn"),
     service: AnilistService = Depends(get_anilist_service),
 ):
-    try:
-        result = await service.search_media(
-            page,
-            per_page,
-            search,
-            media_type.value,
-            sort,
-            season,
-            season_year,
-            format,
-            status,
-            genre_in,
-            tag_in,
-            is_adult,
-            country_of_origin,
-            genre_not_in,
-            tag_not_in,
-        )
-
-        return result
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code, detail="AniList API error"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
+    return await service.search_media(
+        page,
+        per_page,
+        media_type,
+        sort,
+        search,
+        season,
+        season_year,
+        format,
+        status,
+        genre_in,
+        tag_in,
+        is_adult,
+        country_of_origin,
+        genre_not_in,
+        tag_not_in,
+    )
 
 
-@anilist_router.get("/anime/{anime_id}")
-async def get_anime_detail(
-    anime_id: int = Path(..., ge=1, description="Anime ID"),
+@anilist_router.get(
+    "/{media_type}/{media_id}", response_model=Union[AnimeDetailed, MangaDetailed]
+)
+async def get_media_detail(
+    media_type: AnilistMediaType = Path(..., description="Media type (ANIME or MANGA)"),
+    media_id: int = Path(..., ge=1, description="Media ID"),
     service: AnilistService = Depends(get_anilist_service),
 ):
-    try:
-        result = await service.get_anime_detail(anime_id)
-        if not result:
-            raise HTTPException(
-                status_code=http_status.HTTP_404_NOT_FOUND, detail="Anime not found"
-            )
-        return result
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code, detail="AniList API error"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
-
-
-@anilist_router.get("/manga/{manga_id}")
-async def get_manga_detail(
-    manga_id: int = Path(..., ge=1, description="Manga ID"),
-    service: AnilistService = Depends(get_anilist_service),
-):
-    try:
-        result = await service.get_manga_detail(manga_id)
-        if not result:
-            raise HTTPException(
-                status_code=http_status.HTTP_404_NOT_FOUND, detail="Manga not found"
-            )
-        return result
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code, detail="AniList API error"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
-
-
-@anilist_router.get("/featured/bulk/{media_type}")
-async def get_anilist_featured_media_bulk(
-    media_type: str,
-    service: AnilistService = Depends(get_anilist_service),
-):
-    """
-    Fetches featured media data: all time popular, trending now, popular this season, and upcoming next season.
-    """
-    try:
-        return await service.get_featured_bulk(media_type.upper())
-
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(
-            status_code=e.response.status_code, detail="AniList API error"
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
+    return await service.get_media_detail(media_id, media_type)
