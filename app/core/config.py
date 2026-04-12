@@ -24,6 +24,11 @@ class Settings(BaseSettings):
         description="Name of the MongoDB collection for storing user media entries"
     )
 
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL (format: redis://[:password]@host:port/db)",
+    )
+
     jwt_secret_key: str = Field(description="Secret key used for signing JWT tokens")
     jwt_algorithm: str = Field(
         description="Algorithm used for JWT encoding and decoding"
@@ -36,15 +41,15 @@ class Settings(BaseSettings):
 
     tmdb_api_key: str = Field(description="API key for The Movie Database (TMDB)")
     tmdb_access_token: str = Field(description="Access token for TMDB API")
-    
-    #twitch_client_id: str = Field(description="Client ID for Twitch API")
-    #twitch_client_secret: str = Field(description="Client secret for Twitch API")
-    #igdb_access_token: str = Field(description="Access token for IGDB API")
-    #igdb_expires_in: int = Field(
+
+    # twitch_client_id: str = Field(description="Client ID for Twitch API")
+    # twitch_client_secret: str = Field(description="Client secret for Twitch API")
+    # igdb_access_token: str = Field(description="Access token for IGDB API")
+    # igdb_expires_in: int = Field(
     #    description="Expiration time for IGDB access token in seconds"
-    #)#
-    #steam_web_api_key: str = Field(description="API key for Steam Web API")
-    #omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
+    # )#
+    # steam_web_api_key: str = Field(description="API key for Steam Web API")
+    # omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
 
     allow_origins_str: str = Field(
         default="http://localhost:5173",
