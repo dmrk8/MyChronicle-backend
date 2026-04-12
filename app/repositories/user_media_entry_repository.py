@@ -75,14 +75,14 @@ class UserMediaEntryRepository:
         )
 
         if doc:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_media_entry_find_one_by_id_found",
                 entry_id=entry_id,
                 user_id=user_id,
             )
             return UserMediaEntryDB.model_validate(doc)
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_find_one_by_id_not_found",
             entry_id=entry_id,
             user_id=user_id,
@@ -114,14 +114,14 @@ class UserMediaEntryRepository:
         )
 
         if doc:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_media_entry_find_one_by_media_id_and_user_id_found",
                 external_id=external_id,
                 user_id=user_id,
             )
             return UserMediaEntryDB.model_validate(doc)
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
             external_id=external_id,
             user_id=user_id,
@@ -149,7 +149,7 @@ class UserMediaEntryRepository:
         )
 
         if doc:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_media_entry_update_success",
                 entry_id=entry_id,
                 user_id=user_id,
@@ -209,7 +209,7 @@ class UserMediaEntryRepository:
                 user_id=user_id,
             )
         else:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_media_entry_delete_success",
                 entry_id=entry_id,
                 user_id=user_id,
@@ -229,7 +229,7 @@ class UserMediaEntryRepository:
             context={"user_id": user_id},
         )
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_count_result",
             user_id=user_id,
             count=count,
@@ -250,7 +250,7 @@ class UserMediaEntryRepository:
             context={"user_id": user_id},
         )
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_count_entries_result",
             user_id=user_id,
             count=count,
@@ -293,7 +293,7 @@ class UserMediaEntryRepository:
             },
         )
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_get_entries_result",
             count=len(results),
         )
@@ -311,7 +311,7 @@ class UserMediaEntryRepository:
             context={"user_id": user_id},
         )
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_media_entry_delete_by_user_id_result",
             user_id=user_id,
             deleted_count=result.deleted_count,

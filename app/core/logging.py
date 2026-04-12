@@ -1,6 +1,6 @@
 from app.core.config import Settings
 import logging
-import structlog
+import structlog.stdlib
 
 from structlog.contextvars import merge_contextvars
 from structlog.processors import TimeStamper
@@ -76,6 +76,7 @@ def setup_logging(settings: Settings):
     )
 
     shared_processors = [
+        structlog.stdlib.filter_by_level,
         merge_contextvars,
         TimeStamper(fmt="iso"),
         structlog.processors.add_log_level,

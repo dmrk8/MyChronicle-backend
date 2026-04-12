@@ -46,7 +46,7 @@ class ReviewRepository:
             error_event="mongo_review_insert_one_error",
             context={},
         )
-        self.logger.info("mongo_review_inserted_id", review_id=str(result.inserted_id))
+        self.logger.debug("mongo_review_inserted_id", review_id=str(result.inserted_id))
         return ReviewDB.model_validate({**data, "_id": result.inserted_id})
 
     async def delete_review(self, review_id: str, user_id: str, user_media_entry_id: str) -> DeleteResult:
@@ -62,7 +62,7 @@ class ReviewRepository:
             error_event="mongo_review_delete_one_error",
             context={"review_id": review_id},
         )
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_delete_one_result",
             review_id=review_id,
             user_id=user_id,
@@ -98,7 +98,7 @@ class ReviewRepository:
         )
 
             raise
-        self.logger.info(
+        self.logger.debug(
                 "mongo_user_media_entry_update_success",
                 review_id=review_id,
                 user_id=user_id,
@@ -123,7 +123,7 @@ class ReviewRepository:
             error_event="mongo_review_find_by_user_media_entry_id_error",
             context={"user_media_entry_id": user_media_entry_id},
         )
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_find_by_user_media_entry_id_result",
             user_media_entry_id=user_media_entry_id,
             user_id=user_id,
@@ -152,14 +152,14 @@ class ReviewRepository:
         )
 
         if data:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_review_find_one_by_id_found",
                 review_id=review_id,
                 user_id=user_id,
             )
             return ReviewDB(**data)
 
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_find_one_by_id_not_found",
             review_id=review_id,
             user_id=user_id,
@@ -182,7 +182,7 @@ class ReviewRepository:
             error_event="mongo_review_count_by_user_media_entry_id_error",
             context={"user_media_entry_id": user_media_entry_id},
         )
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_count_by_user_media_entry_id_result",
             user_media_entry_id=user_media_entry_id,
             user_id=user_id,
@@ -205,7 +205,7 @@ class ReviewRepository:
             error_event="mongo_review_delete_many_by_user_media_entry_id_error",
             context={"user_media_entry_id": user_media_entry_id, "user_id": user_id},
         )
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_delete_many_by_user_media_entry_id_result",
             user_media_entry_id=user_media_entry_id,
             user_id=user_id,
@@ -224,7 +224,7 @@ class ReviewRepository:
             error_event="mongo_review_delete_many_error",
             context={"user_id": user_id},
         )
-        self.logger.info(
+        self.logger.debug(
             "mongo_review_delete_many_result",
             user_id=user_id,
             deleted_count=result.deleted_count,

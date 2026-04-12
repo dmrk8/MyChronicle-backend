@@ -16,7 +16,7 @@ async def run_db_op(
     start = time.perf_counter()
     try:
         result = await op()
-        logger.info(
+        logger.debug(
             success_event,
             **context,
             elapsed_ms=int((time.perf_counter() - start) * 1000),

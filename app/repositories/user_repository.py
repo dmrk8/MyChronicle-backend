@@ -71,7 +71,7 @@ class UserRepository:
         )
 
         if doc:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_update_success",
                 user_id=id,
             )
@@ -101,7 +101,7 @@ class UserRepository:
                 user_id=user_id,
             )
         else:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_delete_success",
                 user_id=user_id,
                 deleted_count=result.deleted_count,
@@ -121,9 +121,9 @@ class UserRepository:
         )
 
         if doc:
-            self.logger.info("mongo_user_find_one_by_id_found", user_id=id)
+            self.logger.debug("mongo_user_find_one_by_id_found", user_id=id)
             return UserDB.model_validate(doc)
-        self.logger.info("mongo_user_find_one_by_id_not_found", user_id=id)
+        self.logger.debug("mongo_user_find_one_by_id_not_found", user_id=id)
         return None
 
     async def is_username_exists(self, username: str) -> bool:
@@ -139,7 +139,7 @@ class UserRepository:
         )
 
         exists = doc is not None
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_find_one_by_username_exists",
             username=username,
             exists=exists,
@@ -159,12 +159,12 @@ class UserRepository:
         )
 
         if doc:
-            self.logger.info(
+            self.logger.debug(
                 "mongo_user_find_one_by_username_found",
                 username=username,
             )
             return UserDB.model_validate(doc)
-        self.logger.info(
+        self.logger.debug(
             "mongo_user_find_one_by_username_not_found",
             username=username,
         )

@@ -4,7 +4,6 @@ from typing import Optional
 import structlog
 from app.models.jwt_models import Claims
 
-logger = structlog.get_logger()
 
 class JWTHandler:
     SECONDS_PER_DAY = 86400
@@ -22,6 +21,7 @@ class JWTHandler:
         self.issuer = issuer
         self.audience = audience
         self.expire_days = expire_days
+        self.logger = structlog.get_logger().bind(service="JWTHandler")
 
         if not self.secret_key:
             raise ValueError("SECRET_KEY is required")
@@ -47,23 +47,23 @@ class JWTHandler:
             encoded_jwt = jwt.encode(
                 to_encode, self.secret_key, algorithm=self.algorithm
             )
-            logger.info("Token Encoded", subject=claims.sub)  # Structured log
+            self.logger.debug("Token Encoded", subject=claims.sub)  
             return encoded_jwt
 
         except ValueError as ve:
-            logger.error("Validation error in create_access_token", error=str(ve))
+            self.logger.error("Validation error in create_access_token", error=str(ve))
             raise
         except JWTError as je:
-            logger.error("JWT encoding error", error=str(je))
+            self.logger.error("JWT encoding error", error=str(je))
             raise
         except Exception as e:
-            logger.error("Unexpected error in create_access_token", error=str(e))
+            self.logger.error("Unexpected error in create_access_token", error=str(e))
             raise
 
     def _decode_token(self, token: str) -> Optional[Claims]:
         try:
             if not token:
-                logger.warning("Empty token provided")
+                self.logger.warning("Empty token provided")
                 return None
 
             payload_dict = jwt.decode(
@@ -78,10 +78,10 @@ class JWTHandler:
             return payload
 
         except JWTError as je:
-            logger.warning("JWT verification failed", error={je})
+            self.logger.warning("JWT verification failed", error={je})
             return None
         except Exception as e:
-            logger.error("Unexpected error in verify_token", error={e})
+            self.logger.error("Unexpected error in verify_token", error={e})
             raise
 
     def generate_claims(
@@ -115,27 +115,27 @@ class JWTHandler:
         """
         try:
             if not token:
-                logger.warning("Empty token provided")
+                self.logger.warning("Empty token provided")
                 return None
 
             payload = self._decode_token(token)
 
             if payload is None:
-                logger.warning("Failed to decode token")
+                self.logger.warning("Failed to decode token")
                 return None
 
             sub = payload.sub
             if sub is None or not isinstance(sub, str):
-                logger.warning("Token missing subject or invalid type")
+                self.logger.warning("Token missing subject or invalid type")
                 return None
 
-            logger.info("Token verified for user", sub=sub)
+            self.logger.debug("Token verified for user", sub=sub)
             return sub
 
         except JWTError as je:
-            logger.warning("JWT verification failed", error={je})
+            self.logger.warning("JWT verification failed", error={je})
             return None
         except Exception as e:
-            logger.error("Unexpected error in verify_token", error={e})
+            self.logger.error("Unexpected error in verify_token", error={e})
             raise
 
