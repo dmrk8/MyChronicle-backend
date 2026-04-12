@@ -1,4 +1,5 @@
 from typing import Any, Optional
+from app.core.event_bus import EventBus
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.user_media_entry_models import (
     UserMediaEntry,
@@ -26,10 +27,22 @@ logger = structlog.get_logger().bind(service="UserMediaEntryService")
 
 class UserMediaEntryService:
     def __init__(
-        self, repository: UserMediaEntryRepository, review_service: ReviewService
+        self,
+        repository: UserMediaEntryRepository,
+        review_service: ReviewService,
+        event_bus: EventBus | None = None,
     ):
         self.repository = repository
         self.review_service = review_service
+        self.event_bus = event_bus
+
+        # Register handlers when service is created
+        if self.event_bus:
+            self.event_bus.subscribe("user.deleted", self.on_user_deleted)
+
+    async def on_user_deleted(self, *, user_id: str, **_: object) -> None:
+        """Handle user deletion cascade."""
+        await self.delete_all_entries_for_user(user_id)
 
     async def create_entry(
         self, entry_request: UserMediaEntryCreate, user_id: str
@@ -44,8 +57,9 @@ class UserMediaEntryService:
         return UserMediaEntry.from_db(res)
 
     async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntry:
-        res =  await self._verify_ownership(entry_id, user_id)
+        res = await self._verify_ownership(entry_id, user_id)
         return UserMediaEntry.from_db(res)
+
     async def update_entry(
         self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
     ) -> Optional[UserMediaEntry]:
@@ -171,3 +185,16 @@ class UserMediaEntryService:
             )
         logger.info("entry_synced", entry_id=entry_id)
         return UserMediaEntry.from_db(synced_entry)
+
+    async def delete_all_entries_for_user(self, user_id: str) -> None:
+        """Delete all media entries (and their reviews) for a user."""
+        result: DeleteResult = await self.repository.delete_by_user_id(user_id)
+        if not result.acknowledged:
+            raise RuntimeError(f"Failed to delete entries for user {user_id}")
+
+        await self.review_service.delete_all_reviews_for_user(user_id)
+        logger.info(
+            "all_entries_deleted_for_user",
+            user_id=user_id,
+            deleted_count=result.deleted_count,
+        )

@@ -365,3 +365,73 @@ async def test_sync_entry_metadata_raises_when_entry_missing_after_sync(
 
     with pytest.raises(RuntimeError, match="missing after metadata sync"):
         await service.sync_entry_metadata("entry-1", metadata, "user-1")
+
+
+@pytest.mark.asyncio
+async def test_service_initializes_with_event_bus_and_subscribes(
+    mock_repository, mock_review_service
+):
+    from app.core.event_bus import EventBus
+
+    mock_event_bus = MagicMock(spec=EventBus)
+    service = UserMediaEntryService(
+        mock_repository, mock_review_service, event_bus=mock_event_bus
+    )
+
+    assert service.event_bus is mock_event_bus
+    mock_event_bus.subscribe.assert_called_once_with(
+        "user.deleted", service.on_user_deleted
+    )
+
+
+@pytest.mark.asyncio
+async def test_service_initializes_without_event_bus(
+    mock_repository, mock_review_service
+):
+    service = UserMediaEntryService(
+        mock_repository, mock_review_service, event_bus=None
+    )
+
+    assert service.event_bus is None
+
+
+@pytest.mark.asyncio
+async def test_on_user_deleted_deletes_all_entries_and_reviews(
+    service, mock_repository, mock_review_service
+):
+    mock_repository.delete_by_user_id = AsyncMock(
+        return_value=MagicMock(acknowledged=True, deleted_count=3)
+    )
+    mock_review_service.delete_all_reviews_for_user = AsyncMock()
+
+    await service.on_user_deleted(user_id="user-1")
+
+    mock_repository.delete_by_user_id.assert_awaited_once_with("user-1")
+    mock_review_service.delete_all_reviews_for_user.assert_awaited_once_with("user-1")
+
+
+@pytest.mark.asyncio
+async def test_delete_all_entries_for_user_cascades_reviews(
+    service, mock_repository, mock_review_service
+):
+    mock_repository.delete_by_user_id = AsyncMock(
+        return_value=MagicMock(acknowledged=True, deleted_count=5)
+    )
+    mock_review_service.delete_all_reviews_for_user = AsyncMock()
+
+    await service.delete_all_entries_for_user("user-1")
+
+    mock_repository.delete_by_user_id.assert_awaited_once_with("user-1")
+    mock_review_service.delete_all_reviews_for_user.assert_awaited_once_with("user-1")
+
+
+@pytest.mark.asyncio
+async def test_delete_all_entries_for_user_raises_when_not_acknowledged(
+    service, mock_repository, mock_review_service
+):
+    mock_repository.delete_by_user_id = AsyncMock(
+        return_value=MagicMock(acknowledged=False)
+    )
+
+    with pytest.raises(RuntimeError, match="Failed to delete entries for user"):
+        await service.delete_all_entries_for_user("user-1")
