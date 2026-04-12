@@ -96,6 +96,7 @@ async def test_lifespan_initializes_and_closes_clients(
         mongodb_uri="mongodb://localhost:27017",
         database_name="testdb",
         review_collection="reviews",
+        user_collection="users",
         user_media_entry_collection="user_media_entries",
         redis_url="redis://localhost:6379/0",
         jwt_secret_key="test-secret",
@@ -120,23 +121,32 @@ async def test_lifespan_initializes_and_closes_clients(
     monkeypatch.setattr(infra, "init_repositories", mock_init_repositories)
 
     async with infra.lifespan(mock_app):
+        # Verify settings
         assert mock_app.state.settings is settings
+
+        # Verify MongoDB client
         assert isinstance(mock_app.state.mongo_client, FakeMongoClient)
         assert mock_app.state.mongo_client.uri == settings.mongodb_uri
         assert mock_app.state.mongo_client.kwargs == {
             "maxPoolSize": 10,
             "minPoolSize": 2,
+            "serverSelectionTimeoutMS": 3000,
+            "connectTimeoutMS": 3000,
+            "socketTimeoutMS": 5000,
         }
 
+        # Verify Redis client
         assert isinstance(mock_app.state.redis_client, FakeRedis)
         assert mock_app.state.redis_client.url == settings.redis_url
         assert mock_app.state.redis_client.kwargs == {"decode_responses": True}
         assert len(FakeRedis.instances) == 1
 
+        # Verify HTTP clients
         assert len(FakeAsyncClient.instances) == 2
         assert all(client.timeout == 10.0 for client in FakeAsyncClient.instances)
-        assert setup_calls == [settings]
 
+        # Verify setup and repositories
+        assert setup_calls == [settings]
         assert len(init_repos_calls) == 1
         assert mock_app.state.repos is mock_repos
 
@@ -153,6 +163,7 @@ async def test_lifespan_initializes_and_closes_clients(
         assert mock_app.state.jwt_handler.issuer == settings.jwt_issuer
         assert mock_app.state.jwt_handler.audience == settings.jwt_audience
 
+    # Verify cleanup
     assert mock_app.state.mongo_client.closed is True
     assert mock_app.state.redis_client.closed is True
     assert all(client.closed is True for client in FakeAsyncClient.instances)
@@ -160,6 +171,7 @@ async def test_lifespan_initializes_and_closes_clients(
 
 @pytest.mark.asyncio
 async def test_lifespan_raises_when_settings_fail(monkeypatch, mock_app):
+    """Test that lifespan raises when settings loading fails."""
     monkeypatch.setattr(
         infra,
         "get_settings",
@@ -167,5 +179,70 @@ async def test_lifespan_raises_when_settings_fail(monkeypatch, mock_app):
     )
 
     with pytest.raises(RuntimeError, match="settings error"):
+        async with infra.lifespan(mock_app):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_lifespan_raises_when_mongodb_fails(monkeypatch, mock_app):
+    """Test that lifespan raises when MongoDB connection fails."""
+    settings = SimpleNamespace(
+        env="test",
+        mongodb_uri="mongodb://invalid:27017",
+        database_name="testdb",
+        redis_url="redis://localhost:6379/0",
+        jwt_secret_key="test-secret",
+        jwt_algorithm="HS256",
+        jwt_issuer="test",
+        jwt_audience="test",
+        jwt_access_token_expire_days=7,
+    )
+
+    class FailingMongoAdmin:
+        async def command(self, cmd):
+            raise RuntimeError("MongoDB connection failed")
+
+    class FailingMongoClient:
+        def __init__(self, *args, **kwargs):
+            self.admin = FailingMongoAdmin()
+
+    monkeypatch.setattr(infra, "get_settings", lambda: settings)
+    monkeypatch.setattr(infra, "setup_logging", lambda s: None)
+    monkeypatch.setattr(infra, "AsyncIOMotorClient", FailingMongoClient)
+
+    with pytest.raises(RuntimeError, match="MongoDB connection failed"):
+        async with infra.lifespan(mock_app):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_lifespan_raises_when_redis_fails(monkeypatch, mock_app):
+    """Test that lifespan raises when Redis connection fails."""
+    settings = SimpleNamespace(
+        env="test",
+        mongodb_uri="mongodb://localhost:27017",
+        database_name="testdb",
+        review_collection="reviews",
+        user_collection="users",
+        user_media_entry_collection="user_media_entries",
+        redis_url="redis://invalid:6379/0",
+        jwt_secret_key="test-secret",
+        jwt_algorithm="HS256",
+        jwt_issuer="test",
+        jwt_audience="test",
+        jwt_access_token_expire_days=7,
+    )
+
+    class FailingRedis:
+        @classmethod
+        def from_url(cls, *args, **kwargs):
+            raise RuntimeError("Redis connection failed")
+
+    monkeypatch.setattr(infra, "get_settings", lambda: settings)
+    monkeypatch.setattr(infra, "setup_logging", lambda s: None)
+    monkeypatch.setattr(infra, "AsyncIOMotorClient", FakeMongoClient)
+    monkeypatch.setattr(infra, "Redis", FailingRedis)
+
+    with pytest.raises(RuntimeError, match="Redis connection failed"):
         async with infra.lifespan(mock_app):
             pass
