@@ -28,10 +28,12 @@ async def perform_request(
     url: str,
     headers: Optional[dict],
     params: Optional[dict] = None,
-    action: str
+    action: str,
 ):
 
     start = time.perf_counter()
+    request_id = structlog.contextvars.get_contextvars().get("request_id")
+
     try:
         if graphql_query:
             response = await client.post(url=url, json=graphql_query)
@@ -52,6 +54,7 @@ async def perform_request(
             method=method,
             url=str(url),
             status_code=response.status_code,
+            request_id=request_id,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
 
@@ -66,9 +69,10 @@ async def perform_request(
             url=str(url),
             status_code=exc.response.status_code,
             response_text=exc.response.text,
+            request_id=request_id,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
         raise UpstreamServiceException(service_name, exc.response.status_code)
 
     except httpx.RequestError as exc:
@@ -79,10 +83,13 @@ async def perform_request(
             method=method,
             url=str(url),
             error=str(exc),
+            request_id=request_id,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        
+        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
         raise UpstreamServiceException(service_name)
+
     except Exception:
         logger.exception(
             "upstream_request",
@@ -90,7 +97,9 @@ async def perform_request(
             action=action,
             method=method,
             url=str(url),
+            request_id=request_id,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
-        service_name = ACTION_SERVICE_MAP.get(action, "External service")
+        
+        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
         raise UpstreamServiceException(service_name)
