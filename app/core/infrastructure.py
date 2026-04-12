@@ -34,6 +34,9 @@ async def lifespan(app):
             app.state.settings.mongodb_uri,
             maxPoolSize=10,
             minPoolSize=2,
+            serverSelectionTimeoutMS=3000,
+            connectTimeoutMS=3000,
+            socketTimeoutMS=5000
         )
         await app.state.mongo_client.admin.command("ping")
         logger.info("mongodb_connected")
