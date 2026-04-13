@@ -3,9 +3,10 @@ from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timezone
 from pymongo.results import DeleteResult
 
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import NotFoundException, ForbiddenException
 from app.services.review_service import ReviewService
 from app.repositories.review_repository import ReviewRepository
+from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.models.review_models import (
     Review,
     ReviewCreate,
@@ -20,9 +21,18 @@ def mock_review_repository():
 
 
 @pytest.fixture
-def review_service(mock_review_repository):
+def mock_user_media_entry_repository():
+    repo = MagicMock(spec=UserMediaEntryRepository)
+    # By default, allow access (simulate entry exists)
+    repo.get_entry_by_id = AsyncMock(return_value=MagicMock())
+    return repo
+
+
+@pytest.fixture
+def review_service(mock_review_repository, mock_user_media_entry_repository):
     return ReviewService(
         review_repository=mock_review_repository,
+        user_media_entry_repository=mock_user_media_entry_repository,
     )
 
 
@@ -41,6 +51,20 @@ def create_review_db(**overrides):
     }
     defaults.update(overrides)
     return ReviewDB(**defaults)
+
+
+# --- Access control tests ---
+
+
+@pytest.mark.asyncio
+async def test_forbidden_if_entry_not_found(
+    review_service, mock_user_media_entry_repository
+):
+    """Test ForbiddenException is raised if user does not own entry."""
+    mock_user_media_entry_repository.get_entry_by_id = AsyncMock(return_value=None)
+    review_request = ReviewCreate(review="Great anime!", rating=8.5)  # type: ignore
+    with pytest.raises(ForbiddenException):
+        await review_service.create_review(review_request, "entry_456", "user_789")
 
 
 # --- Tests for create_review ---

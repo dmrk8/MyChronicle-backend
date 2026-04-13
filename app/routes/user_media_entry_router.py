@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, Path, Query, status
 from typing import Optional
 
-from app.context.user_media_entry_context import UserMediaEntryContext
 from app.core.dependencies import (
     get_review_service,
-    get_user_media_entry_access_validation,
     get_user_media_entry_service,
 )
-from app.core.validators.user_media_entry_access import UserMediaEntryAccessValidator
 from app.models.review_models import Review, ReviewCreate, ReviewUpdate
 from app.models.user_media_entry_models import (
     UserMediaEntry,
@@ -31,18 +28,6 @@ from app.enums.user_media_entry_enums import (
 user_media_entry_router = APIRouter(
     prefix="/user-media-entries", tags=["user-media-entries"]
 )
-
-
-async def get_user_media_entry_context(
-    entry_id: str = Path(...),
-    user: User = Depends(get_current_user),
-    validator: UserMediaEntryAccessValidator = Depends(
-        get_user_media_entry_access_validation
-    ),
-) -> UserMediaEntryContext:
-    entry = await validator.verify(entry_id, user.id)
-
-    return UserMediaEntryContext(entry_id=entry_id, user=user, entry=entry)
 
 
 @user_media_entry_router.post(
@@ -160,63 +145,70 @@ async def sync_user_media_entry_metadata(
 @user_media_entry_router.post("/{entry_id}/reviews", response_model=Review)
 async def create_review_for_user_media_entry(
     review: ReviewCreate,
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    entry_id: str = Path(..., description="User Media Entry ID"),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.create_review(review, ctx.entry.id, ctx.user.id)
+    return await service.create_review(review, entry_id, user.id)
 
 
 @user_media_entry_router.get("/{entry_id}/reviews", response_model=list[Review])
 async def get_reviews_for_user_media_entry(
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    entry_id: str = Path(..., description="User Media Entry ID"),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.get_reviews_for_user_media_entry(ctx.entry.id, ctx.user.id)
+    return await service.get_reviews_for_user_media_entry(entry_id, user.id)
 
 
 @user_media_entry_router.get("/{entry_id}/reviews/count", response_model=int)
 async def count_reviews_for_user_media_entry(
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    entry_id: str = Path(..., description="User Media Entry ID"),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.count_reviews_for_user_media_entry(ctx.entry.id, ctx.user.id)
+    return await service.count_reviews_for_user_media_entry(entry_id, user.id)
 
 
 @user_media_entry_router.get("/{entry_id}/reviews/{review_id}", response_model=Review)
 async def get_review_by_id(
+    entry_id: str = Path(..., description="User Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.get_review_by_id(review_id, ctx.user.id, ctx.entry.id)
+    return await service.get_review_by_id(review_id, user.id, entry_id)
 
 
 @user_media_entry_router.patch("/{entry_id}/reviews/{review_id}", response_model=Review)
 async def update_review_for_user_media_entry(
     update: ReviewUpdate,
+    entry_id: str = Path(..., description="User Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.update_review(review_id, ctx.entry.id, update, ctx.user.id)
+    return await service.update_review(review_id, entry_id, update, user.id)
 
 
 @user_media_entry_router.delete(
     "/{entry_id}/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_review_for_user_media_entry(
+    entry_id: str = Path(..., description="User Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.delete_review(ctx.entry.id, review_id, ctx.user.id)
+    return await service.delete_review(entry_id, review_id, user.id)
 
 
 @user_media_entry_router.delete(
     "/{entry_id}/reviews", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_reviews_for_user_media_entry(
-    ctx: UserMediaEntryContext = Depends(get_user_media_entry_context),
+    entry_id: str = Path(..., description="User Media Entry ID"),
+    user: User = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.delete_reviews_for_user_media_entry(ctx.entry.id, ctx.user.id)
+    return await service.delete_reviews_for_user_media_entry(entry_id, user.id)

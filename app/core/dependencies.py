@@ -5,7 +5,6 @@ from app.core.config import Settings, get_settings
 from app.core.event_bus import EventBus
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.validators.user_media_entry_access import UserMediaEntryAccessValidator
 from app.services.anilist_service import AnilistService
 from app.integrations.anilistApi import AnilistApi
 
@@ -60,7 +59,7 @@ def get_event_bus(request: Request) -> EventBus:
 
 def get_anilist_service(
     anilist_api: AnilistApi = Depends(get_anilist_api),
-    redis_service: RedisService = Depends(get_redis_service)
+    redis_service: RedisService = Depends(get_redis_service),
 ) -> AnilistService:
     return AnilistService(anilist_api=anilist_api, redis_service=redis_service)
 
@@ -110,20 +109,24 @@ def get_review_repository(
     return ReviewRepository(db=db, collection_name=settings.review_collection)
 
 
-def get_review_service(
-    review_repository: ReviewRepository = Depends(get_review_repository),
-) -> ReviewService:
-    return ReviewService(
-        review_repository=review_repository,
-    )
-
-
 def get_user_media_entry_repository(
     db: AsyncIOMotorDatabase = Depends(get_mongo),
     settings: Settings = Depends(get_settings),
 ) -> UserMediaEntryRepository:
     return UserMediaEntryRepository(
         db=db, collection_name=settings.user_media_entry_collection
+    )
+
+
+def get_review_service(
+    review_repository: ReviewRepository = Depends(get_review_repository),
+    user_media_entry_repository: UserMediaEntryRepository = Depends(
+        get_user_media_entry_repository
+    ),
+) -> ReviewService:
+    return ReviewService(
+        review_repository=review_repository,
+        user_media_entry_repository=user_media_entry_repository,
     )
 
 
@@ -138,10 +141,3 @@ def get_user_media_entry_service(
         event_bus=event_bus,
     )
 
-
-def get_user_media_entry_access_validation(
-    user_media_entry_repository: UserMediaEntryRepository = Depends(
-        get_user_media_entry_repository
-    ),
-) -> UserMediaEntryAccessValidator:
-    return UserMediaEntryAccessValidator(entry_repository=user_media_entry_repository)
