@@ -13,7 +13,7 @@ from app.services.redis_service import RedisService
 from app.services.user_service import UserService
 from app.auth.jwt_handler import JWTHandler
 from app.auth.password_handler import PasswordHandler
-from redis.asyncio import Redis 
+from redis.asyncio import Redis
 
 
 def create_mock_motor_client() -> Any:
@@ -86,19 +86,20 @@ def test_get_password_handler_returns_instance(mock_request):
     assert result is password_handler
 
 
-def test_get_mongo_uses_database_name_from_settings(mock_request, monkeypatch):
-    database = MagicMock()
-    db = create_mock_motor_client()
-    db.__getitem__ = MagicMock(return_value=database)
+def test_get_mongo_uses_database_name_from_settings(mock_request):
+    expected_database_name = "otakutime"
+    expected_database = MagicMock()
+    mock_mongo_client = create_mock_motor_client()
+    mock_mongo_client.__getitem__ = MagicMock(return_value=expected_database)
+    mock_request.app.state.mongo_client = mock_mongo_client
 
-    settings = create_mock_settings(database_name="otakutime")
-    mock_request.app.state.mongo_client = db
-    monkeypatch.setattr(deps, "get_settings", lambda: settings)
+    settings = create_mock_settings(database_name=expected_database_name)
+    mock_request.app.state.settings = settings
 
-    resolved = deps.get_mongo(request=mock_request)
+    result = deps.get_mongo(request=mock_request)
 
-    assert resolved is database
-    db.__getitem__.assert_called_with("otakutime")
+    assert result is expected_database
+    mock_mongo_client.__getitem__.assert_called_once_with(expected_database_name)
 
 
 def test_get_anilist_service_wires_api():

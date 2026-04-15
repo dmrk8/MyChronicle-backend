@@ -185,9 +185,11 @@ async def test_delete_entry_raises_when_delete_not_acknowledged(
     entry = create_user_media_entry_db(user_id="user-1")
     mock_repository.get_entry_by_id = AsyncMock(return_value=entry)
     mock_review_service.delete_reviews_for_user_media_entry = AsyncMock()
-    mock_repository.delete_entry = AsyncMock(return_value=MagicMock(acknowledged=False))
+    mock_repository.delete_entry = AsyncMock(return_value=None)
 
-    with pytest.raises(RuntimeError, match="Delete operation not acknowledged"):
+    with pytest.raises(
+        RuntimeError, match="Delete operation not acknowledged for entry entry-1"
+    ):
         await service.delete_entry("entry-1", "user-1")
 
 
@@ -429,9 +431,7 @@ async def test_delete_all_entries_for_user_cascades_reviews(
 async def test_delete_all_entries_for_user_raises_when_not_acknowledged(
     service, mock_repository, mock_review_service
 ):
-    mock_repository.delete_by_user_id = AsyncMock(
-        return_value=MagicMock(acknowledged=False)
-    )
+    mock_repository.delete_by_user_id = AsyncMock(return_value=None)
 
     with pytest.raises(RuntimeError, match="Failed to delete entries for user"):
         await service.delete_all_entries_for_user("user-1")

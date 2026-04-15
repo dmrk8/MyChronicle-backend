@@ -6,7 +6,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.auth.password_handler import PasswordHandler
 from app.core.exceptions import AuthenticationError, ConflictException
-from app.models.user_models import UserDB, UserRole, UserUpdate
+from app.models.user_models import UserDB, UserRole, UserUpdate, UpdateUsername
 from app.repositories.user_repository import UserRepository
 from app.services.user_service import UserService
 
@@ -105,8 +105,11 @@ async def test_update_user_missing_raises_runtime_error(
 async def test_update_username_success(user_service, mock_user_repository):
     updated_user = create_user_db(username="renamed")
     mock_user_repository.update = AsyncMock(return_value=updated_user)
+    update_username = UpdateUsername(username="renamed")
 
-    result = await user_service.update_username("507f1f77bcf86cd799439011", "renamed")
+    result = await user_service.update_username(
+        "507f1f77bcf86cd799439011", update_username
+    )
 
     assert result is None
     updated_payload = mock_user_repository.update.call_args.args[1]
@@ -119,11 +122,12 @@ async def test_update_username_missing_raises_runtime_error(
     user_service, mock_user_repository
 ):
     mock_user_repository.update = AsyncMock(return_value=None)
+    update_username = UpdateUsername(username="renamed")
 
     with pytest.raises(
         RuntimeError, match="User missing after update - data integrity issue"
     ):
-        await user_service.update_username("missing_user", "renamed")
+        await user_service.update_username("missing_user", update_username)
 
 
 @pytest.mark.asyncio

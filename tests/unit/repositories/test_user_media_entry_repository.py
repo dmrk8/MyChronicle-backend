@@ -175,7 +175,7 @@ async def test_delete_entry_uses_owner_scope(
 
     result = await repository.delete_entry(str(entry_id), "user-1")
 
-    assert result.deleted_count == 1
+    assert result == True
     mock_collection.delete_one.assert_awaited_once_with(
         {"_id": entry_id, "user_id": "user-1"}
     )
@@ -372,5 +372,5 @@ async def test_delete_by_user_id_deletes_all_entries_for_user(
 
     result = await repository.delete_by_user_id("user-1")
 
-    assert result.deleted_count == 5
+    assert result == True
     mock_collection.delete_many.assert_awaited_once_with({"user_id": "user-1"})
