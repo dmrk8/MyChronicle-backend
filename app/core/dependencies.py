@@ -41,7 +41,7 @@ def get_password_handler(request: Request) -> PasswordHandler:
 
 
 def get_mongo(request: Request) -> AsyncIOMotorDatabase:
-    settings = get_settings()
+    settings = request.app.state.settings
     return request.app.state.mongo_client[settings.database_name]
 
 
