@@ -67,6 +67,10 @@ class UpdatePassword(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class UpdateUsername(BaseModel):
+    username: str = Field(...)
+
+
 class User(BaseModel):
     id: str
     username: str

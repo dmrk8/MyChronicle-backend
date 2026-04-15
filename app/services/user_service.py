@@ -5,7 +5,7 @@ from typing import Optional
 from app.auth import password_handler
 from app.core.event_bus import EventBus
 from app.core.exceptions import AuthenticationError, ConflictException
-from app.models.user_models import User, UserInsert, UserUpdate
+from app.models.user_models import UpdateUsername, User, UserInsert, UserUpdate
 from app.repositories.user_repository import UserRepository
 
 logger = structlog.get_logger()
@@ -38,8 +38,8 @@ class UserService:
 
         return User.from_db(res)
 
-    async def update_username(self, user_id: str, username: str) -> None:
-        update_data = UserUpdate(username=username)  # type: ignore
+    async def update_username(self, user_id: str, update_username: UpdateUsername) -> None:
+        update_data = UserUpdate(username=update_username.username)  # type: ignore
         res = await self.user_repository.update(user_id, update_data)
         if res is None:
             raise RuntimeError("User missing after update - data integrity issue")
