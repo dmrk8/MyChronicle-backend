@@ -24,7 +24,8 @@ jobs:
           python-version: '3.13'
       - run: pip install -r requirements.txt
       - run: pip install -r dev-requirements.txt
-      - run: pytest tests/ -v
+      - name: Run tests
+        run: PYTHONPATH=. pytest tests/ -v
 
   deploy:
     needs: test
