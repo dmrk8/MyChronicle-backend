@@ -188,7 +188,7 @@ class UserMediaEntryRepository:
             return UserMediaEntryDB.model_validate(doc)
         return None
 
-    async def delete_entry(self, entry_id: str, user_id: str) -> DeleteResult:
+    async def delete_entry(self, entry_id: str, user_id: str) -> bool:
         async def _op() -> DeleteResult:
             return await self.collection.delete_one(
                 {"_id": ObjectId(entry_id), "user_id": user_id}
@@ -201,21 +201,7 @@ class UserMediaEntryRepository:
             error_event="mongo_user_media_entry_delete_one_error",
             context={"entry_id": entry_id, "user_id": user_id},
         )
-
-        if result.deleted_count == 0:
-            self.logger.warning(
-                "mongo_user_media_entry_delete_not_found_or_forbidden",
-                entry_id=entry_id,
-                user_id=user_id,
-            )
-        else:
-            self.logger.debug(
-                "mongo_user_media_entry_delete_success",
-                entry_id=entry_id,
-                user_id=user_id,
-                deleted_count=result.deleted_count,
-            )
-        return result
+        return result.deleted_count > 0
 
     async def count_entries_by_user_id(self, user_id: str) -> int:
         async def _op() -> int:
@@ -299,7 +285,7 @@ class UserMediaEntryRepository:
         )
         return results
     
-    async def delete_by_user_id(self, user_id: str) -> DeleteResult:
+    async def delete_by_user_id(self, user_id: str) -> bool:
         async def _op() -> DeleteResult:
             return await self.collection.delete_many({"user_id": user_id})
 
@@ -316,4 +302,4 @@ class UserMediaEntryRepository:
             user_id=user_id,
             deleted_count=result.deleted_count,
         )
-        return result
+        return result.deleted_count > 0

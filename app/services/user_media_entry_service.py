@@ -1,4 +1,5 @@
 from typing import Any, Optional
+
 from app.core.event_bus import EventBus
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.user_media_entry_models import (
@@ -17,7 +18,6 @@ from app.enums.user_media_entry_enums import (
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
 )
-from pymongo.results import DeleteResult
 
 import structlog
 import re
@@ -82,8 +82,8 @@ class UserMediaEntryService:
     async def delete_entry(self, entry_id: str, user_id: str) -> None:
         await self._verify_ownership(entry_id, user_id)
         await self.review_service.delete_reviews_for_user_media_entry(entry_id, user_id)
-        result: DeleteResult = await self.repository.delete_entry(entry_id, user_id)
-        if not result.acknowledged:
+        deleted = await self.repository.delete_entry(entry_id, user_id)
+        if not deleted:
             raise RuntimeError(
                 f"Delete operation not acknowledged for entry {entry_id}"
             )
@@ -188,13 +188,12 @@ class UserMediaEntryService:
 
     async def delete_all_entries_for_user(self, user_id: str) -> None:
         """Delete all media entries (and their reviews) for a user."""
-        result: DeleteResult = await self.repository.delete_by_user_id(user_id)
-        if not result.acknowledged:
+        deleted = await self.repository.delete_by_user_id(user_id)
+        if not deleted:
             raise RuntimeError(f"Failed to delete entries for user {user_id}")
 
         await self.review_service.delete_all_reviews_for_user(user_id)
         logger.info(
             "all_entries_deleted_for_user",
             user_id=user_id,
-            deleted_count=result.deleted_count,
         )
