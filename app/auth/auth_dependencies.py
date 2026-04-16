@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status, Request
 from app.services.user_service import UserService
-from app.models.user_models import User
+from app.models.db.user_models import User
 from app.auth.jwt_handler import JWTHandler
 from app.core.dependencies import get_user_service, get_jwt_handler
 from structlog.contextvars import bind_contextvars

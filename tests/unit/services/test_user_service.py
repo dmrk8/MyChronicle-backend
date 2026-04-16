@@ -6,7 +6,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.auth.password_handler import PasswordHandler
 from app.core.exceptions import AuthenticationError, ConflictException
-from app.models.user_models import UserDB, UserRole, UserUpdate, UpdateUsername
+from app.models.db.user_models import UserDB, UserRole, UserUpdate, UpdateUsername
 from app.repositories.user_repository import UserRepository
 from app.services.user_service import UserService
 

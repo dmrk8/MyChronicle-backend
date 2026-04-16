@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from app.auth.auth_dependencies import get_current_user
-from app.models.user_models import UpdatePassword, UpdateUsername, User
+from app.models.db.user_models import UpdatePassword, UpdateUsername, User
 from app.services.user_service import UserService
 from app.core.dependencies import get_user_service
 

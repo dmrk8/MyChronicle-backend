@@ -3,7 +3,7 @@ import structlog
 import calendar
 
 from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
-from app.models.anilist_models import (
+from app.models.api.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,
     MediaDate,

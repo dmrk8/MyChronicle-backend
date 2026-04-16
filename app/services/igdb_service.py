@@ -1,6 +1,6 @@
 import logging
 from app.integrations.igdb_api import IGDBApi
-from app.models.igdb_models import IGDBGameDetail
+from app.models.api.igdb_models import IGDBGameDetail
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
 from bson import ObjectId
-from app.models.review_models import ReviewDB, ReviewInsert, ReviewUpdate
+from app.models.db.review_models import ReviewDB, ReviewInsert, ReviewUpdate
 from app.repositories._repo_observability import run_db_op
 import structlog
 

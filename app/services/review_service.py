@@ -1,6 +1,6 @@
 from typing import List, Optional
 from app.core.exceptions import NotFoundException, ForbiddenException
-from app.models.review_models import Review, ReviewCreate, ReviewInsert, ReviewUpdate
+from app.models.db.review_models import Review, ReviewCreate, ReviewInsert, ReviewUpdate
 from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from pymongo.results import DeleteResult

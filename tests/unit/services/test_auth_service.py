@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.auth.jwt_handler import JWTHandler
 from app.core.exceptions import AuthenticationError, ConflictException
-from app.models.auth_models import RegisterRequest
-from app.models.user_models import User, UserRole
+from app.models.auth.auth_models import RegisterRequest
+from app.models.db.user_models import User, UserRole
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from datetime import datetime, timezone

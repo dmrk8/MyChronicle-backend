@@ -1,7 +1,7 @@
 ﻿import structlog
 
 from app.auth.jwt_handler import JWTHandler
-from app.models.auth_models import RegisterRequest
+from app.models.auth.auth_models import RegisterRequest
 from app.services.user_service import UserService
 
 logger = structlog.get_logger("auth_service")

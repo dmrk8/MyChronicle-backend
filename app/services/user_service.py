@@ -5,7 +5,7 @@ from typing import Optional
 from app.auth import password_handler
 from app.core.event_bus import EventBus
 from app.core.exceptions import AuthenticationError, ConflictException
-from app.models.user_models import UpdateUsername, User, UserInsert, UserUpdate
+from app.models.db.user_models import UpdateUsername, User, UserInsert, UserUpdate
 from app.repositories.user_repository import UserRepository
 
 logger = structlog.get_logger()

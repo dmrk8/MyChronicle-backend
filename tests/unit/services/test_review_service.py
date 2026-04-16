@@ -7,7 +7,7 @@ from app.core.exceptions import NotFoundException, ForbiddenException
 from app.services.review_service import ReviewService
 from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
-from app.models.review_models import (
+from app.models.db.review_models import (
     Review,
     ReviewCreate,
     ReviewDB,

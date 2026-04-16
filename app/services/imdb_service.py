@@ -1,6 +1,6 @@
 import logging
 from app.integrations.imdb_api import IMDBApi
-from app.models.imdb_models import IMDBAggregateRating
+from app.models.api.imdb_models import IMDBAggregateRating
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 from bson import ObjectId
 
 import app.repositories.review_repository as repo_module
-from app.models.review_models import ReviewInsert, ReviewUpdate
+from app.models.db.review_models import ReviewInsert, ReviewUpdate
 from app.repositories.review_repository import ReviewRepository
 
 

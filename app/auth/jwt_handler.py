@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from typing import Optional
 import structlog
-from app.models.jwt_models import Claims
+from app.models.auth.jwt_models import Claims
 
 
 class JWTHandler:

@@ -4,7 +4,7 @@ from bson import ObjectId
 import pytest
 from pydantic import ValidationError
 
-from app.models.review_models import (
+from app.models.db.review_models import (
     Review,
     ReviewCreate,
     ReviewDB,

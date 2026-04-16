@@ -8,7 +8,7 @@ from app.enums.user_media_entry_enums import (
     MediaType,
     UserMediaEntryStatus,
 )
-from app.models.user_media_entry_models import (
+from app.models.db.user_media_entry_models import (
     UserMediaEntryCreate,
     UserMediaEntryDB,
     UserMediaEntryInsert,

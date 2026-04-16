@@ -4,7 +4,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from pymongo.results import DeleteResult, InsertOneResult
 from bson import ObjectId
-from app.models.user_media_entry_models import (
+from app.models.db.user_media_entry_models import (
     UserMediaEntryDB,
     UserMediaEntryInsert,
     UserMediaEntrySyncMetadata,

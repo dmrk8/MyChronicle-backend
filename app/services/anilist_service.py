@@ -7,7 +7,7 @@ from app.cache.anilist_cache import (
 )
 from app.integrations.anilistApi import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType
-from app.models.cache_models import (
+from app.models.cache.cache_models import (
     CachedAnimeDetail,
     CachedMangaDetail,
     CachedMediaPagination,

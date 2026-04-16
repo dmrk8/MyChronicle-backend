@@ -1,7 +1,7 @@
 from typing import  List, Optional
 from httpx import AsyncClient
 
-from app.models.anilist_models import (
+from app.models.api.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,
     AnilistPageInfo,

@@ -6,7 +6,7 @@ from bson import ObjectId
 from pymongo import ReturnDocument
 
 import app.repositories.user_repository as repo_module
-from app.models.user_models import UserInsert, UserRole, UserUpdate
+from app.models.db.user_models import UserInsert, UserRole, UserUpdate
 from app.repositories.user_repository import UserRepository
 
 

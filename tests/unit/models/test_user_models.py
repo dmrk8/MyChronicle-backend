@@ -4,7 +4,7 @@ from bson import ObjectId
 from pydantic import ValidationError
 import pytest
 
-from app.models.user_models import (
+from app.models.db.user_models import (
     User,
     UserDB,
     UserInsert,

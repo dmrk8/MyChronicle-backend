@@ -1,5 +1,5 @@
 import httpx
-from app.models.imdb_models import IMDBResponse
+from app.models.api.imdb_models import IMDBResponse
 
 
 class IMDBApi:

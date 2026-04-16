@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from app.core.event_bus import EventBus
 from app.core.exceptions import ForbiddenException, NotFoundException
-from app.models.user_media_entry_models import (
+from app.models.db.user_media_entry_models import (
     UserMediaEntry,
     UserMediaEntryCreate,
     UserMediaEntryDB,

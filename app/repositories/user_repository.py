@@ -6,7 +6,7 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.results import DeleteResult, InsertOneResult, UpdateResult
 
-from app.models.user_models import UserDB, UserInsert, UserUpdate
+from app.models.db.user_models import UserDB, UserInsert, UserUpdate
 from app.repositories._repo_observability import run_db_op
 
 logger = structlog.get_logger()

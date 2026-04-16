@@ -2,7 +2,7 @@ from typing import List, Optional
 import httpx
 import structlog
 import asyncio
-from app.models.tmdb_models import (
+from app.models.api.tmdb_models import (
     TMDBCollection,
     TMDBMediaMinimal,
     TMDBPageInfo,

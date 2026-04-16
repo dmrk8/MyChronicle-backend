@@ -5,15 +5,15 @@ from app.core.dependencies import (
     get_review_service,
     get_user_media_entry_service,
 )
-from app.models.review_models import Review, ReviewCreate, ReviewUpdate
-from app.models.user_media_entry_models import (
+from app.models.db.review_models import Review, ReviewCreate, ReviewUpdate
+from app.models.db.user_media_entry_models import (
     UserMediaEntry,
     UserMediaEntryCreate,
     UserMediaEntrySyncMetadata,
     UserMediaEntryUpdate,
     UserMediaEntryPagination,
 )
-from app.models.user_models import User
+from app.models.db.user_models import User
 
 from app.services.review_service import ReviewService
 from app.services.user_media_entry_service import UserMediaEntryService

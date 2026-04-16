@@ -11,7 +11,7 @@ from app.enums.user_media_entry_enums import (
     MediaType,
     UserMediaEntryStatus,
 )
-from app.models.user_media_entry_models import (
+from app.models.db.user_media_entry_models import (
     UserMediaEntryInsert,
     UserMediaEntryUpdate,
 )
@@ -261,7 +261,7 @@ async def test_get_entries_scopes_filters_with_user_id_and_applies_pagination(
 async def test_sync_entry_metadata_applies_owner_scope_and_returns_synced_doc(
     repository, mock_collection, passthrough_run_db_op
 ):
-    from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
+    from app.models.db.user_media_entry_models import UserMediaEntrySyncMetadata
 
     entry_id = ObjectId()
     metadata = UserMediaEntrySyncMetadata(
@@ -301,7 +301,7 @@ async def test_sync_entry_metadata_applies_owner_scope_and_returns_synced_doc(
 async def test_sync_entry_metadata_returns_none_when_not_found(
     repository, mock_collection, passthrough_run_db_op
 ):
-    from app.models.user_media_entry_models import UserMediaEntrySyncMetadata
+    from app.models.db.user_media_entry_models import UserMediaEntrySyncMetadata
 
     entry_id = ObjectId()
     metadata = UserMediaEntrySyncMetadata(title="New Title")  # type: ignore

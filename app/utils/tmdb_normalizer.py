@@ -13,7 +13,7 @@ from app.models.media_models import (
     MovieDetailed,
     TVDetailed,
 )
-from app.models.tmdb_models import (
+from app.models.api.tmdb_models import (
     TMDBAlternativeTitles,
     TMDBAlternativeTitlesTv,
     TMDBBelongsToCollection,

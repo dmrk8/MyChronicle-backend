@@ -4,7 +4,7 @@ import time  # Add this import
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv, set_key
 import httpx
-from app.models.igdb_models import IGDBGameDetail, IGDBToken
+from app.models.api.igdb_models import IGDBGameDetail, IGDBToken
 
 load_dotenv()
 
