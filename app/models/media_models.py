@@ -2,11 +2,11 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 from app.enums.user_media_entry_enums import MediaType
-from app.models.anilist_models import (
+from app.models.api.anilist_models import (
     NextAiringEpisode,
     Tag,
 )
-from app.models.tmdb_models import (
+from app.models.api.tmdb_models import (
     TMDBLastEpisodeToAir,
     TMDBNextEpisodeToAir,
 )
