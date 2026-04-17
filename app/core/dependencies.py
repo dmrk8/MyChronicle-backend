@@ -8,6 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.services.anilist_service import AnilistService
 from app.integrations.anilistApi import AnilistApi
 
+from app.services.media_service import MediaService
 from app.services.redis_service import RedisService
 from app.services.review_service import ReviewService
 from app.services.tmdb_service import TMDBService
@@ -141,3 +142,14 @@ def get_user_media_entry_service(
         event_bus=event_bus,
     )
 
+
+def get_media_service(
+    redis_service: RedisService = Depends(get_redis_service),
+    anilist_service: AnilistService = Depends(get_anilist_service),
+    tmdb_service: TMDBService = Depends(get_tmdb_service),
+) -> MediaService:
+    return MediaService(
+        redis_service=redis_service,
+        anilist_service=anilist_service,
+        tmdb_service=tmdb_service,
+    )
