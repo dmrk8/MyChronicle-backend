@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     #    description="Expiration time for IGDB access token in seconds"
     # )#
     # steam_web_api_key: str = Field(description="API key for Steam Web API")
-    # omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
+    omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
 
     allow_origins: str = Field(
         default="http://localhost:5173",
