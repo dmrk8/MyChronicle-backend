@@ -1,13 +1,12 @@
 from typing import Optional
-from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 from pymongo.results import DeleteResult, InsertOneResult
-from app.enums.media_enums import MediaExternalSource
-from app.models.db.media_external_details_models import (
-    MediaExternalDetailsDB,
-    MediaExternalDetailsInsert,
-    MediaExternalDetailsUpdate,
+from app.enums.media_enums import MediaExternalSource, MediaType
+from app.models.db.external__storage_models import (
+    ExternalDataDB,
+    ExternalDataInsert,
+    ExternalDataUpdate,
 )
 from app.repositories._repo_observability import run_db_op
 import structlog
@@ -15,12 +14,12 @@ import structlog
 logger = structlog.get_logger()
 
 
-class MediaExternalDetailsRepository:
+class ExternalStorageRepository:
     def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
         self.db = db
         self.collection = self.db[collection_name]
         self.logger = logger.bind(
-            repository="MediaExternalDetailsRepository", collection=collection_name
+            repository="ExternalStorageRepository", collection=collection_name
         )
 
     async def init_indexes(self) -> None:
@@ -28,6 +27,7 @@ class MediaExternalDetailsRepository:
             [
                 ("external_id", 1),
                 ("external_source", 1),
+                ("media_type", 1),
             ],
             unique=True,
             name="external_id_source_unique_idx",
@@ -37,9 +37,7 @@ class MediaExternalDetailsRepository:
             "last_accessed_at", name="last_accessed_at_idx"
         )
 
-    async def upsert(
-        self, details: MediaExternalDetailsInsert
-    ) -> MediaExternalDetailsDB:
+    async def upsert(self, details: ExternalDataInsert) -> ExternalDataDB:
         data = details.model_dump()
 
         async def _op():
@@ -47,6 +45,7 @@ class MediaExternalDetailsRepository:
                 {
                     "external_id": details.external_id,
                     "external_source": details.external_source,
+                    "media_type": details.media_type,
                 },
                 {
                     "$set": {
@@ -74,17 +73,25 @@ class MediaExternalDetailsRepository:
             context={
                 "external_id": details.external_id,
                 "external_source": details.external_source,
+                "media_type": details.media_type,
             },
         )
 
-        return MediaExternalDetailsDB.model_validate(doc)
+        return ExternalDataDB.model_validate(doc)
 
-    async def get_by_external_id_and_source(
-        self, external_id: int, external_source: MediaExternalSource
-    ) -> Optional[MediaExternalDetailsDB]:
+    async def get_by_external_id_and_source_and_media_type(
+        self,
+        external_id: int,
+        external_source: MediaExternalSource,
+        media_type: MediaType,
+    ) -> Optional[ExternalDataDB]:
         async def _op():
             return await self.collection.find_one(
-                {"external_id": external_id, "external_source": external_source}
+                {
+                    "external_id": external_id,
+                    "external_source": external_source,
+                    "media_type": media_type,
+                }
             )
 
         doc = await run_db_op(
@@ -95,24 +102,26 @@ class MediaExternalDetailsRepository:
             context={
                 "external_id": external_id,
                 "external_source": str(external_source),
+                "media_type": str(media_type),
             },
         )
 
         if doc:
-            return MediaExternalDetailsDB.model_validate(doc)
+            return ExternalDataDB.model_validate(doc)
         return None
 
-    async def update(
+    async def update_by_external_id_and_source_and_media_type(
         self,
         external_id: int,
         external_source: MediaExternalSource,
-        update: MediaExternalDetailsUpdate,
-    ) -> Optional[MediaExternalDetailsDB]:
+        media_type: MediaType,
+        update: ExternalDataUpdate,
+    ) -> Optional[ExternalDataDB]:
         update_dict = update.to_update_dict()
 
         async def _op():
             return await self.collection.find_one_and_update(
-                {"external_id": external_id, "external_source": external_source},
+                {"external_id": external_id, "external_source": external_source, "media_type": media_type},
                 {"$set": update_dict},
                 return_document=ReturnDocument.AFTER,
             )
@@ -125,19 +134,20 @@ class MediaExternalDetailsRepository:
             context={
                 "external_id": external_id,
                 "external_source": str(external_source),
+                "media_type": str(media_type),
             },
         )
 
         if doc:
-            return MediaExternalDetailsDB.model_validate(doc)
+            return ExternalDataDB.model_validate(doc)
         return None
 
-    async def delete(
-        self, external_id: int, external_source: MediaExternalSource
+    async def delete_by_external_id_and_source_and_media_type(
+        self, external_id: int, external_source: MediaExternalSource, media_type: MediaType
     ) -> bool:
         async def _op() -> DeleteResult:
             return await self.collection.delete_one(
-                {"external_id": external_id, "external_source": external_source}
+                {"external_id": external_id, "external_source": external_source, "media_type": media_type}
             )
 
         result = await run_db_op(
@@ -148,6 +158,7 @@ class MediaExternalDetailsRepository:
             context={
                 "external_id": external_id,
                 "external_source": str(external_source),
+                "media_type": str(media_type),
             },
         )
         return result.deleted_count > 0
