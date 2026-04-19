@@ -297,6 +297,7 @@ class AnilistApi:
                     }
                   }
                 }
+                popularity
                 season
                 seasonYear
                 source
@@ -312,6 +313,7 @@ class AnilistApi:
                   native
                   romaji
                 }
+                idMal 
                 type
                 volumes
                 tags {

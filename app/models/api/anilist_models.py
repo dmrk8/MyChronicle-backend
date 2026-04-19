@@ -191,6 +191,7 @@ class AnilistMediaMinimal(BaseModel):
 
 class AnilistMediaDetailed(BaseModel):
     id: int
+    id_mal: Optional[int] = Field(None, alias="idMal")
     average_score: Optional[int] = Field(None, alias="averageScore")
     banner_image: Optional[str] = Field(None, alias="bannerImage")
     chapters: Optional[int] = None
@@ -214,6 +215,7 @@ class AnilistMediaDetailed(BaseModel):
     status: Optional[str] = None
     synonyms: Optional[List[str]] = None
     title: Title
+    popularity: Optional[int] = None
     type: str
     volumes: Optional[int] = None
     tags: List[Tag] = []
