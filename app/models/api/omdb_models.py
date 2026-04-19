@@ -28,10 +28,10 @@ class OMDbData(BaseModel):
     imdb_votes: Optional[str] = Field(None, alias="imdbVotes")
     imdbID: str
     Type: str
-    DVD: Optional[str]
-    BoxOffice: Optional[str]
-    Production: Optional[str]
-    Website: Optional[str]
+    DVD: Optional[str] = None
+    BoxOffice: Optional[str] = None
+    Production: Optional[str] = None
+    Website: Optional[str] = None
     total_seasons: Optional[str] = Field(None, alias="totalSeasons")
     Response: str
 

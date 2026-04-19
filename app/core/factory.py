@@ -45,6 +45,7 @@ def create_app(settings) -> FastAPI:
         # HTTP clients
         app.state.anilist_client = AsyncClient(timeout=10.0)
         app.state.tmdb_client = AsyncClient(timeout=10.0)
+        app.state.omdb_client = AsyncClient(timeout=10.0)   
 
         # Core services
         app.state.event_bus = EventBus()
@@ -59,7 +60,7 @@ def create_app(settings) -> FastAPI:
 
         # Repositories
         db = app.state.mongo_client[settings.database_name]
-        app.state.repos = await init_repositories(db, settings)
+        app.state.repositories = await init_repositories(db, settings)
 
         yield
 
