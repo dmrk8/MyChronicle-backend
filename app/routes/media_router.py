@@ -1,8 +1,9 @@
 from typing import List, Optional, Union
 from fastapi import APIRouter, Path, Query, Depends
 
+from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
 from app.models.media_models import AnimeDetailed, MangaDetailed, MediaPagination
-from app.enums.anilist_enums import SortOption, AnilistMediaType
+from app.enums.anilist_enums import AnilistSortOption, AnilistMediaType
 from app.services.media_service import MediaService
 from app.core.dependencies import get_media_service
 
@@ -10,11 +11,11 @@ media_router = APIRouter(prefix="/media")
 
 @media_router.get("/anilist/search/{media_type}", response_model=MediaPagination)
 async def search_anilist(
-    media_type: AnilistMediaType = Path(...),
+    media_type: str = Path(...),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=50, alias="perPage"),
     search: Optional[str] = Query(None, min_length=1),
-    sort: str = Query(SortOption.POPULARITY_DESC),
+    sort: AnilistSortOption = Query(AnilistSortOption.POPULARITY_DESC),
     season: Optional[str] = Query(None, pattern="^(SPRING|SUMMER|FALL|WINTER)$"),
     season_year: Optional[int] = Query(None, alias="seasonYear"),
     format: Optional[str] = Query(
@@ -31,10 +32,11 @@ async def search_anilist(
     tag_not_in: Optional[List[str]] = Query(None, alias="tagNotIn"),
     service: MediaService = Depends(get_media_service),
 ):
+    media_type_enum = AnilistMediaType(media_type.upper())
     return await service.search_media_anilist(
         page,
         per_page,
-        media_type,
+        media_type_enum,
         sort,
         search,
         season,
@@ -67,7 +69,7 @@ async def search_tmdb_movie(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
     language: str = Query("en-US", description="Language for results"),
-    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
+    sort_by: TmdbMovieSortOptions = Query(TmdbMovieSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"),
     primary_release_date_gte: Optional[str] = Query(
         None,
         description="Primary release date greater than or equal to",
@@ -125,7 +127,7 @@ async def search_tmdb_tv(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
     language: str = Query("en-US", description="Language for results"),
-    sort_by: str = Query("popularity.desc", description="Sort by", alias="sortBy"),
+    sort_by: TmdbTvSortOptions = Query(TmdbTvSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"),
     air_date_gte: Optional[str] = Query(
         None, description="Air date greater than or equal to", alias="airDateGte"
     ),
@@ -190,7 +192,7 @@ async def search_tmdb_tv(
     )
 
 
-@media_router.get("/tmdb/media/movie/{movie_id}")
+@media_router.get("/tmdb/movie/{movie_id}")
 async def get_tmdb_movie_detail(
     movie_id: int = Path(..., ge=1, description="Movie ID"),
     language: str = Query("en-US", description="Language for results"),
@@ -202,7 +204,7 @@ async def get_tmdb_movie_detail(
     )
 
 
-@media_router.get("/tmdb/media/tv/{tv_id}")
+@media_router.get("/tmdb/tv/{tv_id}")
 async def get_tmdb_tv_detail(
     tv_id: int = Path(..., ge=1, description="TV Show ID"),
     language: str = Query("en-US", description="Language for results"),
