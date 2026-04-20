@@ -8,19 +8,39 @@ from app.models.media_models import (
     TVDetailed,
 )
 from app.utils.tmdb_normalizer import TMDBNormalizer
+from app.models.api.tmdb_models import (
+    TMDBMovieDetail,
+    TMDBCollection,
+    TMDBPagination,
+    TMDBTVDetail,
+)
 
 
 class TMDBService:
     def __init__(self, tmdb_api: TMDBApi):
         self.tmdb_api = tmdb_api
 
+    @staticmethod
+    def _filter_recommendations(results):
+        """
+        Filters out anime (genre_id 16) with Japanese original language.
+        """
+        return [
+            media
+            for media in results
+            if not (
+                16 in getattr(media, "genre_ids", [])
+                and getattr(media, "original_language", None) == "ja"
+            )
+        ]
+
     async def get_trending_media(
         self, media_type: str, time_window: str, language: str, page: int
     ) -> MediaPagination:
-        results, page_info = await self.tmdb_api.get_trending_media(
+        pagination = await self.tmdb_api.get_trending_media(
             media_type=media_type, time_window=time_window, language=language, page=page
         )
-
+        results = pagination.results
         per_page = len(results)
 
         filtered_results = [
@@ -54,9 +74,10 @@ class TMDBService:
         without_keywords: Optional[str] = None,
     ) -> MediaPagination:
         if search:
-            results, page_info = await self.tmdb_api.get_search_movie(
+            pagination = await self.tmdb_api.get_search_movie(
                 query=search, page=page, language=language
             )
+            results = pagination.results
             per_page = len(results)
 
             filtered_results = [
@@ -76,7 +97,7 @@ class TMDBService:
             else:
                 without_keywords = "281372,210024"
 
-            results, page_info = await self.tmdb_api.get_discover_movie(
+            pagination = await self.tmdb_api.get_discover_movie(
                 page=page,
                 language=language,
                 sort_by=sort_by,
@@ -90,10 +111,14 @@ class TMDBService:
                 without_genres=without_genres,
                 without_keywords=without_keywords,
             )
-            per_page = len(results)
-            results = TMDBNormalizer.normalize_minimal(results, "movie")
+            per_page = len(pagination.results)
+            results = TMDBNormalizer.normalize_minimal(pagination.results, "movie")
         return MediaPagination(
-            results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
+            results=results,
+            currentPage=page,
+            perPage=20,
+            hasNextPage=per_page == 20,
+            total=pagination.total_results,
         )
 
     async def search_tv(
@@ -116,9 +141,10 @@ class TMDBService:
         without_keywords: Optional[str] = None,
     ) -> MediaPagination:
         if search:
-            results, page_info = await self.tmdb_api.get_search_tv(
+            pagination = await self.tmdb_api.get_search_tv(
                 query=search, page=page, language=language
             )
+            results = pagination.results
             per_page = len(results)
             filtered_results = [
                 media
@@ -137,7 +163,7 @@ class TMDBService:
             else:
                 without_keywords = "281372,210024"
 
-            results, page_info = await self.tmdb_api.get_discover_tv(
+            pagination = await self.tmdb_api.get_discover_tv(
                 page=page,
                 language=language,
                 sort_by=sort_by,
@@ -154,49 +180,44 @@ class TMDBService:
                 without_genres=without_genres,
                 without_keywords=without_keywords,
             )
-            per_page = len(results)
-            results = TMDBNormalizer.normalize_minimal(results, "tv")
+            per_page = len(pagination.results)
+            results = TMDBNormalizer.normalize_minimal(pagination.results, "tv")
         return MediaPagination(
-            results=results, currentPage=page, perPage=20, hasNextPage=per_page == 20
+            results=results,
+            currentPage=page,
+            perPage=20,
+            hasNextPage=per_page == 20,
+            total=pagination.total_results,
         )
 
     async def get_movie_detail(
         self,
         movie_id: int,
-        language: str,
-    ) -> MovieDetailed:
+        language: Optional[str] = "en-US",
+    ) -> TMDBMovieDetail:
         res = await self.tmdb_api.get_movie_detail(movie_id, language)
         if res.recommendations:
-            filtered_results = [
-                media
-                for media in res.recommendations.results
-                if not (16 in media.genre_ids and media.original_language == "ja")
-            ]
+            filtered_results = self._filter_recommendations(res.recommendations.results)
             res.recommendations.results = filtered_results
-        return TMDBNormalizer.normalize_movie_detailed(res)
+        return res
 
     async def get_tv_detail(
         self,
         tv_id: int,
-        language: str,
-    ) -> TVDetailed:
+        language: Optional[str] = "en-US",
+    ) -> TMDBTVDetail:
         res = await self.tmdb_api.get_tv_detail(tv_id, language)
         if res.recommendations:
-            filtered_results = [
-                media
-                for media in res.recommendations.results
-                if not (16 in media.genre_ids and media.original_language == "ja")
-            ]
+            filtered_results = self._filter_recommendations(res.recommendations.results)
             res.recommendations.results = filtered_results
-        return TMDBNormalizer.normalize_tv_detailed(res)
+        return res
 
     async def get_collection_detail(
         self,
         collection_id: int,
-        language: str,
-    ) -> Optional[MovieCollection]:
-        res = await self.tmdb_api.get_collection_detail(collection_id, language)
-        return TMDBNormalizer._get_movie_collection(res)
+        language: Optional[str] = "en-US",
+    ) -> Optional[TMDBCollection]:
+        return await self.tmdb_api.get_collection_detail(collection_id, language)
 
     async def search_keyword(
         self,

@@ -1,14 +1,13 @@
 from typing import List, Optional
 import httpx
 import structlog
-import asyncio
 from app.models.api.tmdb_models import (
     TMDBCollection,
     TMDBMediaMinimal,
     TMDBPageInfo,
     TMDBMovieDetail,
+    TMDBPagination,
     TMDBTVDetail,
-    TMDBExternalIds,
 )
 from app.integrations.http_helpers import perform_request
 
@@ -32,7 +31,7 @@ class TMDBApi:
         time_window: str,  # "day" or "week"
         language: str,
         page: int,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+    ) -> TMDBPagination:
         """
         Fetches trending media (movie or TV) from TMDB.
         """
@@ -51,14 +50,12 @@ class TMDBApi:
             TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
         ]
 
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", page),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
+        return TMDBPagination(
+            results=results,
+            page=data.get("page", page),
+            total_pages=data.get("total_pages", 1),
+            total_results=data.get("total_results", 0),
         )
-        return results, page_info
 
     async def get_search_movie(
         self,
@@ -66,7 +63,7 @@ class TMDBApi:
         query: str,
         language: str = "en-US",
         include_adult: bool = False,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+    ) -> TMDBPagination:
         """
         Searches for movies on TMDB.
         """
@@ -89,14 +86,13 @@ class TMDBApi:
         results = [
             TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
         ]
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", page),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
+
+        return TMDBPagination(
+            results=results,
+            page=data.get("page", page),
+            total_pages=data.get("total_pages", 1),
+            total_results=data.get("total_results", 0),
         )
-        return results, page_info
 
     async def get_search_tv(
         self,
@@ -104,7 +100,7 @@ class TMDBApi:
         query: str,
         language: str = "en-US",
         include_adult: bool = False,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+    ) -> TMDBPagination:
         """
         Searches for TV shows on TMDB.
         """
@@ -127,15 +123,13 @@ class TMDBApi:
         results = [
             TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
         ]
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", page),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
-        )
-        return results, page_info
 
+        return TMDBPagination(
+            results=results,
+            page=data.get("page", page),
+            total_pages=data.get("total_pages", 1),
+            total_results=data.get("total_results", 0),
+        )
 
     async def get_discover_movie(
         self,
@@ -151,7 +145,7 @@ class TMDBApi:
         with_original_language: Optional[str] = None,
         without_genres: Optional[str] = None,
         without_keywords: Optional[str] = None,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+    ) -> TMDBPagination:
         """
         Fetches discovered movies with filters from TMDB.
         """
@@ -194,14 +188,13 @@ class TMDBApi:
         results = [
             TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
         ]
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", page),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
+
+        return TMDBPagination(
+            results=results,
+            page=data.get("page", page),
+            total_pages=data.get("total_pages", 1),
+            total_results=data.get("total_results", 0),
         )
-        return results, page_info
 
     async def get_discover_tv(
         self,
@@ -220,7 +213,7 @@ class TMDBApi:
         with_status: Optional[str] = None,
         without_genres: Optional[str] = None,
         without_keywords: Optional[str] = None,
-    ) -> tuple[List[TMDBMediaMinimal], TMDBPageInfo]:
+    ) -> TMDBPagination:
         """
         Fetches discovered TV shows with filters from TMDB.
         """
@@ -269,19 +262,18 @@ class TMDBApi:
         results = [
             TMDBMediaMinimal.model_validate(item) for item in data.get("results", [])
         ]
-        page_info = TMDBPageInfo.model_validate(
-            {
-                "page": data.get("page", page),
-                "total_pages": data.get("total_pages", 1),
-                "total_results": data.get("total_results", 0),
-            }
+
+        return TMDBPagination(
+            results=results,
+            page=data.get("page", page),
+            total_pages=data.get("total_pages", 1),
+            total_results=data.get("total_results", 0),
         )
-        return results, page_info
 
     async def get_movie_detail(
         self,
         movie_id: int,
-        language: str,
+        language: Optional[str],
     ) -> TMDBMovieDetail:
         """
         Fetches detailed information for a specific movie from TMDB, including keywords.
@@ -306,14 +298,14 @@ class TMDBApi:
     async def get_tv_detail(
         self,
         tv_id: int,
-        language: str,
+        language: Optional[str],
     ) -> TMDBTVDetail:
         """
         Fetches detailed information for a specific TV show from TMDB, including keywords.
         """
         url = f"{self.BASE_URL}/tv/{tv_id}"
         params = {
-            "append_to_response": "keywords,credits,recommendations,alternative_titles",
+            "append_to_response": "keywords,credits,recommendations,alternative_titles,external_ids",
             "language": language,
         }
         data = await perform_request(
@@ -328,12 +320,10 @@ class TMDBApi:
         tv_detail = TMDBTVDetail.model_validate(data)
         return tv_detail
 
-    
-
     async def get_collection_detail(
         self,
         collection_id: int,
-        language: str,
+        language: Optional[str],
     ) -> TMDBCollection:
         """
         Fetches detailed information for a specific collection from TMDB.

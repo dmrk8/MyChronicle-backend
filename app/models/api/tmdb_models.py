@@ -166,8 +166,8 @@ class TMDBPageInfo(BaseModel):
 class TMDBPagination(BaseModel):
     results: List[TMDBMediaMinimal]
     page: int
-    total_pages: int = Field(..., alias="totalPages")
-    total_results: int = Field(..., alias="totalResults")
+    total_pages: int = Field(...)
+    total_results: int = Field(...)
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -238,7 +238,6 @@ class TMDBMediaDetailBase(BaseModel):
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
     genres: List[TMDBGenre]
     id: int
-    imdb_id: Optional[str] = Field(None, alias="imdbId")
     origin_country: List[str] = Field(..., alias="originCountry")
     original_language: str = Field(..., alias="originalLanguage")
     overview: str
@@ -258,6 +257,7 @@ class TMDBMediaDetailBase(BaseModel):
 
 
 class TMDBMovieDetail(TMDBMediaDetailBase):
+    imdb_id: Optional[str] = Field(None, alias="imdbId")
     belongs_to_collection: Optional[TMDBBelongsToCollection] = Field(
         None, alias="belongsToCollection"
     )
@@ -311,5 +311,6 @@ class TMDBTVDetail(TMDBMediaDetailBase):
     alternative_titles: Optional[TMDBAlternativeTitlesTv] = Field(
         None, alias="alternativeTitles"
     )
+    external_ids: Optional[TMDBExternalIds] = Field(None, alias="externalIds")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
