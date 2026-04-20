@@ -10,6 +10,7 @@ from app.models.api.tmdb_models import (
     TMDBLastEpisodeToAir,
     TMDBNextEpisodeToAir,
 )
+from app.models.db.media_db_models import MediaScore
 
 
 class MediaMinimal(BaseModel):
@@ -61,11 +62,11 @@ class MediaBase(BaseModel):
     genres: Optional[List[str]] = None
     status: Optional[str] = None
     cover_image: Optional[str] = Field(None, alias="coverImage")
-    average_score: Optional[float] = Field(None, alias="averageScore")
     description: Optional[str] = None
     banner_image: Optional[str] = Field(None, alias="bannerImage")
     is_adult: Optional[bool] = Field(None, alias="isAdult")
     synonyms: Optional[List[str]] = None
+    media_scores: Optional[List[MediaScore]] = None
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -223,10 +224,10 @@ class MovieCollectionPart(BaseModel):
     backdrop_path: Optional[str] = Field(None, alias="backdropPath")
     id: int
     title: str
+    original_title: str = Field(..., alias="originalTitle")
     media_type: MediaType = Field(..., alias="mediaType")
     release_date: str = Field(..., alias="releaseDate")
     poster_path: Optional[str] = Field(None, alias="posterPath")  
-
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -241,3 +242,6 @@ class MovieCollection(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
+class MovieDetailedWithCollection(BaseModel):
+    movie: MovieDetailed
+    collection: Optional[MovieCollection] = None

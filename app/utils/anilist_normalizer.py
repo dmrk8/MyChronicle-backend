@@ -86,9 +86,6 @@ class AnilistNormalizer:
                 genres=media.genres,
                 status=AnilistNormalizer._convert_enum_field(media.status),
                 coverImage=media.cover_image.extra_large if media.cover_image else None,
-                averageScore=(
-                    round(media.average_score / 10, 1) if media.average_score else None
-                ),
                 description=media.description,
                 bannerImage=media.banner_image,
                 isAdult=media.is_adult,
@@ -136,9 +133,6 @@ class AnilistNormalizer:
                 genres=media.genres,
                 status=AnilistNormalizer._convert_enum_field(media.status),
                 coverImage=media.cover_image.extra_large if media.cover_image else None,
-                averageScore=(
-                    round(media.average_score / 10, 1) if media.average_score else None
-                ),
                 description=media.description,
                 bannerImage=media.banner_image,
                 isAdult=media.is_adult,
