@@ -1,5 +1,6 @@
 import httpx
 from typing import Optional
+from app.integrations.http_helpers import perform_request
 from app.models.api.omdb_models import OMDbData
 
 OMDB_API_URL = "http://www.omdbapi.com/"
@@ -19,9 +20,12 @@ class OMDbApi:
             params["t"] = title
         if imdb_id:
             params["i"] = imdb_id
-        response = await self.client.get(self.BASE_URL, params=params)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("Response") == "True":
-            return OMDbData.model_validate(data)
-        return None
+        data = await perform_request(
+            client=self.client,
+            method="GET",
+            url=self.BASE_URL,
+            params=params,
+            headers=None,
+            action="fetch_omdb_data",
+        )
+        return OMDbData.model_validate(data)

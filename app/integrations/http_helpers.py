@@ -7,16 +7,14 @@ from app.core.exceptions import UpstreamServiceException
 logger = structlog.get_logger()
 
 ACTION_SERVICE_MAP = {
-    "get_featured_media": "Anime-Manga",
     "search_media": "Anime-Manga",
     "get_media_detail": "Anime-Manga",
-    "get_featured_media_bulk": "Anime-Manga",
-    "get_featured_manga_bulk": "Anime-Manga",
     "get_trending_media": "Movies-TV",
     "get_movie_detail": "Movies-TV",
     "get_tv_detail": "Movies-TV",
     "get_discover_movie": "Movies-TV",
     "get_discover_tv": "Movies-TV",
+    "fetch_omdb_data": "OMDb", 
 }
 
 
