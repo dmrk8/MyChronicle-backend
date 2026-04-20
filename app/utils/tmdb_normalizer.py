@@ -44,7 +44,7 @@ class TMDBNormalizer:
     TMDB_COLLECTION_BACKDROP_SIZE = "w1440_and_h320_multi_faces"
 
     MAX_CAST = 6
-    MAX_RECOMMENDATIONS = 7
+    MAX_RECOMMENDATIONS = 20
 
     @staticmethod
     def normalize_minimal(
@@ -62,7 +62,7 @@ class TMDBNormalizer:
                     genres=TMDBNormalizer._get_genres(media.genre_ids, media_type),
                     averageScore=round(media.vote_average, 1),
                     format=media.media_type,
-                    coverImage=TMDBNormalizer._get_image_url(
+                    coverImage=TMDBNormalizer.get_image_url(
                         media.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
                     ),
                     releaseDate=media.release_date,
@@ -78,19 +78,19 @@ class TMDBNormalizer:
         """Normalize TMDB movie data to MovieDetailed."""
         try:
             title = media.title or media.original_title or ""
-            cover_image = TMDBNormalizer._get_image_url(
+            cover_image = TMDBNormalizer.get_image_url(
                 media.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
             )
-            banner_image = TMDBNormalizer._get_image_url(
+            banner_image = TMDBNormalizer.get_image_url(
                 media.backdrop_path, TMDBNormalizer.TMDB_BACKDROP_SIZE
             )
             belongs_to_collection = TMDBNormalizer._get_belongs_to_collection(
                 media.belongs_to_collection
             )
-            alternative_titles = TMDBNormalizer._get_alternative_titles(
+            alternative_titles = TMDBNormalizer.get_alternative_titles(
                 media.alternative_titles
             )
-            keywords = TMDBNormalizer._get_movie_keywords(media.keywords)
+            keywords = TMDBNormalizer.get_movie_keywords(media.keywords)
             credits = TMDBNormalizer._get_cast(media.credits)
             recommendations = TMDBNormalizer._get_movie_recommendations(
                 media.recommendations
@@ -105,7 +105,6 @@ class TMDBNormalizer:
                 genres=[genre.name for genre in media.genres],
                 status=media.status,
                 coverImage=cover_image,
-                averageScore=round(media.vote_average, 1),
                 description=media.overview,
                 bannerImage=banner_image,
                 originCountry=media.origin_country,
@@ -139,19 +138,19 @@ class TMDBNormalizer:
         """Normalize TMDB TV data to TVDetailed."""
         try:
             title = media.name or media.original_name or ""
-            cover_image = TMDBNormalizer._get_image_url(
+            cover_image = TMDBNormalizer.get_image_url(
                 media.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
             )
-            banner_image = TMDBNormalizer._get_image_url(
+            banner_image = TMDBNormalizer.get_image_url(
                 media.backdrop_path, TMDBNormalizer.TMDB_BACKDROP_SIZE
             )
             seasons = TMDBNormalizer._get_seasons(media.seasons)
-            keywords = TMDBNormalizer._get_tv_keywords(media.keywords)
+            keywords = TMDBNormalizer.get_tv_keywords(media.keywords)
             credits = TMDBNormalizer._get_cast(media.credits)
             recommendations = TMDBNormalizer._get_tv_recommendations(
                 media.recommendations
             )
-            alternative_titles = TMDBNormalizer._get_tv_alternative_titles(
+            alternative_titles = TMDBNormalizer.get_tv_alternative_titles(
                 media.alternative_titles
             )
             
@@ -164,7 +163,6 @@ class TMDBNormalizer:
                 genres=[genre.name for genre in media.genres],
                 status=media.status,
                 coverImage=cover_image,
-                averageScore=round(media.vote_average, 1),
                 description=media.overview,
                 bannerImage=banner_image,
                 isAdult=media.adult,
@@ -206,7 +204,7 @@ class TMDBNormalizer:
             raise
 
     @staticmethod
-    def _get_image_url(path: Optional[str], size: str) -> str:
+    def get_image_url(path: Optional[str], size: str) -> str:
         """Construct TMDB image URL."""
         if not path:
             return ""
@@ -253,13 +251,13 @@ class TMDBNormalizer:
         return [item.title for item in items]
 
     @staticmethod
-    def _get_alternative_titles(
+    def get_alternative_titles(
         alternative_titles: Optional[TMDBAlternativeTitles],
     ) -> Optional[List[str]]:
         return TMDBNormalizer._extract_alternative_titles(alternative_titles, "titles")
 
     @staticmethod
-    def _get_tv_alternative_titles(
+    def get_tv_alternative_titles(
         alternative_titles: Optional[TMDBAlternativeTitlesTv],
     ) -> Optional[List[str]]:
         """Extract TV alternative titles."""
@@ -280,14 +278,14 @@ class TMDBNormalizer:
         return [keyword.name for keyword in items]
 
     @staticmethod
-    def _get_movie_keywords(
+    def get_movie_keywords(
         keywords: Optional[TMDBMovieKeywords],
     ) -> Optional[List[str]]:
         """Extract movie keywords."""
         return TMDBNormalizer._extract_keyword_names(keywords, "keywords")
 
     @staticmethod
-    def _get_tv_keywords(keywords: Optional[TMDBTvKeywords]) -> Optional[List[str]]:
+    def get_tv_keywords(keywords: Optional[TMDBTvKeywords]) -> Optional[List[str]]:
         """Extract TV keywords."""
         return TMDBNormalizer._extract_keyword_names(keywords, "results")
 
@@ -303,7 +301,7 @@ class TMDBNormalizer:
             MediaCast(
                 name=cast_member.name,
                 character=cast_member.character,
-                castImage=TMDBNormalizer._get_image_url(
+                castImage=TMDBNormalizer.get_image_url(
                     cast_member.profile_path, TMDBNormalizer.TMDB_PROFILE_SIZE
                 ),
             )
@@ -323,7 +321,7 @@ class TMDBNormalizer:
             MediaRecommendation(
                 id=recommendation.id,
                 title=title_getter(recommendation),
-                coverImage=TMDBNormalizer._get_image_url(
+                coverImage=TMDBNormalizer.get_image_url(
                     recommendation.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
                 ),
                 mediaType=MediaType[recommendation.media_type.upper()],
@@ -384,10 +382,10 @@ class TMDBNormalizer:
         return MediaBelongsToCollection(
             id=collection.id,
             name=collection.name,
-            posterPath=TMDBNormalizer._get_image_url(
+            posterPath=TMDBNormalizer.get_image_url(
                 collection.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
             ),
-            backdropPath=TMDBNormalizer._get_image_url(
+            backdropPath=TMDBNormalizer.get_image_url(
                 collection.backdrop_path, TMDBNormalizer.TMDB_COLLECTION_BACKDROP_SIZE
             ),
         )
@@ -406,7 +404,7 @@ class TMDBNormalizer:
                 episodeCount=season.episode_count,
                 name=season.name,
                 overview=season.overview,
-                posterPath=TMDBNormalizer._get_image_url(
+                posterPath=TMDBNormalizer.get_image_url(
                     season.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
                 ),
                 seasonNumber=season.season_number,
@@ -415,7 +413,7 @@ class TMDBNormalizer:
         ]
 
     @staticmethod
-    def _get_movie_collection(collection: TMDBCollection) -> Optional[MovieCollection]:
+    def get_movie_collection(collection: TMDBCollection) -> Optional[MovieCollection]:
         """Normalize TMDB collection data to MovieCollection."""
         if not collection:
             return None
@@ -433,14 +431,15 @@ class TMDBNormalizer:
 
             normalized_parts.append(
                 MovieCollectionPart(
-                    backdropPath=TMDBNormalizer._get_image_url(
+                    backdropPath=TMDBNormalizer.get_image_url(
                         part.backdrop_path, TMDBNormalizer.TMDB_BACKDROP_SIZE
                     ),
                     id=part.id,
                     title=part.title,
+                    originalTitle=part.original_title,
                     mediaType=MediaType[media_type_key],
                     releaseDate=part.release_date,
-                    posterPath=TMDBNormalizer._get_image_url(
+                    posterPath=TMDBNormalizer.get_image_url(
                         part.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
                     ),
                 )
@@ -450,10 +449,10 @@ class TMDBNormalizer:
             id=collection.id,
             name=collection.name,
             overview=collection.overview,
-            posterPath=TMDBNormalizer._get_image_url(
+            posterPath=TMDBNormalizer.get_image_url(
                 collection.poster_path, TMDBNormalizer.TMDB_POSTER_SIZE
             ),
-            backdropPath=TMDBNormalizer._get_image_url(
+            backdropPath=TMDBNormalizer.get_image_url(
                 collection.backdrop_path, TMDBNormalizer.TMDB_COLLECTION_BACKDROP_SIZE
             ),
             parts=normalized_parts,
