@@ -1,29 +1,44 @@
+import asyncio
 from typing import List, Optional, Union
 
 import structlog
 from app.cache.anilist_cache import (
-    DETAIL_TTL,
+    ANILITS_DETAIL_TTL,
     anilist_detail_key,
     anilist_search_key,
-    get_serach_ttl,
+    get_anilist_search_ttl,
 )
-from app.enums.anilist_enums import AnilistMediaType
+from app.cache.tmdb_cache import TMDB_DETAIL_TTL, get_tmdb_search_ttl, tmdb_detail_key, tmdb_search_key
+from app.core.exceptions import NotFoundException
+from app.enums.anilist_enums import AnilistMediaType, AnilistSortOption
+from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
+from app.models.api.anilist_models import AnilistMediaDetailed
+from app.models.api.omdb_models import OMDbData
+from app.models.api.tmdb_models import TMDBCollection, TMDBTVDetail
 from app.models.cache.cache_models import (
     CachedAnimeDetail,
     CachedMangaDetail,
     CachedMediaPagination,
+    CachedMovieDetailWithCollection,
+    CachedTVDetail,
+    CachedTVDetail,
 )
+from app.models.db.external__storage_models import MovieWithCollection
 from app.models.media_models import (
     AnimeDetailed,
     MangaDetailed,
     MediaPagination,
-    MovieCollection,
-    MovieDetailed,
-    TVDetailed,
+    
+    MovieDetailedWithCollection,
 )
 from app.services.anilist_service import AnilistService
+from app.services.external_storage_service import ExternalStorageService
+from app.services.media_db_service import MediaDatabaseService
 from app.services.redis_service import RedisService
+from app.services.sync_service import SyncService
 from app.services.tmdb_service import TMDBService
+from app.utils.media_normalizer import MediaNormalizer
 
 
 logger = structlog.get_logger()
@@ -35,17 +50,23 @@ class MediaService:
         redis_service: RedisService,
         anilist_service: AnilistService,
         tmdb_service: TMDBService,
+        sync_service: SyncService,
+        media_database_service: MediaDatabaseService,
+        external_storage_service: ExternalStorageService,
     ):
         self.redis_service = redis_service
         self.anilist_service = anilist_service
         self.tmdb_service = tmdb_service
+        self.sync_service = sync_service
+        self.media_database_service = media_database_service
+        self.external_storage_service = external_storage_service
 
     async def search_media_anilist(
         self,
         page: int,
         per_page: int,
         media_type: AnilistMediaType,
-        sort: str,
+        sort: AnilistSortOption,
         search: Optional[str],
         season: Optional[str],
         season_year: Optional[int],
@@ -78,7 +99,7 @@ class MediaService:
             cache_key = anilist_search_key(
                 page,
                 per_page,
-                media_type.value,
+                media_type,
                 sort,
                 is_adult or False,
                 season,
@@ -116,41 +137,75 @@ class MediaService:
 
         # Only cache if no advanced filters
         if should_cache and cache_key:
-            ttl = get_serach_ttl(sort)
+            ttl = get_anilist_search_ttl(sort)
             await self.redis_service.set_cached(
                 cache_key, CachedMediaPagination(data=res), ttl=ttl
             )
 
         return res
 
+    async def _get_and_normalize_anilist_media(
+        self,
+        media_id: int,
+        media_type: MediaType,
+        expected_payload_type: type,
+        normalizer_func,
+        cache_key: str,
+        cache_model,
+        cache_ttl: int,
+    ) -> Union[AnimeDetailed, MangaDetailed]:
+        if cache_key:
+            cached = await self.redis_service.get_cached(cache_key, cache_model)
+            if cached:
+                logger.info("cache_hit", key=cache_key)
+                return cached.data
+            logger.info("cache_miss", key=cache_key)
+
+        data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+            media_id, MediaExternalSource.ANILIST, media_type
+        )
+        if not data:
+            await self.sync_service.sync_anilist_media(media_id, media_type)
+            data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                media_id, MediaExternalSource.ANILIST, media_type=media_type
+            )
+        elif data and data.freshness_status != "FRESH":
+            asyncio.create_task(
+                self.sync_service.sync_anilist_media(media_id, media_type)
+            )
+        if data and isinstance(data.payload, expected_payload_type):
+            res = normalizer_func(data.payload)
+            if cache_key:
+                await self.redis_service.set_cached(
+                    cache_key, cache_model(data=res), ttl=cache_ttl
+                )
+            return res
+        raise NotFoundException()
+
     async def get_media_detail_anilist(
         self, media_id: int, media_type: AnilistMediaType
     ) -> Union[AnimeDetailed, MangaDetailed]:
-        key = anilist_detail_key(media_type.value, media_id)
+        key = anilist_detail_key(media_type, media_id)
         if media_type == AnilistMediaType.ANIME:
-            cached = await self.redis_service.get_cached(key, CachedAnimeDetail)
-            if cached:
-                logger.info("cache_hit", key=key)
-                return cached.data
-        else:
-            cached = await self.redis_service.get_cached(key, CachedMangaDetail)
-            if cached:
-                logger.info("cache_hit", key=key)
-                return cached.data
-
-        logger.info("cache_miss", key=key)
-        res = await self.anilist_service.get_media_detail(media_id, media_type)
-
-        if isinstance(res, AnimeDetailed):
-            await self.redis_service.set_cached(
-                key, CachedAnimeDetail(data=res), ttl=DETAIL_TTL
+            return await self._get_and_normalize_anilist_media(
+                media_id=media_id,
+                media_type=MediaType.ANIME,
+                expected_payload_type=AnilistMediaDetailed,
+                normalizer_func=MediaNormalizer.to_anime_detailed,
+                cache_key=key,
+                cache_model=CachedAnimeDetail,
+                cache_ttl=ANILITS_DETAIL_TTL,
             )
-            return res
         else:
-            await self.redis_service.set_cached(
-                key, CachedMangaDetail(data=res), ttl=DETAIL_TTL
+            return await self._get_and_normalize_anilist_media(
+                media_id=media_id,
+                media_type=MediaType.MANGA,
+                expected_payload_type=AnilistMediaDetailed,
+                normalizer_func=MediaNormalizer.to_manga_detailed,
+                cache_key=key,
+                cache_model=CachedMangaDetail,
+                cache_ttl=ANILITS_DETAIL_TTL,
             )
-            return res
 
     async def get_trending_media_tmdb(
         self, media_type: str, time_window: str, language: str, page: int
@@ -158,13 +213,15 @@ class MediaService:
         return await self.tmdb_service.get_trending_media(
             media_type=media_type, time_window=time_window, language=language, page=page
         )
+        
+        
 
     async def search_movie_tmdb(
         self,
         search: Optional[str],
         page: int,
         language: str,
-        sort_by: str,
+        sort_by: TmdbMovieSortOptions,
         primary_release_date_gte: Optional[str] = None,
         primary_release_date_lte: Optional[str] = None,
         with_genres: Optional[str] = None,
@@ -176,11 +233,43 @@ class MediaService:
         without_keywords: Optional[str] = None,
     ) -> MediaPagination:
 
-        return await self.tmdb_service.search_movie(
+        should_cache = (
+            not search
+            and not primary_release_date_gte
+            and not primary_release_date_lte
+            and not with_genres
+            and not with_keywords
+            and not with_runtime_gte
+            and not with_runtime_lte
+            and not with_original_language
+            and not without_genres
+            and not without_keywords
+            and sort_by == TmdbMovieSortOptions.POPULARITY_DESC
+        )
+        cache_key = None
+        if should_cache:
+            cache_key = tmdb_search_key(
+                page=page,
+                media_type="movie",
+                sort=sort_by,
+            )
+            cached = await self.redis_service.get_cached(
+                cache_key, CachedMediaPagination
+            )
+            if cached:
+                logger.info("cache_hit", key=cache_key)
+                return cached.data
+            logger.info("cache_miss", key=cache_key)
+        else:
+            logger.debug(
+                "skipping_cache", reason="advanced_filters_provided_or_non_default_sort"
+            )
+
+        res = await self.tmdb_service.search_movie(
             search=search,
             page=page,
             language=language,
-            sort_by=sort_by,
+            sort_by=sort_by.value,
             primary_release_date_gte=primary_release_date_gte,
             primary_release_date_lte=primary_release_date_lte,
             with_genres=with_genres,
@@ -191,13 +280,19 @@ class MediaService:
             without_genres=without_genres,
             without_keywords=without_keywords,
         )
+        if should_cache and cache_key:
+            ttl = get_tmdb_search_ttl(sort_by)
+            await self.redis_service.set_cached(
+                cache_key, CachedMediaPagination(data=res), ttl=ttl
+            )
+        return res
 
     async def search_tv_tmdb(
         self,
         search: Optional[str],
         page: int,
         language: str,
-        sort_by: str,
+        sort_by: TmdbTvSortOptions,
         air_date_gte: Optional[str] = None,
         air_date_lte: Optional[str] = None,
         first_air_date_gte: Optional[str] = None,
@@ -211,11 +306,47 @@ class MediaService:
         without_genres: Optional[str] = None,
         without_keywords: Optional[str] = None,
     ) -> MediaPagination:
-        return await self.tmdb_service.search_tv(
+        should_cache = (
+            not search
+            and not air_date_gte
+            and not air_date_lte
+            and not first_air_date_gte
+            and not first_air_date_lte
+            and not with_genres
+            and not with_keywords
+            and not with_runtime_gte
+            and not with_runtime_lte
+            and not with_original_language
+            and not with_status
+            and not without_genres
+            and not without_keywords
+            and sort_by == TmdbTvSortOptions.POPULARITY_DESC
+        )
+        cache_key = None
+        if should_cache:
+            cache_key = tmdb_search_key(
+                page=page,
+                media_type="tv",
+                sort=sort_by,
+            )
+            cached = await self.redis_service.get_cached(
+                cache_key, CachedMediaPagination
+            )
+            if cached:
+                logger.info("cache_hit", key=cache_key)
+                return cached.data
+            logger.info("cache_miss", key=cache_key)
+            
+        else:
+            logger.debug(
+                "skipping_cache", reason="advanced_filters_provided_or_non_default_sort"
+            )
+        
+        res =  await self.tmdb_service.search_tv(
             search=search,
             page=page,
             language=language,
-            sort_by=sort_by,
+            sort_by=sort_by.value,
             air_date_gte=air_date_gte,
             air_date_lte=air_date_lte,
             first_air_date_gte=first_air_date_gte,
@@ -229,26 +360,98 @@ class MediaService:
             without_genres=without_genres,
             without_keywords=without_keywords,
         )
+        if should_cache and cache_key:
+            ttl = get_tmdb_search_ttl(sort_by)
+            await self.redis_service.set_cached(
+                cache_key, CachedMediaPagination(data=res), ttl=ttl
+            )
+        return res
 
     async def get_movie_detail_tmdb(
         self,
         movie_id: int,
         language: str,
-    ) -> MovieDetailed:
-        return await self.tmdb_service.get_movie_detail(movie_id, language)
+    ) -> MovieDetailedWithCollection:
+        cache_key = tmdb_detail_key("movie", movie_id)
+        if cache_key:
+            cached = await self.redis_service.get_cached(cache_key, CachedMovieDetailWithCollection)
+            if cached:
+                logger.info("cache_hit", key=cache_key)
+                return cached.data
+            logger.info("cache_miss", key=cache_key)
+        
+        data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+            movie_id, MediaExternalSource.TMDB, MediaType.MOVIE
+        )
+
+        if not data:
+            await self.sync_service.sync_tmdb_movie(movie_id, MediaType.MOVIE)
+            data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                movie_id, MediaExternalSource.TMDB, MediaType.MOVIE
+            )
+        elif data and data.freshness_status != "FRESH":
+            asyncio.create_task(
+                self.sync_service.sync_tmdb_movie(movie_id, MediaType.MOVIE)
+            )
+        if data and isinstance(data.payload, MovieWithCollection):
+            omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                movie_id, MediaExternalSource.OMDB, MediaType.MOVIE
+            )
+            omdb_payload = None
+            if omdb_data and isinstance(omdb_data.payload, OMDbData):
+                omdb_payload = omdb_data.payload
+            res = MediaNormalizer.to_movie_detailed_with_collection(
+                data.payload, omdb_payload
+            )
+            if cache_key:
+                await self.redis_service.set_cached(
+                    cache_key, CachedMovieDetailWithCollection(data=res), ttl=TMDB_DETAIL_TTL
+                )
+                return res 
+        raise NotFoundException()
 
     async def get_tv_detail_tmdb(
         self,
         tv_id: int,
         language: str,
-    ) -> TVDetailed:
-        return await self.tmdb_service.get_tv_detail(tv_id, language)
+    ):
+        cache_key = tmdb_detail_key("tv", tv_id)
+        if cache_key:
+            cached = await self.redis_service.get_cached(cache_key, CachedTVDetail)
+            if cached:
+                logger.info("cache_hit", key=cache_key)
+                return cached.data
+            logger.info("cache_miss", key=cache_key)
+        data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+            tv_id, MediaExternalSource.TMDB, MediaType.TV
+        )
+        if not data:
+            await self.sync_service.sync_tmdb_tv(tv_id, MediaType.TV)
+            data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                tv_id, MediaExternalSource.TMDB, MediaType.TV
+            )
+        elif data and data.freshness_status != "FRESH":
+            asyncio.create_task(self.sync_service.sync_tmdb_tv(tv_id, MediaType.TV))
+        if data and isinstance(data.payload, TMDBTVDetail):
+            omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                tv_id, MediaExternalSource.OMDB, MediaType.TV
+            )
+            omdb_payload = None
+            if omdb_data and isinstance(omdb_data.payload, OMDbData):
+                omdb_payload = omdb_data.payload
+            res = MediaNormalizer.to_tv_detailed(data.payload, omdb_payload)
+            if cache_key:
+                await self.redis_service.set_cached(
+                    cache_key, CachedTVDetail(data=res), ttl=TMDB_DETAIL_TTL
+                )
+                return res
+        raise NotFoundException()
 
     async def get_collection_detail_tmdb(
         self,
         collection_id: int,
         language: str,
-    ) -> Optional[MovieCollection]:
+    ) -> Optional[TMDBCollection]:
         return await self.tmdb_service.get_collection_detail(collection_id, language)
 
     async def search_keyword_tmdb(
