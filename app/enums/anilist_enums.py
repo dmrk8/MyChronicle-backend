@@ -6,7 +6,7 @@ class AnilistMediaType(str, Enum):
     MANGA = "MANGA"
 
 
-class SortOption(str, Enum):
+class AnilistSortOption(str, Enum):
     POPULARITY_DESC = "POPULARITY_DESC"
     POPULARITY_ASC = "POPULARITY"
     TRENDING_DESC = "TRENDING_DESC"

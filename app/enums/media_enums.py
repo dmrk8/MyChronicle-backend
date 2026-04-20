@@ -4,7 +4,6 @@ from enum import Enum
 class MediaType(str, Enum):
     ANIME = "ANIME"
     MANGA = "MANGA"
-    GAME = "GAME"
     MOVIE = "MOVIE"
     TV = "TV"
 
@@ -27,5 +26,8 @@ class SyncFrequency(str, Enum):
     MEDIUM = "MEDIUM"
     LOW = "LOW"
     MANUAL = "MANUAL"
-
-
+    
+class StoredDataType(str, Enum):
+    MEDIA_DETAILS = "MEDIA_DETAILS"
+    OMDB_DATA = "OMDB_DATA"
+    
