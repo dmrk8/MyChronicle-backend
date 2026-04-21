@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 from app.core.event_bus import EventBus
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.user_media_entry_models import (
     UserMediaEntry,
     UserMediaEntryCreate,
@@ -14,7 +15,6 @@ from app.models.db.user_media_entry_models import (
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
 from app.services.review_service import ReviewService
 from app.enums.user_media_entry_enums import (
-    MediaExternalSource,
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
 )
@@ -89,11 +89,15 @@ class UserMediaEntryService:
             )
         logger.info("entry_deleted", entry_id=entry_id, user_id=user_id)
 
-    async def get_entry_by_external_id_and_source(
-        self, external_id: int, external_source: MediaExternalSource, user_id: str
+    async def get_entry_by_external_id_and_source_and_media_type(
+        self,
+        external_id: int,
+        external_source: MediaExternalSource,
+        user_id: str,
+        media_type: MediaType,
     ) -> Optional[UserMediaEntry]:
-        res = await self.repository.get_entry_by_external_id_and_external_source_and_user_id(
-            external_id, external_source, user_id
+        res = await self.repository.get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
+            external_id, external_source, user_id, media_type.value
         )
         if not res:
             raise NotFoundException(

@@ -30,6 +30,7 @@ class UserMediaEntryRepository:
                 ("user_id", 1),
                 ("external_id", 1),
                 ("external_source", 1),
+                ("media_type", 1),
             ],
             unique=True,
             name="user_external_unique_idx",
@@ -89,8 +90,8 @@ class UserMediaEntryRepository:
         )
         return None
 
-    async def get_entry_by_external_id_and_external_source_and_user_id(
-        self, external_id: int, external_source: str, user_id: str
+    async def get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
+        self, external_id: int, external_source: str, user_id: str, media_type: str
     ) -> Optional[UserMediaEntryDB]:
         async def _op():
             return await self.collection.find_one(
@@ -98,26 +99,29 @@ class UserMediaEntryRepository:
                     "external_id": external_id,
                     "external_source": external_source,
                     "user_id": user_id,
+                    "media_type": media_type,
                 }
             )
 
         doc = await run_db_op(
             self.logger,
             _op,
-            success_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_query",
-            error_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_error",
+            success_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_query",
+            error_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_error",
             context={
                 "external_id": external_id,
                 "external_source": external_source,
                 "user_id": user_id,
+                "media_type": media_type,
             },
         )
 
         if doc:
             self.logger.debug(
-                "mongo_user_media_entry_find_one_by_media_id_and_user_id_found",
+                "mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_found",
                 external_id=external_id,
                 user_id=user_id,
+                media_type=media_type,
             )
             return UserMediaEntryDB.model_validate(doc)
 
@@ -125,6 +129,7 @@ class UserMediaEntryRepository:
             "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
             external_id=external_id,
             user_id=user_id,
+            media_type=media_type,
         )
         return None
 
@@ -284,7 +289,7 @@ class UserMediaEntryRepository:
             count=len(results),
         )
         return results
-    
+
     async def delete_by_user_id(self, user_id: str) -> bool:
         async def _op() -> DeleteResult:
             return await self.collection.delete_many({"user_id": user_id})

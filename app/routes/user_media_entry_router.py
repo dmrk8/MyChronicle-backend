@@ -5,6 +5,7 @@ from app.core.dependencies import (
     get_review_service,
     get_user_media_entry_service,
 )
+from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.review_models import Review, ReviewCreate, ReviewUpdate
 from app.models.db.user_media_entry_models import (
     UserMediaEntry,
@@ -20,7 +21,6 @@ from app.services.user_media_entry_service import UserMediaEntryService
 from app.auth.auth_dependencies import get_current_user
 
 from app.enums.user_media_entry_enums import (
-    MediaExternalSource,
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
 )
@@ -61,16 +61,18 @@ async def delete_user_media_entry(
 
 
 @user_media_entry_router.get(
-    "/external/{external_source}/{external_id}", response_model=UserMediaEntry
+    "/external/{external_source}/{media_type}/{external_id}",
+    response_model=UserMediaEntry,
 )
 async def get_entry_by_external_id(
     external_id: int = Path(..., description="External ID"),
     external_source: MediaExternalSource = Path(..., description="External Source"),
+    media_type: MediaType = Path(..., description="Media Type"),
     user: User = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
-    return await service.get_entry_by_external_id_and_source(
-        external_id, external_source, user.id
+    return await service.get_entry_by_external_id_and_source_and_media_type(
+        external_id, external_source, user.id, media_type
     )
 
 
