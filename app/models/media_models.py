@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
-from app.enums.user_media_entry_enums import MediaType
+from app.enums.media_enums import MediaType
 from app.models.api.anilist_models import (
     NextAiringEpisode,
     Tag,

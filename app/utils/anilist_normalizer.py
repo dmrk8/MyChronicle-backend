@@ -2,7 +2,7 @@ from typing import List, Optional
 import structlog
 import calendar
 
-from app.enums.user_media_entry_enums import MediaExternalSource, MediaType
+from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.api.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,

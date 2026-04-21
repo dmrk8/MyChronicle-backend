@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
-from app.enums.user_media_entry_enums import (
-    MediaExternalSource,
-    MediaType,
-    UserMediaEntryStatus,
-)
+
+from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.user_media_entry_enums import UserMediaEntryStatus
+
 
 
 class UserMediaEntryCreate(BaseModel):
@@ -123,7 +122,7 @@ class UserMediaEntrySyncMetadata(BaseModel):
     is_adult: Optional[bool] = Field(
         None, alias="isAdult", description="Synced adult status"
     )
-    
+
     def to_update_dict(self) -> dict:
         data = self.model_dump(exclude_unset=True, by_alias=False)
         if not data:
