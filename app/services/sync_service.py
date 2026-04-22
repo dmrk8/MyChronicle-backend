@@ -77,7 +77,7 @@ class SyncService:
             )
             payload = MovieWithCollection(movie=tmdb_movie, collection=collection)
         else:
-            payload = tmdb_movie
+            payload = MovieWithCollection(movie=tmdb_movie, collection=None)
 
         await self.external_storage_service.upsert(
             external_id=external_id,

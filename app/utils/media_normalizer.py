@@ -3,12 +3,13 @@ from typing import Optional
 from app.enums.media_enums import MediaExternalSource
 from app.models.api.anilist_models import AnilistMediaDetailed
 from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBTVDetail
+from app.models.api.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.models.db.external__storage_models import MovieWithCollection
 from app.models.db.media_db_models import MediaScore
 from app.models.media_models import (
     AnimeDetailed,
     MangaDetailed,
+    MovieDetailed,
     MovieDetailedWithCollection,
     TVDetailed,
 )

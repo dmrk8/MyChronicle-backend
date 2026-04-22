@@ -2,14 +2,20 @@ from datetime import timedelta, timezone, datetime
 import time
 
 import structlog
-from typing import Optional
+from typing import Optional, Union
 
 from app.enums.media_enums import MediaExternalSource, MediaType, SyncFrequency
+from app.models.api.anilist_models import AnilistMediaDetailed
+from app.models.api.omdb_models import OMDbData
+from app.models.api.tmdb_models import TMDBTVDetail
 from app.models.db.external__storage_models import (
     ExternalDataDB,
     ExternalDataInsert,
     ExternalDataUpdate,
+    MovieWithCollection,
+    MovieWithCollection,
 )
+from app.models.media_models import MovieDetailed
 from app.repositories.external_storage_repository import ExternalStorageRepository
 
 logger = structlog.get_logger()
