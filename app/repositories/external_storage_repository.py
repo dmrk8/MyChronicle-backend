@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 from pymongo.results import DeleteResult, InsertOneResult
 from app.enums.media_enums import MediaExternalSource, MediaType
+from app.models.db.db_context_model import DBOpContext
 from app.models.db.external__storage_models import (
     ExternalDataDB,
     ExternalDataInsert,
@@ -38,6 +39,13 @@ class ExternalStorageRepository:
         )
 
     async def upsert(self, details: ExternalDataInsert) -> ExternalDataDB:
+        context = DBOpContext(
+            external_id=details.external_id,
+            external_source=details.external_source,
+            media_type=details.media_type,
+            operation="upsert",
+            collection=self.collection.name,
+            )
         data = details.model_dump()
 
         async def _op():
@@ -70,11 +78,7 @@ class ExternalStorageRepository:
             _op,
             success_event="mongo_external_details_upsert",
             error_event="mongo_external_details_upsert_error",
-            context={
-                "external_id": details.external_id,
-                "external_source": details.external_source,
-                "media_type": details.media_type,
-            },
+            context=context,
         )
 
         return ExternalDataDB.model_validate(doc)
@@ -85,6 +89,13 @@ class ExternalStorageRepository:
         external_source: MediaExternalSource,
         media_type: MediaType,
     ) -> Optional[ExternalDataDB]:
+        context = DBOpContext(
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
+            operation="find_one",
+            collection=self.collection.name,
+        )
         async def _op():
             return await self.collection.find_one(
                 {
@@ -99,11 +110,7 @@ class ExternalStorageRepository:
             _op,
             success_event="mongo_external_details_find_one_by_external_id_source_query",
             error_event="mongo_external_details_find_one_by_external_id_source_error",
-            context={
-                "external_id": external_id,
-                "external_source": str(external_source),
-                "media_type": str(media_type),
-            },
+            context=context,
         )
 
         if doc:
@@ -126,16 +133,20 @@ class ExternalStorageRepository:
                 return_document=ReturnDocument.AFTER,
             )
 
+        context = DBOpContext(
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
+            operation="update_one",
+            collection=self.collection.name,
+        )
+
         doc = await run_db_op(
             self.logger,
             _op,
             success_event="mongo_external_details_update_query",
             error_event="mongo_external_details_update_one_error",
-            context={
-                "external_id": external_id,
-                "external_source": str(external_source),
-                "media_type": str(media_type),
-            },
+            context=context,
         )
 
         if doc:
@@ -150,15 +161,19 @@ class ExternalStorageRepository:
                 {"external_id": external_id, "external_source": external_source, "media_type": media_type}
             )
 
+        context = DBOpContext(
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
+            operation="delete_one",
+            collection=self.collection.name,
+        )
+
         result = await run_db_op(
             self.logger,
             _op,
             success_event="mongo_external_details_delete_query",
             error_event="mongo_external_details_delete_one_error",
-            context={
-                "external_id": external_id,
-                "external_source": str(external_source),
-                "media_type": str(media_type),
-            },
+            context=context,
         )
         return result.deleted_count > 0

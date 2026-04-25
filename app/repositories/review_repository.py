@@ -1,8 +1,10 @@
 from typing import List, Optional
+from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
-from pymongo.results import InsertOneResult, DeleteResult, UpdateResult
+from pymongo.results import InsertOneResult, DeleteResult
 from bson import ObjectId
+from app.models.db.db_context_model import DBOpContext
 from app.models.db.review_models import ReviewDB, ReviewInsert, ReviewUpdate
 from app.repositories._repo_observability import run_db_op
 import structlog
@@ -18,22 +20,14 @@ class ReviewRepository:
             repository="ReviewRepository", collection=collection_name
         )
 
-    async def is_exists(self, review_id: str, user_id: str, user_media_entry_id: str) -> bool:
-        async def _op() -> int:
-            return await self.collection.count_documents(
-                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id}, limit=1
-            )
-
-        count = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_review_exists",
-            error_event="mongo_review_exists_error",
-            context={"review_id": review_id},
+    async def insert_review(self, review_data: ReviewInsert) -> ReviewDB:
+        context = DBOpContext(
+            user_id=review_data.user_id,
+            entry_id=review_data.user_media_entry_id,
+            operation="insert_one",
+            collection=self.collection.name,
         )
-        return count > 0
 
-    async def create_review(self, review_data: ReviewInsert) -> ReviewDB:
         data = review_data.model_dump()
 
         async def _op() -> InsertOneResult:
@@ -44,15 +38,28 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_insert_one",
             error_event="mongo_review_insert_one_error",
-            context={},
+            context=context,
         )
-        self.logger.debug("mongo_review_inserted_id", review_id=str(result.inserted_id))
         return ReviewDB.model_validate({**data, "_id": result.inserted_id})
 
-    async def delete_review(self, review_id: str, user_id: str, user_media_entry_id: str) -> DeleteResult:
+    async def delete_review(
+        self,  review_id: str, user_id: str, user_media_entry_id: str
+    ) -> bool:
+        context = DBOpContext(
+            review_id=review_id,
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="delete_one",
+            collection=self.collection.name,
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_one(
-                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id}
+                {
+                    "_id": ObjectId(review_id),
+                    "user_id": user_id,
+                    "user_media_entry_id": user_media_entry_id,
+                }
             )
 
         result = await run_db_op(
@@ -60,25 +67,33 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_delete_one",
             error_event="mongo_review_delete_one_error",
-            context={"review_id": review_id},
+            context=context,
         )
-        self.logger.debug(
-            "mongo_review_delete_one_result",
-            review_id=review_id,
-            user_id=user_id,
-            deleted_count=result.deleted_count,
-        )
-        return result
+        return result.deleted_count > 0
 
     async def update_review(
-        self, review_id: str, user_media_entry_id: str, update: ReviewUpdate, user_id: str
-    ) -> ReviewDB:
-
+        self,
+        review_id: str,
+        user_media_entry_id: str,
+        update: ReviewUpdate,
+        user_id: str,
+    ) -> Optional[ReviewDB]:
+        context = DBOpContext(
+            review_id=review_id,
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="find_one_and_update",
+            collection=self.collection.name,
+        )
         update_dict = update.to_update_dict()
 
         async def _op():
             return await self.collection.find_one_and_update(
-                {"_id": ObjectId(review_id), "user_id": user_id, "user_media_entry_id": user_media_entry_id},
+                {
+                    "_id": ObjectId(review_id),
+                    "user_id": user_id,
+                    "user_media_entry_id": user_media_entry_id,
+                },
                 {"$set": update_dict},
                 return_document=ReturnDocument.AFTER,
             )
@@ -88,28 +103,22 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_update_one",
             error_event="mongo_review_update_one_error",
-            context={"review_id": review_id, "user_id": user_id},
+            context=context,
         )
         if not doc:
-            self.logger.warning(
-            "mongo_user_media_entry_update_not_found_or_forbidden",
-            review_id=review_id,
-            user_id=user_id,
-        )
-
-            raise
-        self.logger.debug(
-                "mongo_user_media_entry_update_success",
-                review_id=review_id,
-                user_id=user_id,
-            )
-        return ReviewDB.model_validate(doc)
-
-               
+            return ReviewDB.model_validate(doc)
+        return None
 
     async def get_reviews_by_user_media_entry_id_and_user_id(
         self, user_media_entry_id: str, user_id: str
     ) -> Optional[List[ReviewDB]]:
+        context = DBOpContext(
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="find",
+            collection=self.collection.name,
+        )
+
         async def _op() -> List[ReviewDB]:
             cursor = self.collection.find(
                 {"user_media_entry_id": user_media_entry_id, "user_id": user_id}
@@ -121,19 +130,21 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_find_by_user_media_entry_id",
             error_event="mongo_review_find_by_user_media_entry_id_error",
-            context={"user_media_entry_id": user_media_entry_id},
-        )
-        self.logger.debug(
-            "mongo_review_find_by_user_media_entry_id_result",
-            user_media_entry_id=user_media_entry_id,
-            user_id=user_id,
-            count=len(results),
+            context=context,
         )
         return results
 
     async def get_review_by_id(
         self, review_id: str, user_id: str, user_media_entry_id: str
     ) -> Optional[ReviewDB]:
+        context = DBOpContext(
+            review_id=review_id,
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="find_one",
+            collection=self.collection.name,
+        )
+
         async def _op():
             return await self.collection.find_one(
                 {
@@ -148,28 +159,23 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_find_one_by_id_query",
             error_event="mongo_review_find_one_by_id_error",
-            context={"review_id": review_id},
+            context=context,
         )
 
         if data:
-            self.logger.debug(
-                "mongo_review_find_one_by_id_found",
-                review_id=review_id,
-                user_id=user_id,
-            )
-            return ReviewDB(**data)
-
-        self.logger.debug(
-            "mongo_review_find_one_by_id_not_found",
-            review_id=review_id,
-            user_id=user_id,
-            user_media_entry_id=user_media_entry_id
-        )
+            ReviewDB.model_validate(data)
         return None
 
     async def count_reviews_by_user_media_entry_id(
         self, user_media_entry_id: str, user_id: str
     ) -> int:
+        context = DBOpContext(
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="count",
+            collection=self.collection.name,
+        )
+
         async def _op() -> int:
             return await self.collection.count_documents(
                 {"user_media_entry_id": user_media_entry_id, "user_id": user_id}
@@ -180,19 +186,21 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_count_by_user_media_entry_id",
             error_event="mongo_review_count_by_user_media_entry_id_error",
-            context={"user_media_entry_id": user_media_entry_id},
+            context=context,
         )
-        self.logger.debug(
-            "mongo_review_count_by_user_media_entry_id_result",
-            user_media_entry_id=user_media_entry_id,
-            user_id=user_id,
-            count=count,
-        )
+
         return count
 
     async def delete_reviews_by_user_media_entry_id(
         self, user_media_entry_id: str, user_id: str
-    ) -> DeleteResult:
+    ) -> bool:
+        context = DBOpContext(
+            user_id=user_id,
+            entry_id=user_media_entry_id,
+            operation="delete_many",
+            collection=self.collection.name,
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_many(
                 {"user_media_entry_id": user_media_entry_id, "user_id": user_id}
@@ -203,17 +211,17 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_delete_many_by_user_media_entry_id",
             error_event="mongo_review_delete_many_by_user_media_entry_id_error",
-            context={"user_media_entry_id": user_media_entry_id, "user_id": user_id},
+            context=context,
         )
-        self.logger.debug(
-            "mongo_review_delete_many_by_user_media_entry_id_result",
-            user_media_entry_id=user_media_entry_id,
-            user_id=user_id,
-            deleted_count=result.deleted_count,
-        )
-        return result
+        return result.deleted_count > 0
 
-    async def delete_by_user_id(self, user_id: str) -> DeleteResult:
+    async def delete_by_user_id(self, user_id: str) -> bool:
+        context = DBOpContext(
+            user_id=user_id,
+            operation="delete_many",
+            collection=self.collection.name,
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_many({"user_id": user_id})
 
@@ -222,11 +230,7 @@ class ReviewRepository:
             _op,
             success_event="mongo_review_delete_many",
             error_event="mongo_review_delete_many_error",
-            context={"user_id": user_id},
+            context=context,
         )
-        self.logger.debug(
-            "mongo_review_delete_many_result",
-            user_id=user_id,
-            deleted_count=result.deleted_count,
-        )
-        return result
+
+        return result.deleted_count > 0

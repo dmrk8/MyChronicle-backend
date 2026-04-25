@@ -1,20 +1,20 @@
 from typing import List, Optional
+from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from pymongo.results import DeleteResult, InsertOneResult
 from bson import ObjectId
+from app.models.db.db_context_model import DBOpContext
 from app.models.db.user_media_entry_models import (
     UserMediaEntryDB,
     UserMediaEntryInsert,
-    UserMediaEntrySyncMetadata,
     UserMediaEntryUpdate,
 )
 from app.repositories._repo_observability import run_db_op
 import structlog
 
 logger = structlog.get_logger()
-
 
 class UserMediaEntryRepository:
     def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
@@ -36,8 +36,19 @@ class UserMediaEntryRepository:
             name="user_external_unique_idx",
         )
 
-    async def create_entry(self, entry: UserMediaEntryInsert) -> UserMediaEntryDB:
+    async def insert_entry(
+        self, entry: UserMediaEntryInsert
+    ) -> UserMediaEntryDB:
         data = entry.model_dump()
+
+        context = DBOpContext(
+            user_id=entry.user_id,
+            external_source=entry.external_source,
+            external_id=entry.external_id,
+            media_type=entry.media_type,
+            operation="insert_one",
+            collection=self.collection.name,
+        )
 
         async def _op() -> InsertOneResult:
             return await self.collection.insert_one(data)
@@ -48,7 +59,7 @@ class UserMediaEntryRepository:
                 _op,
                 success_event="mongo_user_media_entry_insert_one",
                 error_event="mongo_user_media_entry_insert_one_error",
-                context={"user_id": entry.user_id, "external_id": entry.external_id},
+                context=context,
             )
             return UserMediaEntryDB(**{**data, "_id": result.inserted_id})
         except DuplicateKeyError:
@@ -59,9 +70,16 @@ class UserMediaEntryRepository:
             )
             raise
 
-    async def get_entry_by_id(
+    async def get_entry_by_id_and_user_id(
         self, entry_id: str, user_id: str
     ) -> Optional[UserMediaEntryDB]:
+        context = DBOpContext(
+            entry_id=entry_id,
+            user_id=user_id,
+            operation="find_one_by_id",
+            collection=self.collection.name,
+        )
+
         async def _op():
             return await self.collection.find_one(
                 {"_id": ObjectId(entry_id), "user_id": user_id}
@@ -72,27 +90,32 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_find_one_by_id_query",
             error_event="mongo_user_media_entry_find_one_by_id_error",
-            context={"user_id": user_id, "entry_id": entry_id},
+            context=context,
         )
 
         if doc:
-            self.logger.debug(
-                "mongo_user_media_entry_find_one_by_id_found",
-                entry_id=entry_id,
-                user_id=user_id,
-            )
             return UserMediaEntryDB.model_validate(doc)
 
-        self.logger.debug(
-            "mongo_user_media_entry_find_one_by_id_not_found",
-            entry_id=entry_id,
-            user_id=user_id,
-        )
         return None
 
     async def get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
-        self, external_id: int, external_source: str, user_id: str, media_type: str
+        self,
+        
+        external_id: int,
+        external_source: str,
+        user_id: str,
+        media_type: str,
     ) -> Optional[UserMediaEntryDB]:
+        context = DBOpContext(
+            external_id=external_id,
+            external_source=external_source,
+            user_id=user_id,
+            media_type=media_type,
+            operation="find_one_by_external_id_and_user_id_and_media_type",
+            collection=self.collection.name,
+            
+        )
+
         async def _op():
             return await self.collection.find_one(
                 {
@@ -108,35 +131,26 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_query",
             error_event="mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_error",
-            context={
-                "external_id": external_id,
-                "external_source": external_source,
-                "user_id": user_id,
-                "media_type": media_type,
-            },
+            context=context,
         )
 
         if doc:
-            self.logger.debug(
-                "mongo_user_media_entry_find_one_by_external_id_and_user_id_and_media_type_found",
-                external_id=external_id,
-                user_id=user_id,
-                media_type=media_type,
-            )
             return UserMediaEntryDB.model_validate(doc)
 
-        self.logger.debug(
-            "mongo_user_media_entry_find_one_by_external_id_and_user_id_not_found",
-            external_id=external_id,
-            user_id=user_id,
-            media_type=media_type,
-        )
         return None
 
     async def update_entry(
-        self, entry_id: str, user_id: str, update: UserMediaEntryUpdate
+        self,
+        entry_id: str,
+        user_id: str,
+        update: UserMediaEntryUpdate,
     ) -> Optional[UserMediaEntryDB]:
         update_dict = update.to_update_dict()
+        context = DBOpContext(
+            entry_id=entry_id,
+            collection=self.collection.name,
+           
+        )
 
         async def _op():
             return await self.collection.find_one_and_update(
@@ -150,43 +164,7 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_update_query",
             error_event="mongo_user_media_entry_update_one_error",
-            context={"entry_id": entry_id, "user_id": user_id},
-        )
-
-        if doc:
-            self.logger.debug(
-                "mongo_user_media_entry_update_success",
-                entry_id=entry_id,
-                user_id=user_id,
-            )
-            return UserMediaEntryDB.model_validate(doc)
-
-        self.logger.warning(
-            "mongo_user_media_entry_update_not_found_or_forbidden",
-            entry_id=entry_id,
-            user_id=user_id,
-        )
-        return None
-
-    async def sync_entry_metadata(
-        self, entry_id: str, user_id: str, metadata: UserMediaEntrySyncMetadata
-    ) -> Optional[UserMediaEntryDB]:
-        """Sync metadata from external API"""
-        update_dict = metadata.to_update_dict()
-
-        async def _op():
-            return await self.collection.find_one_and_update(
-                {"_id": ObjectId(entry_id), "user_id": user_id},
-                {"$set": update_dict},
-                return_document=ReturnDocument.AFTER,
-            )
-
-        doc = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_user_media_entry_sync_metadata",
-            error_event="mongo_user_media_entry_sync_metadata_error",
-            context={"entry_id": entry_id, "user_id": user_id},
+            context=context,
         )
 
         if doc:
@@ -194,6 +172,14 @@ class UserMediaEntryRepository:
         return None
 
     async def delete_entry(self, entry_id: str, user_id: str) -> bool:
+        context = DBOpContext(
+            entry_id=entry_id,
+            user_id=user_id,
+            operation="delete_one",
+            collection=self.collection.name,
+            
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_one(
                 {"_id": ObjectId(entry_id), "user_id": user_id}
@@ -204,11 +190,17 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_delete_query",
             error_event="mongo_user_media_entry_delete_one_error",
-            context={"entry_id": entry_id, "user_id": user_id},
+            context=context,
         )
         return result.deleted_count > 0
 
     async def count_entries_by_user_id(self, user_id: str) -> int:
+        context = DBOpContext(
+            user_id=user_id,
+            operation="count_documents",
+            collection=self.collection.name,
+        )
+
         async def _op() -> int:
             return await self.collection.count_documents({"user_id": user_id})
 
@@ -217,18 +209,19 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_count_by_user_id",
             error_event="mongo_user_media_entry_count_by_user_id_error",
-            context={"user_id": user_id},
+            context=context,
         )
 
-        self.logger.debug(
-            "mongo_user_media_entry_count_result",
-            user_id=user_id,
-            count=count,
-        )
         return count
 
     async def count_entries(self, user_id: str, filters: dict) -> int:
         query = {**filters, "user_id": user_id}
+
+        context = DBOpContext(
+            user_id=user_id,
+            operation="count_documents",
+            collection=self.collection.name,
+        )
 
         async def _op() -> int:
             return await self.collection.count_documents(query)
@@ -238,13 +231,7 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_count_entries",
             error_event="mongo_user_media_entry_count_entries_error",
-            context={"user_id": user_id},
-        )
-
-        self.logger.debug(
-            "mongo_user_media_entry_count_entries_result",
-            user_id=user_id,
-            count=count,
+            context=context,
         )
         return count
 
@@ -257,6 +244,12 @@ class UserMediaEntryRepository:
         sort_by: str,
         sort_order: int,
     ) -> List[UserMediaEntryDB]:
+        context = DBOpContext(
+            user_id=user_id,
+            operation="find",
+            collection=self.collection.name,
+            
+        )
         skip = (page - 1) * per_page
 
         query = {**filters, "user_id": user_id}
@@ -275,22 +268,18 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_get_entries",
             error_event="mongo_user_media_entry_get_entries_error",
-            context={
-                "user_id": user_id,
-                "page": page,
-                "per_page": per_page,
-                "sort_by": sort_by,
-                "sort_order": sort_order,
-            },
+            context=context,
         )
 
-        self.logger.debug(
-            "mongo_user_media_entry_get_entries_result",
-            count=len(results),
-        )
         return results
 
     async def delete_by_user_id(self, user_id: str) -> bool:
+        context = DBOpContext(
+            user_id=user_id,
+            operation="delete_many",
+            collection=self.collection.name,
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_many({"user_id": user_id})
 
@@ -299,12 +288,7 @@ class UserMediaEntryRepository:
             _op,
             success_event="mongo_user_media_entry_delete_by_user_id",
             error_event="mongo_user_media_entry_delete_by_user_id_error",
-            context={"user_id": user_id},
+            context=context,
         )
 
-        self.logger.debug(
-            "mongo_user_media_entry_delete_by_user_id_result",
-            user_id=user_id,
-            deleted_count=result.deleted_count,
-        )
         return result.deleted_count > 0

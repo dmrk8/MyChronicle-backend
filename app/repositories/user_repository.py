@@ -6,6 +6,7 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.results import DeleteResult, InsertOneResult, UpdateResult
 
+from app.models.db.db_context_model import DBOpContext
 from app.models.db.user_models import UserDB, UserInsert, UserUpdate
 from app.repositories._repo_observability import run_db_op
 
@@ -19,6 +20,7 @@ class UserRepository:
         self.logger = logger.bind(
             repository="UserRepository", collection=collection_name
         )
+
     async def init_indexes(self) -> None:
         await self.collection.create_index(
             [
@@ -27,32 +29,45 @@ class UserRepository:
             unique=True,
             name="username_unique_idx",
         )
-        
-    async def create(self, user: UserInsert) -> UserDB:
+
+    async def insert_user(self, user: UserInsert) -> UserDB:
+        context = DBOpContext(
+            username=user.username,
+            operation="insert_one",
+            collection=self.collection.name,
+        )
         data = user.model_dump()
 
         async def _op() -> InsertOneResult:
             return await self.collection.insert_one(data)
+
         try:
-            
+
             result = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_user_insert_one",
-            error_event="mongo_user_insert_one_error",
-            context={"username": user.username},
-        )
-            
+                self.logger,
+                _op,
+                success_event="mongo_user_insert_one",
+                error_event="mongo_user_insert_one_error",
+                context=context,
+            )
+
             return UserDB(**{**data, "_id": result.inserted_id})
         except DuplicateKeyError:
             self.logger.warning(
-                "mongo_user_media_entry_insert_duplicate",
+                "mongo_user_insert_one_duplicate",
                 username=user.username,
             )
             raise
-            
 
-    async def update(self, id: str, update_data: UserUpdate) -> Optional[UserDB]:
+    async def update(
+        self, id: str, update_data: UserUpdate
+    ) -> Optional[UserDB]:
+        context = DBOpContext(
+            user_id=id,
+            operation="update_one",
+            collection=self.collection.name,
+        )
+
         update_dict = update_data.to_update_dict()
 
         async def _op() -> UpdateResult:
@@ -67,23 +82,21 @@ class UserRepository:
             _op,
             success_event="mongo_user_update_query",
             error_event="mongo_user_update_one_error",
-            context={"user_id": id},
+            context=context,
         )
 
         if doc:
-            self.logger.debug(
-                "mongo_user_update_success",
-                user_id=id,
-            )
             return UserDB.model_validate(doc)
 
-        self.logger.warning(
-            "mongo_user_update_not_found_or_forbidden",
-            user_id=id,
-        )
         return None
 
-    async def delete(self, user_id: str) -> DeleteResult:
+    async def delete(self, user_id: str) -> bool:
+        context = DBOpContext(
+            user_id=user_id,
+            operation="delete_one",
+            collection=self.collection.name,
+        )
+
         async def _op() -> DeleteResult:
             return await self.collection.delete_one({"_id": ObjectId(user_id)})
 
@@ -92,23 +105,18 @@ class UserRepository:
             _op,
             success_event="mongo_user_delete_query",
             error_event="mongo_user_delete_one_error",
-            context={"user_id": user_id},
+            context=context,
         )
 
-        if result.deleted_count == 0:
-            self.logger.warning(
-                "mongo_user_delete_not_found_or_forbidden",
-                user_id=user_id,
-            )
-        else:
-            self.logger.debug(
-                "mongo_user_delete_success",
-                user_id=user_id,
-                deleted_count=result.deleted_count,
-            )
-        return result
+        return result.deleted_count > 0
 
     async def get_by_id(self, id: str) -> Optional[UserDB]:
+        context = DBOpContext(
+            user_id=id,
+            operation="find_one",
+            collection=self.collection.name,
+        )
+
         async def _op():
             return await self.collection.find_one({"_id": ObjectId(id)})
 
@@ -117,36 +125,22 @@ class UserRepository:
             _op,
             success_event="mongo_user_find_one_by_id_query",
             error_event="mongo_user_find_one_by_id_error",
-            context={"user_id": id},
+            context=context,
         )
 
         if doc:
-            self.logger.debug("mongo_user_find_one_by_id_found", user_id=id)
             return UserDB.model_validate(doc)
-        self.logger.debug("mongo_user_find_one_by_id_not_found", user_id=id)
         return None
 
-    async def is_username_exists(self, username: str) -> bool:
-        async def _op():
-            return await self.collection.find_one({"username": username})
-
-        doc = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_user_find_one_by_username_query",
-            error_event="mongo_user_find_one_by_username_error",
-            context={"username": username},
-        )
-
-        exists = doc is not None
-        self.logger.debug(
-            "mongo_user_find_one_by_username_exists",
+    async def get_by_username(
+        self, username: str
+    ) -> Optional[UserDB]:
+        context = DBOpContext(
             username=username,
-            exists=exists,
+            operation="find_one",
+            collection=self.collection.name,
         )
-        return exists
 
-    async def get_by_username(self, username: str) -> Optional[UserDB]:
         async def _op():
             return await self.collection.find_one({"username": username})
 
@@ -155,17 +149,9 @@ class UserRepository:
             _op,
             success_event="mongo_user_find_one_by_username_query",
             error_event="mongo_user_find_one_by_username_error",
-            context={"username": username},
+            context=context,
         )
 
         if doc:
-            self.logger.debug(
-                "mongo_user_find_one_by_username_found",
-                username=username,
-            )
             return UserDB.model_validate(doc)
-        self.logger.debug(
-            "mongo_user_find_one_by_username_not_found",
-            username=username,
-        )
         return None
