@@ -44,6 +44,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_trending_media",
+            external_source="tmdb",
+            media_type=media_type,
         )
 
         results = [
@@ -81,6 +83,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_search_movie",
+            external_source="tmdb",
+            media_type="movie",
         )
 
         results = [
@@ -118,6 +122,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_search_tv",
+            external_source="tmdb",
+            media_type="tv",
         )
 
         results = [
@@ -183,6 +189,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_discover_movie",
+            external_source="tmdb",
+            media_type="movie",
         )
 
         results = [
@@ -257,6 +265,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_discover_tv",
+            external_source="tmdb",
+            media_type="tv",
         )
 
         results = [
@@ -290,6 +300,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_movie_detail",
+            external_source="tmdb",
+            media_type="movie",
         )
 
         movie_detail = TMDBMovieDetail.model_validate(data)
@@ -297,6 +309,7 @@ class TMDBApi:
 
     async def get_tv_detail(
         self,
+
         tv_id: int,
         language: Optional[str],
     ) -> TMDBTVDetail:
@@ -315,6 +328,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_tv_detail",
+            external_source="tmdb",
+            media_type="tv",
         )
 
         tv_detail = TMDBTVDetail.model_validate(data)
@@ -339,6 +354,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_collection_detail",
+            external_source="tmdb",
+            media_type=None,
         )
 
         collection_detail = TMDBCollection.model_validate(data)
@@ -364,6 +381,8 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="search_keyword",
+            external_source="tmdb",
+            media_type=None,
         )
 
         results = data.get("results", [])

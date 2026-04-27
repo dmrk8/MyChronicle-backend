@@ -1,11 +1,11 @@
-from typing import  List, Optional
+from typing import List, Optional
+from fastapi import Request
 from httpx import AsyncClient
 
 from app.models.api.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,
     AnilistPageInfo,
-    
 )
 from app.integrations.http_helpers import perform_request
 
@@ -95,6 +95,8 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="get_featured_media",
+            external_source="anilist",
+            media_type=media_type,
         )
 
         media_list = data.get("data", {}).get("Page", {}).get("media", [])
@@ -228,6 +230,8 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="search_media",
+            external_source="anilist",
+            media_type=media_type,
         )
 
         page_data = data.get("data", {}).get("Page", {})
@@ -387,6 +391,8 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="get_media_detail",
+            external_source="anilist",
+            media_type=None,
         )
 
         media = data.get("data", {}).get("Media", {})
@@ -394,4 +400,3 @@ class AnilistApi:
         detailed_media = AnilistMediaDetailed.model_validate(media)
 
         return detailed_media
-

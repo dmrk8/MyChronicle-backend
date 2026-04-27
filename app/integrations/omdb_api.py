@@ -27,5 +27,7 @@ class OMDbApi:
             params=params,
             headers=None,
             action="fetch_omdb_data",
+            external_source="omdb",
+            media_type=None,
         )
         return OMDbData.model_validate(data)
