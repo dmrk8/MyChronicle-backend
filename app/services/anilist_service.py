@@ -1,4 +1,5 @@
-from typing import List, Union, Optional
+from typing import List, Optional
+
 from app.integrations.anilist_api import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType
 from app.models.api.anilist_models import AnilistMediaDetailed

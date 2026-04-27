@@ -1,4 +1,6 @@
-﻿import structlog
+﻿from multiprocessing import AuthenticationError
+
+import structlog
 
 from app.auth.jwt_handler import JWTHandler
 from app.models.auth.auth_models import RegisterRequest
@@ -24,5 +26,6 @@ class AuthService:
 
     async def login(self, username: str, password: str) -> str:
         user = await self.user_service.verify_credentials(username, password)
-        logger.info("login_success", username=user.username)  # type: ignore
-        return self.jwt_handler.create_access_token(user.id)  # type: ignore
+        if not user:
+            raise AuthenticationError("Invalid username or password")
+        return self.jwt_handler.create_access_token(user.id)

@@ -1,5 +1,4 @@
 from typing import List, Optional
-from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
@@ -15,6 +14,7 @@ from app.repositories._repo_observability import run_db_op
 import structlog
 
 logger = structlog.get_logger()
+
 
 class UserMediaEntryRepository:
     def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
@@ -36,9 +36,7 @@ class UserMediaEntryRepository:
             name="user_external_unique_idx",
         )
 
-    async def insert_entry(
-        self, entry: UserMediaEntryInsert
-    ) -> UserMediaEntryDB:
+    async def insert_entry(self, entry: UserMediaEntryInsert) -> UserMediaEntryDB:
         data = entry.model_dump()
 
         context = DBOpContext(
@@ -100,7 +98,6 @@ class UserMediaEntryRepository:
 
     async def get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
         self,
-        
         external_id: int,
         external_source: str,
         user_id: str,
@@ -113,7 +110,6 @@ class UserMediaEntryRepository:
             media_type=media_type,
             operation="find_one_by_external_id_and_user_id_and_media_type",
             collection=self.collection.name,
-            
         )
 
         async def _op():
@@ -149,7 +145,8 @@ class UserMediaEntryRepository:
         context = DBOpContext(
             entry_id=entry_id,
             collection=self.collection.name,
-           
+            operation="find_one_and_update",
+            user_id=user_id,
         )
 
         async def _op():
@@ -177,7 +174,6 @@ class UserMediaEntryRepository:
             user_id=user_id,
             operation="delete_one",
             collection=self.collection.name,
-            
         )
 
         async def _op() -> DeleteResult:
@@ -248,7 +244,6 @@ class UserMediaEntryRepository:
             user_id=user_id,
             operation="find",
             collection=self.collection.name,
-            
         )
         skip = (page - 1) * per_page
 

@@ -8,7 +8,12 @@ from app.cache.anilist_cache import (
     anilist_search_key,
     get_anilist_search_ttl,
 )
-from app.cache.tmdb_cache import TMDB_DETAIL_TTL, get_tmdb_search_ttl, tmdb_detail_key, tmdb_search_key
+from app.cache.tmdb_cache import (
+    TMDB_DETAIL_TTL,
+    get_tmdb_search_ttl,
+    tmdb_detail_key,
+    tmdb_search_key,
+)
 from app.core.exceptions import NotFoundException
 from app.enums.anilist_enums import AnilistMediaType, AnilistSortOption
 from app.enums.media_enums import MediaExternalSource, MediaType
@@ -29,7 +34,6 @@ from app.models.media_models import (
     AnimeDetailed,
     MangaDetailed,
     MediaPagination,
-    
     MovieDetailedWithCollection,
 )
 from app.services.anilist_service import AnilistService
@@ -107,10 +111,19 @@ class MediaService:
                 status,
             )
             cached = await self.redis_service.get_cached(
-                cache_key, CachedMediaPagination
+                key=cache_key,
+                endpoint=f"/media/anilist/search/{media_type}",
+                service="anilist",
+                cache_type="media_search",
+                model=CachedMediaPagination,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
+                logger.info(
+                    "cache_hit",
+                    cache_key=cache_key,
+                    service="redis",
+                    endpoint=f"/media/anilist/search/{media_type}",
+                )
                 return cached.data
 
             logger.info("cache_miss", key=cache_key)
@@ -155,7 +168,13 @@ class MediaService:
         cache_ttl: int,
     ) -> Union[AnimeDetailed, MangaDetailed]:
         if cache_key:
-            cached = await self.redis_service.get_cached(cache_key, cache_model)
+            cached = await self.redis_service.get_cached(
+                key=cache_key,
+                endpoint=f"/media/anilist/{media_type}/:id",
+                service="anilist",
+                cache_type="media_detail",
+                model=cache_model,
+            )
             if cached:
                 logger.info("cache_hit", key=cache_key)
                 return cached.data
@@ -183,7 +202,7 @@ class MediaService:
         raise NotFoundException()
 
     async def get_media_detail_anilist(
-        self, media_id: int, media_type: AnilistMediaType
+        self,  media_id: int, media_type: AnilistMediaType
     ) -> Union[AnimeDetailed, MangaDetailed]:
         key = anilist_detail_key(media_type, media_id)
         if media_type == AnilistMediaType.ANIME:
@@ -208,13 +227,18 @@ class MediaService:
             )
 
     async def get_trending_media_tmdb(
-        self, media_type: str, time_window: str, language: str, page: int
+        self,
+        media_type: str,
+        time_window: str,
+        language: str,
+        page: int,
     ) -> MediaPagination:
         return await self.tmdb_service.get_trending_media(
-            media_type=media_type, time_window=time_window, language=language, page=page
+            media_type=media_type,
+            time_window=time_window,
+            language=language,
+            page=page,
         )
-        
-        
 
     async def search_movie_tmdb(
         self,
@@ -254,7 +278,11 @@ class MediaService:
                 sort=sort_by,
             )
             cached = await self.redis_service.get_cached(
-                cache_key, CachedMediaPagination
+                key=cache_key,
+                endpoint="/media/tmdb/search/movie",
+                service="tmdb",
+                cache_type="media_search",
+                model=CachedMediaPagination,
             )
             if cached:
                 logger.info("cache_hit", key=cache_key)
@@ -330,19 +358,23 @@ class MediaService:
                 sort=sort_by,
             )
             cached = await self.redis_service.get_cached(
-                cache_key, CachedMediaPagination
+                key=cache_key,
+                endpoint="/media/tmdb/search/tv",
+                service="tmdb",
+                cache_type="media_search",
+                model=CachedMediaPagination,
             )
             if cached:
                 logger.info("cache_hit", key=cache_key)
                 return cached.data
             logger.info("cache_miss", key=cache_key)
-            
+
         else:
             logger.debug(
                 "skipping_cache", reason="advanced_filters_provided_or_non_default_sort"
             )
-        
-        res =  await self.tmdb_service.search_tv(
+
+        res = await self.tmdb_service.search_tv(
             search=search,
             page=page,
             language=language,
@@ -374,12 +406,18 @@ class MediaService:
     ) -> MovieDetailedWithCollection:
         cache_key = tmdb_detail_key("movie", movie_id)
         if cache_key:
-            cached = await self.redis_service.get_cached(cache_key, CachedMovieDetailWithCollection)
+            cached = await self.redis_service.get_cached(
+                key=cache_key,
+                endpoint="/media/tmdb/movie/:id",
+                service="tmdb",
+                cache_type="media_detail",
+                model=CachedMovieDetailWithCollection,
+            )
             if cached:
                 logger.info("cache_hit", key=cache_key)
                 return cached.data
             logger.info("cache_miss", key=cache_key)
-        
+
         data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             movie_id, MediaExternalSource.TMDB, MediaType.MOVIE
         )
@@ -405,9 +443,11 @@ class MediaService:
             )
             if cache_key:
                 await self.redis_service.set_cached(
-                    cache_key, CachedMovieDetailWithCollection(data=res), ttl=TMDB_DETAIL_TTL
+                    cache_key,
+                    CachedMovieDetailWithCollection(data=res),
+                    ttl=TMDB_DETAIL_TTL,
                 )
-                return res 
+            return res
         raise NotFoundException()
 
     async def get_tv_detail_tmdb(
@@ -417,7 +457,13 @@ class MediaService:
     ):
         cache_key = tmdb_detail_key("tv", tv_id)
         if cache_key:
-            cached = await self.redis_service.get_cached(cache_key, CachedTVDetail)
+            cached = await self.redis_service.get_cached(
+                key=cache_key,
+                endpoint="/media/tmdb/tv/:id",
+                service="tmdb",
+                cache_type="media_detail",
+                model=CachedTVDetail,
+            )
             if cached:
                 logger.info("cache_hit", key=cache_key)
                 return cached.data

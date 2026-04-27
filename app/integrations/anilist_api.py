@@ -1,5 +1,4 @@
 from typing import List, Optional
-from fastapi import Request
 from httpx import AsyncClient
 
 from app.models.api.anilist_models import (

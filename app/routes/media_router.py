@@ -9,6 +9,7 @@ from app.core.dependencies import get_media_service
 
 media_router = APIRouter(prefix="/media")
 
+
 @media_router.get("/anilist/search/{media_type}", response_model=MediaPagination)
 async def search_anilist(
     media_type: str = Path(...),
@@ -57,11 +58,12 @@ async def search_anilist(
     response_model=Union[AnimeDetailed, MangaDetailed],
 )
 async def get_media_detail(
-    media_type: AnilistMediaType = Path(..., description="Media type (ANIME or MANGA)"),
+    media_type: str = Path(..., description="Media type (ANIME or MANGA)"),
     media_id: int = Path(..., ge=1, description="Media ID"),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_media_detail_anilist(media_id, media_type)
+    media_type_enum = AnilistMediaType(media_type.upper())
+    return await service.get_media_detail_anilist(media_id, media_type_enum)
 
 
 @media_router.get("/tmdb/search/movie")
@@ -69,7 +71,9 @@ async def search_tmdb_movie(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
     language: str = Query("en-US", description="Language for results"),
-    sort_by: TmdbMovieSortOptions = Query(TmdbMovieSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"),
+    sort_by: TmdbMovieSortOptions = Query(
+        TmdbMovieSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"
+    ),
     primary_release_date_gte: Optional[str] = Query(
         None,
         description="Primary release date greater than or equal to",
@@ -127,7 +131,9 @@ async def search_tmdb_tv(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
     language: str = Query("en-US", description="Language for results"),
-    sort_by: TmdbTvSortOptions = Query(TmdbTvSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"),
+    sort_by: TmdbTvSortOptions = Query(
+        TmdbTvSortOptions.POPULARITY_DESC, description="Sort by", alias="sortBy"
+    ),
     air_date_gte: Optional[str] = Query(
         None, description="Air date greater than or equal to", alias="airDateGte"
     ),

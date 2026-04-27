@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from redis.asyncio import Redis
 import structlog
 
+from app.observability.metrics import REDIS_HITS, REDIS_MISSES
+
 T = TypeVar("T", bound=BaseModel)
 
 logger = structlog.get_logger("redis_service")
@@ -12,10 +14,28 @@ class RedisService:
     def __init__(self, redis_client: Redis):
         self.redis_client = redis_client
 
-    async def get_cached(self, key: str, model: type[T]) -> Optional[T]:
+    async def get_cached(
+        self,
+        key: str,
+        endpoint: str,
+        service: str,
+        cache_type: str,
+        model: type[T],
+    ) -> Optional[T]:
         try:
             data = await self.redis_client.get(key)
-            return model.model_validate_json(data) if data else None
+
+
+            if data:
+                REDIS_HITS.labels(
+                    endpoint=endpoint, service=service, cache_type=cache_type
+                ).inc()
+                return model.model_validate_json(data)
+            else:
+                REDIS_MISSES.labels(
+                    endpoint=endpoint, service=service, cache_type=cache_type
+                ).inc()
+                return None
         except Exception as e:
             logger.error("redis_get_failed", key=key, error=str(e), exc_info=True)
             raise
