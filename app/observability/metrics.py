@@ -44,19 +44,19 @@ REDIS_MISSES = Counter(
 EXTERNAL_API_REQUESTS_TOTAL = Counter(
     "external_api_requests_total",
     "Total number of requests made to external APIs",
-    ["external_source", "media_type", "endpoint"],
+    ["external_source", "media_type", "action"],
 )
 
 EXTERNAL_API_FAILURES_TOTAL = Counter(
     "external_api_failures_total",
     "Total number of failed requests to external APIs",
-    ["external_source", "media_type", "endpoint"],
+    ["external_source", "media_type", "action"],
 )
 
 EXTERNAL_API_LATENCY_SECONDS = Histogram(
     "external_api_latency_seconds",
     "Latency of external API requests in seconds",
-    ["external_source", "media_type", "endpoint"],
+    ["external_source", "media_type", "action"],
 )
 
 
@@ -71,19 +71,19 @@ MONGO_QUERY_DURATION = Histogram(
 )
 
 MONGO_QUERY_SUCCESS = Counter(
-    "mongo_query_success_count",
+    "mongo_query_success_total",
     "MongoDB query success count",
     ["operation", "collection"],
 )
 
 MONGO_QUERY_FAILURE = Counter(
-    "mongo_query_failure_count",
+    "mongo_query_failure_total",
     "MongoDB query failure count",
     ["operation", "collection"],
 )
 
 MONGO_SLOW_QUERY = Counter(
-    "mongo_slow_query_count",
+    "mongo_slow_query_total",
     "MongoDB slow query count",
     ["operation", "collection"],
 )

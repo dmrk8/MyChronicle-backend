@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import structlog
@@ -11,6 +12,7 @@ from app.core.repositories import init_repositories
 from app.core.event_bus import EventBus
 from app.auth.password_handler import PasswordHandler
 from app.auth.jwt_handler import JWTHandler
+from app.observability.prometheus import setup_prometheus
 
 logger = structlog.get_logger()
 
@@ -45,7 +47,7 @@ def create_app(settings) -> FastAPI:
         # HTTP clients
         app.state.anilist_client = AsyncClient(timeout=10.0)
         app.state.tmdb_client = AsyncClient(timeout=10.0)
-        app.state.omdb_client = AsyncClient(timeout=10.0)   
+        app.state.omdb_client = AsyncClient(timeout=10.0)
 
         # Core services
         app.state.event_bus = EventBus()
@@ -72,6 +74,8 @@ def create_app(settings) -> FastAPI:
         await app.state.tmdb_client.aclose()
 
     app = FastAPI(title=settings.service_name, lifespan=lifespan)
+
+    setup_prometheus(app)
 
     # ------------------------
     # Middleware

@@ -1,9 +1,17 @@
 import time
 from typing import Optional
 import httpx
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 import structlog
 from app.core.exceptions import UpstreamServiceException
+from app.observability.metrics import (
+    EXTERNAL_API_FAILURES_TOTAL,
+    EXTERNAL_API_LATENCY_SECONDS,
+    EXTERNAL_API_REQUESTS_TOTAL,
+)
 
+tracer = trace.get_tracer(__name__)
 logger = structlog.get_logger()
 
 ACTION_SERVICE_MAP = {
@@ -14,7 +22,7 @@ ACTION_SERVICE_MAP = {
     "get_tv_detail": "Movies-TV",
     "get_discover_movie": "Movies-TV",
     "get_discover_tv": "Movies-TV",
-    "fetch_omdb_data": "OMDb", 
+    "fetch_omdb_data": "OMDb",
 }
 
 
@@ -27,77 +35,92 @@ async def perform_request(
     headers: Optional[dict],
     params: Optional[dict] = None,
     action: str,
+    external_source: Optional[str],
+    media_type: Optional[str],
 ):
 
-    start = time.perf_counter()
     request_id = structlog.contextvars.get_contextvars().get("request_id")
 
-    try:
-        if graphql_query:
-            response = await client.post(url=url, json=graphql_query)
+    with tracer.start_as_current_span(f"external_api_call: {action}") as span:
+        span.set_attribute("external.action", action)
+        span.set_attribute("external.source", external_source or "unknown")
+        span.set_attribute("media.type", media_type or "unknown")
+        span.set_attribute("http.url", url)
+        span.set_attribute("http.method", method)
 
-        else:
-            response = await client.request(
+        start = time.perf_counter()
+
+        try:
+            if graphql_query:
+                response = await client.post(url=url, json=graphql_query)
+
+            else:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=params,
+                )
+            elapsed = time.perf_counter() - start
+
+            EXTERNAL_API_REQUESTS_TOTAL.labels(
+                external_source=external_source,
+                media_type=media_type,
+                action=action,
+            ).inc()
+            EXTERNAL_API_LATENCY_SECONDS.labels(
+                external_source=external_source,
+                media_type=media_type,
+                action=action,
+            ).observe(elapsed)
+
+            response.raise_for_status()
+
+            span.set_attribute("http.status_code", response.status_code)
+
+            logger.debug(
+                "upstream_request",
+                status="success",
+                action=action,
                 method=method,
-                url=url,
-                headers=headers,
-                params=params,
+                url=str(url),
+                status_code=response.status_code,
+                request_id=request_id,
+                elapsed_ms=int(elapsed * 1000),
             )
 
-        response.raise_for_status()
-        logger.info(
-            "upstream_request",
-            status="success",
-            action=action,
-            method=method,
-            url=str(url),
-            status_code=response.status_code,
-            request_id=request_id,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-        )
+            return response.json()
 
-        return response.json()
+        except Exception as exc:
 
-    except httpx.HTTPStatusError as exc:
-        logger.warning(
-            "upstream_request",
-            status="http_error",
-            action=action,
-            method=method,
-            url=str(url),
-            status_code=exc.response.status_code,
-            response_text=exc.response.text,
-            request_id=request_id,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-        )
-        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
-        raise UpstreamServiceException(service_name, exc.response.status_code)
+            elapsed = time.perf_counter() - start
+            EXTERNAL_API_FAILURES_TOTAL.labels(
+                external_source=external_source,
+                media_type=media_type,
+                action=action,
+            ).inc()
+            EXTERNAL_API_LATENCY_SECONDS.labels(
+                external_source=external_source,
+                media_type=media_type,
+                action=action,
+            ).observe(elapsed)
 
-    except httpx.RequestError as exc:
-        logger.error(
-            "upstream_request",
-            status="connection_error",
-            action=action,
-            method=method,
-            url=str(url),
-            error=str(exc),
-            request_id=request_id,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-        )
-        
-        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
-        raise UpstreamServiceException(service_name)
+            span.record_exception(exc)
+            span.set_status(Status(StatusCode.ERROR))
 
-    except Exception:
-        logger.exception(
-            "upstream_request",
-            status="unexpected_error",
-            action=action,
-            method=method,
-            url=str(url),
-            request_id=request_id,
-            elapsed_ms=int((time.perf_counter() - start) * 1000),
-        )
-        
-        service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
-        raise UpstreamServiceException(service_name)
+            logger.exception(
+                "upstream_request",
+                status="error",
+                action=action,
+                request_id=request_id,
+                elapsed_ms=int(elapsed * 1000),
+            )
+            service_name = ACTION_SERVICE_MAP.get(action, f"Unknown action: {action}")
+
+            if isinstance(exc, httpx.HTTPStatusError):
+                span.set_attribute("http.status_code", exc.response.status_code)
+                raise UpstreamServiceException(service_name, exc.response.status_code)
+            elif isinstance(exc, httpx.RequestError):
+                raise UpstreamServiceException(service_name)
+            else:
+                raise
