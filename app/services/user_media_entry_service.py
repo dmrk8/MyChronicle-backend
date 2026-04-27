@@ -8,7 +8,6 @@ from app.models.db.user_media_entry_models import (
     UserMediaEntryCreate,
     UserMediaEntryDB,
     UserMediaEntryInsert,
-    UserMediaEntrySyncMetadata,
     UserMediaEntryUpdate,
     UserMediaEntryPagination,
 )
@@ -52,8 +51,8 @@ class UserMediaEntryService:
             **entry_request.model_dump(),
             user_id=user_id,
         )
-        res = await self.repository.create_entry(entry_data)
-        logger.info("entry_created", entry_id=res.id, user_id=user_id)
+        res = await self.repository.insert_entry(entry_data)
+
         return UserMediaEntry.from_db(res)
 
     async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntry:
@@ -61,7 +60,10 @@ class UserMediaEntryService:
         return UserMediaEntry.from_db(res)
 
     async def update_entry(
-        self, entry_id: str, update_data: UserMediaEntryUpdate, user_id: str
+        self,
+        entry_id: str,
+        update_data: UserMediaEntryUpdate,
+        user_id: str,
     ) -> Optional[UserMediaEntry]:
         await self._verify_ownership(entry_id, user_id)
 
@@ -84,10 +86,7 @@ class UserMediaEntryService:
         await self.review_service.delete_reviews_for_user_media_entry(entry_id, user_id)
         deleted = await self.repository.delete_entry(entry_id, user_id)
         if not deleted:
-            raise RuntimeError(
-                f"Delete operation not acknowledged for entry {entry_id}"
-            )
-        logger.info("entry_deleted", entry_id=entry_id, user_id=user_id)
+            raise RuntimeError(f"Failed to delete entry {entry_id}")
 
     async def get_entry_by_external_id_and_source_and_media_type(
         self,
@@ -100,9 +99,7 @@ class UserMediaEntryService:
             external_id, external_source, user_id, media_type.value
         )
         if not res:
-            raise NotFoundException(
-                f"Entry not found for external_id={external_id}, source={external_source}"
-            )
+            raise NotFoundException(f"Entry not found")
 
         return UserMediaEntry.from_db(res)
 
@@ -164,7 +161,7 @@ class UserMediaEntryService:
         return count
 
     async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
-        entry = await self.repository.get_entry_by_id(entry_id, user_id)
+        entry = await self.repository.get_entry_by_id_and_user_id(entry_id, user_id)
         if not entry:
             raise NotFoundException(f"Entry {entry_id} not found")
         if entry.user_id != user_id:
@@ -174,22 +171,6 @@ class UserMediaEntryService:
             raise ForbiddenException("You do not have access to this entry")
         return entry
 
-    async def sync_entry_metadata(
-        self, entry_id: str, metadata: UserMediaEntrySyncMetadata, user_id: str
-    ) -> Optional[UserMediaEntry]:
-        """Sync metadata from external API"""
-        await self._verify_ownership(entry_id, user_id)
-
-        synced_entry = await self.repository.sync_entry_metadata(
-            entry_id, user_id, metadata
-        )
-        if synced_entry is None:
-            raise RuntimeError(
-                "UserMediaEntry missing after metadata sync - data integrity issue"
-            )
-        logger.info("entry_synced", entry_id=entry_id)
-        return UserMediaEntry.from_db(synced_entry)
-
     async def delete_all_entries_for_user(self, user_id: str) -> None:
         """Delete all media entries (and their reviews) for a user."""
         deleted = await self.repository.delete_by_user_id(user_id)
@@ -197,7 +178,3 @@ class UserMediaEntryService:
             raise RuntimeError(f"Failed to delete entries for user {user_id}")
 
         await self.review_service.delete_all_reviews_for_user(user_id)
-        logger.info(
-            "all_entries_deleted_for_user",
-            user_id=user_id,
-        )

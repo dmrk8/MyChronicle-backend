@@ -1,17 +1,14 @@
 from typing import Optional, List
+
 from app.integrations.tmdb_api import TMDBApi
 
 from app.models.media_models import (
     MediaPagination,
-    MovieCollection,
-    MovieDetailed,
-    TVDetailed,
 )
 from app.utils.tmdb_normalizer import TMDBNormalizer
 from app.models.api.tmdb_models import (
     TMDBMovieDetail,
     TMDBCollection,
-    TMDBPagination,
     TMDBTVDetail,
 )
 
@@ -35,10 +32,17 @@ class TMDBService:
         ]
 
     async def get_trending_media(
-        self, media_type: str, time_window: str, language: str, page: int
+        self,
+        media_type: str,
+        time_window: str,
+        language: str,
+        page: int,
     ) -> MediaPagination:
         pagination = await self.tmdb_api.get_trending_media(
-            media_type=media_type, time_window=time_window, language=language, page=page
+            media_type=media_type,
+            time_window=time_window,
+            language=language,
+            page=page,
         )
         results = pagination.results
         per_page = len(results)
@@ -195,7 +199,7 @@ class TMDBService:
         movie_id: int,
         language: Optional[str] = "en-US",
     ) -> TMDBMovieDetail:
-        res = await self.tmdb_api.get_movie_detail(movie_id, language)
+        res = await self.tmdb_api.get_movie_detail(movie_id=movie_id, language=language)
         if res.recommendations:
             filtered_results = self._filter_recommendations(res.recommendations.results)
             res.recommendations.results = filtered_results
@@ -206,7 +210,7 @@ class TMDBService:
         tv_id: int,
         language: Optional[str] = "en-US",
     ) -> TMDBTVDetail:
-        res = await self.tmdb_api.get_tv_detail(tv_id, language)
+        res = await self.tmdb_api.get_tv_detail(tv_id=tv_id, language=language)
         if res.recommendations:
             filtered_results = self._filter_recommendations(res.recommendations.results)
             res.recommendations.results = filtered_results
@@ -217,7 +221,9 @@ class TMDBService:
         collection_id: int,
         language: Optional[str] = "en-US",
     ) -> Optional[TMDBCollection]:
-        return await self.tmdb_api.get_collection_detail(collection_id, language)
+        return await self.tmdb_api.get_collection_detail(
+            collection_id=collection_id, language=language
+        )
 
     async def search_keyword(
         self,
