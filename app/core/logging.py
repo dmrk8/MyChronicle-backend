@@ -2,8 +2,6 @@ from app.core.config import Settings
 import logging
 import structlog.stdlib
 
-from structlog.contextvars import merge_contextvars
-from structlog.processors import TimeStamper
 from structlog.stdlib import LoggerFactory
 
 
@@ -70,21 +68,25 @@ def setup_logging(settings: Settings):
     root_logger.addHandler(handler)
 
     shared_processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
         structlog.stdlib.filter_by_level,
-        merge_contextvars,
-        TimeStamper(fmt="iso"),
-        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
     ]
 
     if env == "prod":
-        processors = shared_processors + [structlog.processors.JSONRenderer()]
+        structlog.configure(
+            processors=shared_processors + [structlog.processors.JSONRenderer()],
+            wrapper_class=structlog.stdlib.BoundLogger,
+            logger_factory=structlog.stdlib.LoggerFactory(),
+        )
     else:
-        processors = shared_processors + [rich_renderer]
+        structlog.configure(
+            processors=shared_processors + [rich_renderer],
+            wrapper_class=structlog.stdlib.BoundLogger,
+            logger_factory=structlog.stdlib.LoggerFactory(),
+        )
+    
 
-    structlog.configure(
-        processors=processors,
-        logger_factory=LoggerFactory(),
-        cache_logger_on_first_use=True,
-    )

@@ -377,7 +377,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(external_api_requests_total[1m])) by (external_source)",
+                        "expr": "sum(rate(external_api_requests_total[5m])) by (external_source)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -399,7 +399,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(external_api_failures_total[1m])) by (external_source)",
+                        "expr": "sum(rate(external_api_failures_total[5m])) by (external_source)",
                         "instant": false,
                         "legendFormat": "__auto",
                         "range": true
@@ -452,7 +452,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(mongo_query_success_count[1m])) by (collection)",
+                        "expr": "sum(rate(mongo_query_success_total[5m])) by (collection)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -474,7 +474,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(mongo_query_failure_count[1m])) by (collection)",
+                        "expr": "sum(rate(mongo_query_failure_total[5m])) by (collection)",
                         "instant": false,
                         "legendFormat": "__auto",
                         "range": true
@@ -527,7 +527,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[1m]))\r\n/\r\nsum(rate(http_requests_total[1m]))",
+                        "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m]))\r\n/\r\nsum(rate(http_requests_total[5m]))",
                         "legendFormat": "__auto",
                         "range": true
                       }
