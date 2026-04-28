@@ -56,7 +56,7 @@ class UserUpdate(BaseModel):
         return data
 
 
-class UpdatePassword(BaseModel):
+class UpdatePasswordRequest(BaseModel):
     current_password: str = Field(..., alias="currentPassword")
     new_password: str = Field(..., alias="newPassword")
 
@@ -66,9 +66,8 @@ class UpdatePassword(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class UpdateUsername(BaseModel):
-    username: str = Field(...)
+class UpdateUsernameRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
 
 
 class User(BaseModel):

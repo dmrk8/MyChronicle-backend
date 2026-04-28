@@ -1,5 +1,4 @@
-﻿from astroid import NotFoundError
-
+﻿from mongomock import DuplicateKeyError
 import structlog
 from typing import Optional
 
@@ -7,9 +6,16 @@ from app.auth import password_handler
 from app.core.event_bus import EventBus
 from app.core.exceptions import (
     AuthenticationError,
+    ConflictException,
     NotFoundException,
 )
-from app.models.db.user_models import UpdateUsername, User, UserInsert, UserUpdate
+from app.models.db.user_models import (
+    UpdatePasswordRequest,
+    UpdateUsernameRequest,
+    User,
+    UserInsert,
+    UserUpdate,
+)
 from app.repositories.user_repository import UserRepository
 
 logger = structlog.get_logger()
@@ -30,63 +36,75 @@ class UserService:
     async def create_user(self, username: str, password: str) -> User:
         hash_password = self.password_handler.hash_password(password)
         user_insert = UserInsert(username=username, hash_password=hash_password)
-        res = await self.user_repository.insert_user(user_insert)
+        try:
+            res = await self.user_repository.insert_user(user_insert)
+        except DuplicateKeyError:
+            raise ConflictException("Username already exists")
         if res is None:
-            raise RuntimeError("User creation failed for unknown reasons")
-        return User.from_db(res)
-
-    async def update_user(self, user_id: str, user_update: UserUpdate) -> User:
-        res = await self.user_repository.update(user_id, user_update)
-        if res is None:
-            raise RuntimeError("User missing after update - data integrity issue")
-
+            raise RuntimeError("User creation failed. Please try again later.")
         return User.from_db(res)
 
     async def update_username(
-        self, user_id: str, update_username: UpdateUsername
-    ) -> None:
+        self, user_id: str, update_username: UpdateUsernameRequest
+    ) -> User:
         update_data = UserUpdate(username=update_username.username)  # type: ignore
         res = await self.user_repository.update(user_id, update_data)
         if res is None:
-            raise RuntimeError("User missing after update - data integrity issue")
+            self.logger.error(
+                "username_update_failed",
+                user_id=user_id,
+                username=update_username.username,
+            )
+            raise RuntimeError("Unable to update username. Please try again later.")
+        return User.from_db(res)
 
     async def change_password(
-        self, user_id: str, current_password: str, new_password: str
-    ) -> None:
+        self, user_id: str, update_password: UpdatePasswordRequest
+    ) -> User:
         user = await self.user_repository.get_by_id(user_id)
         if user is None:
-            raise NotFoundError("User not found")
+            self.logger.error(
+                "password_update_user_not_found",
+                user_id=user_id,
+            )
+            raise RuntimeError("Unable to change password: Please try again later.")
 
         if not self.password_handler.verify_password(
-            current_password, user.hash_password
+            update_password.current_password, user.hash_password
         ):
-            raise AuthenticationError("Current password is incorrect")
+            raise AuthenticationError("Invalid Credentials")
 
-        new_hash = self.password_handler.hash_password(new_password)
+        new_hash = self.password_handler.hash_password(update_password.new_password)
         user_update = UserUpdate(hash_password=new_hash)  # type: ignore
 
         res = await self.user_repository.update(user_id, user_update)
         if res is None:
-            raise RuntimeError("Password update failed")
+            self.logger.error(
+                "password_update_failed",
+                user_id=user_id,
+            )
+            raise RuntimeError("Unable to change password. Please try again later.")
+        return User.from_db(res)
 
     async def delete_user(self, user_id: str) -> None:
         deleted = await self.user_repository.delete(user_id)
         if not deleted:
+            self.logger.error(
+                "user_delete_failed",
+                user_id=user_id,
+            )
             raise RuntimeError(f"Delete operation had no effect for user {user_id}")
 
         if self.event_bus:
             await self.event_bus.publish("user.deleted", user_id=user_id)
 
-    async def get_by_username(self, username: str) -> Optional[User]:
-        user = await self.user_repository.get_by_username(username)
-        if not user:
-            raise NotFoundException("User not found")
-
-        return User.from_db(user)
-
     async def get_by_id(self, user_id: str) -> Optional[User]:
         user = await self.user_repository.get_by_id(user_id)
         if not user:
+            self.logger.error(
+                "user_not_found",
+                user_id=user_id,
+            )
             raise NotFoundException("User not found")
         return User.from_db(user)
 
