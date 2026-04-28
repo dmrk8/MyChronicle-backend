@@ -4,8 +4,6 @@ from typing import Awaitable, Callable, TypeVar
 from pymongo.errors import PyMongoError
 import structlog
 
-logger = structlog.get_logger()
-
 from app.models.db.db_context_model import DBOpContext
 
 T = TypeVar("T")
@@ -30,13 +28,8 @@ async def run_db_op(
             success_event,
             **context.model_dump(exclude_unset=True),
             elapsed_ms=elapsed_ms,
+            slow=elapsed_ms > SLOW_DB_THRESHOLD_MS,
         )
-        if elapsed_ms > SLOW_DB_THRESHOLD_MS:
-            logger.warning(
-                "slow_db_operation",
-                **context.model_dump(exclude_unset=True),
-                elapsed_ms=elapsed_ms,
-            )
 
         return result
 

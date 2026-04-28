@@ -53,10 +53,6 @@ class UserRepository:
 
             return UserDB(**{**data, "_id": result.inserted_id})
         except DuplicateKeyError:
-            self.logger.warning(
-                "mongo_user_insert_one_duplicate",
-                username=user.username,
-            )
             raise
 
     async def update(
@@ -70,20 +66,22 @@ class UserRepository:
 
         update_dict = update_data.to_update_dict()
 
-        async def _op() -> UpdateResult:
+        async def _op():
             return await self.collection.find_one_and_update(
                 {"_id": ObjectId(id)},
                 {"$set": update_dict},
                 return_document=ReturnDocument.AFTER,
             )
-
-        doc = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_user_update_query",
-            error_event="mongo_user_update_one_error",
-            context=context,
-        )
+        try:
+            doc = await run_db_op(
+                self.logger,
+                _op,
+                success_event="mongo_user_update_query",
+                error_event="mongo_user_update_one_error",
+                context=context,
+            )
+        except DuplicateKeyError:
+            raise 
 
         if doc:
             return UserDB.model_validate(doc)

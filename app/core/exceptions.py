@@ -25,6 +25,10 @@ class ForbiddenException(AppException):
     def __init__(self, detail: str = "Forbidden"):
         super().__init__(status.HTTP_403_FORBIDDEN, detail)
 
+class InternalServerErrorException(AppException):
+    def __init__(self, detail: str = "Internal server error"):
+        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)
+
 def _resolve_status_code(upstream_code: int) -> int:
     return {
         429: 429,  # rate limit — client should back off
