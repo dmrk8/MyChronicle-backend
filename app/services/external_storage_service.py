@@ -1,21 +1,15 @@
 from datetime import timedelta, timezone, datetime
-import time
 
 import structlog
-from typing import Optional, Union
+from typing import Optional
 
-from app.enums.media_enums import MediaExternalSource, MediaType, SyncFrequency
-from app.models.api.anilist_models import AnilistMediaDetailed
-from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBTVDetail
-from app.models.db.external__storage_models import (
+from app.enums.media_enums import DataFreshnessStatus, MediaExternalSource, MediaType, StoredDataType
+from app.models.db.external_storage_models import (
     ExternalDataDB,
-    ExternalDataInsert,
     ExternalDataUpdate,
-    MovieWithCollection,
-    MovieWithCollection,
+    ExternalDataUpsert,
+    PayloadType,
 )
-from app.models.media_models import MovieDetailed
 from app.repositories.external_storage_repository import ExternalStorageRepository
 
 logger = structlog.get_logger()
@@ -29,25 +23,6 @@ class ExternalStorageService:
         self.repository = repository
         self.logger = logger.bind(service="ExternalStorageService")
 
-    def _compute_expiry(self, sync_frequency: SyncFrequency) -> Optional[datetime]:
-        now = datetime.now(timezone.utc)
-
-        mapping = {
-            SyncFrequency.HIGH: timedelta(hours=6),
-            SyncFrequency.MEDIUM: timedelta(days=1),
-            SyncFrequency.LOW: timedelta(days=7),
-            SyncFrequency.MANUAL: None,
-        }
-
-        ttl = mapping.get(sync_frequency)
-
-        return now + ttl if ttl else None
-
-    def _is_stale(self, entry: ExternalDataDB) -> bool:
-        if not entry.expires_at:
-            return False
-        return datetime.now(timezone.utc) > entry.expires_at
-
     async def get_by_external_id_and_source_and_media_type(
         self,
         external_id: int,
@@ -58,35 +33,37 @@ class ExternalStorageService:
             external_id, external_source, media_type
         )
 
-        if entry:
-            await self.repository.update_by_external_id_and_source_and_media_type(
-                external_id,
-                external_source,
-                media_type,
-                ExternalDataUpdate(last_accessed_at=datetime.now(timezone.utc)),
-            )
-            return entry
-        return None
+        if not entry:
+            return None
 
-    async def update(
-        self,
-        external_id: int,
-        external_source: MediaExternalSource,
-        media_type: MediaType,
-        update: ExternalDataUpdate,
-    ) -> Optional[ExternalDataDB]:
-        return await self.repository.update_by_external_id_and_source_and_media_type(
-            external_id, external_source, media_type, update
+        await self.repository.update_by_external_id_and_source_and_media_type(
+            external_id,
+            external_source,
+            media_type,
+            ExternalDataUpdate(last_accessed_at=datetime.now(timezone.utc)),
         )
+        self.logger.info(
+            "Updated last accessed time for external data",
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
+        )
+        return entry
 
     async def delete(
         self,
         external_id: int,
         external_source: MediaExternalSource,
         media_type: MediaType,
-    ) -> bool:
-        return await self.repository.delete_by_external_id_and_source_and_media_type(
+    ) -> None:
+        await self.repository.delete_by_external_id_and_source_and_media_type(
             external_id, external_source, media_type
+        )
+        self.logger.info(
+            "Deleted external data",
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
         )
 
     async def upsert(
@@ -94,23 +71,26 @@ class ExternalStorageService:
         external_id: int,
         external_source: MediaExternalSource,
         media_type: MediaType,
-        sync_frequency: SyncFrequency,
-        payload: dict,
-        payload_type: str,
+        payload: PayloadType,
+        payload_type: StoredDataType,
         expires_at: Optional[datetime] = None,
     ) -> ExternalDataDB:
-
-        if expires_at is None:
-            expires_at = self._compute_expiry(sync_frequency)
-
-        insert_model = ExternalDataInsert(
+        
+        insert_model = ExternalDataUpsert(
             external_id=external_id,
             external_source=external_source,
             media_type=media_type,
-            sync_frequency=sync_frequency,
             payload=payload,
             payload_type=payload_type,
             expires_at=expires_at,
-        )  # type: ignore
+        )
 
-        return await self.repository.upsert(insert_model)
+        res = await self.repository.upsert(insert_model)
+
+        self.logger.info(
+            "Upserted external data",
+            external_id=external_id,
+            external_source=external_source,
+            media_type=media_type,
+        )
+        return res
