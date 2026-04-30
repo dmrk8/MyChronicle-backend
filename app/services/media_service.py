@@ -29,7 +29,7 @@ from app.models.cache.cache_models import (
     CachedTVDetail,
     CachedTVDetail,
 )
-from app.models.db.external__storage_models import MovieWithCollection
+from app.models.db.external_storage_models import MovieWithCollection
 from app.models.media_models import (
     AnimeDetailed,
     MangaDetailed,

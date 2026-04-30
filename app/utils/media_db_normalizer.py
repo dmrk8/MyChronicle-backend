@@ -1,15 +1,13 @@
-from calendar import c
 from datetime import datetime, timezone
 import re
 from typing import List, Optional
 from app.models.api.anilist_models import AnilistMediaDetailed
 from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBTVDetail
 from app.models.db.media_db_models import (
-    MediaInsert,
     MediaScore,
     MediaTitle,
     MediaTag,
+    MediaUpsert,
 )
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.utils.omdb_normalizer import normalize_omdb_rating
@@ -49,7 +47,7 @@ class MediaDBNormalizer:
         return list(tokens)
 
     @staticmethod
-    def normalize_anilist_to_media_core(anilist: AnilistMediaDetailed) -> MediaInsert:
+    def normalize_anilist_to_media_core(anilist: AnilistMediaDetailed) -> MediaUpsert:
         # Normalize title
 
         raw_title = (
@@ -126,8 +124,8 @@ class MediaDBNormalizer:
                 )
             )
 
-        # Compose MediaInsert
-        return MediaInsert(
+        # Compose MediaUpsert
+        return MediaUpsert(
             external_id=anilist.id,
             external_source=MediaExternalSource.ANILIST,
             media_type=MediaType[anilist.type.upper()],
@@ -205,7 +203,7 @@ class MediaDBNormalizer:
     @staticmethod
     def normalize_tmdb_tv_to_media_core(
         tv: TMDBTVDetail, omdb_data: Optional[OMDbData]
-    ) -> MediaInsert:
+    ) -> MediaUpsert:
         title = MediaDBNormalizer.build_tmdb_title(tv)
         alt_titles = TMDBNormalizer.get_tv_alternative_titles(tv.alternative_titles)
         search_tokens = MediaDBNormalizer.build_tmdb_search_tokens(title.normalized, alt_titles)
@@ -240,7 +238,7 @@ class MediaDBNormalizer:
                 )
             )
 
-        return MediaInsert(
+        return MediaUpsert(
             external_id=tv.id,
             external_source=MediaExternalSource.TMDB,
             media_type=MediaType.TV,
@@ -268,7 +266,7 @@ class MediaDBNormalizer:
     @staticmethod
     def normalize_tmdb_movie_to_media_core(
         movie: TMDBMovieDetail, omdb_data: Optional[OMDbData] = None
-    ) -> MediaInsert:
+    ) -> MediaUpsert:
         title = MediaDBNormalizer.build_tmdb_title(movie)
         alt_titles = TMDBNormalizer.get_alternative_titles(movie.alternative_titles)
         search_tokens = MediaDBNormalizer.build_tmdb_search_tokens(title.normalized, alt_titles)
@@ -296,7 +294,7 @@ class MediaDBNormalizer:
             
         keywords = TMDBNormalizer.get_movie_keywords(movie.keywords)
 
-        return MediaInsert(
+        return MediaUpsert (
             external_id=movie.id,
             external_source=MediaExternalSource.TMDB,
             media_type=MediaType.MOVIE,
