@@ -1,12 +1,16 @@
-from datetime import timedelta, timezone, datetime
+from datetime import datetime
 
 import structlog
 from typing import Optional
 
-from app.enums.media_enums import DataFreshnessStatus, MediaExternalSource, MediaType, StoredDataType
+from app.enums.media_enums import (
+    DataFreshnessStatus,
+    MediaExternalSource,
+    MediaType,
+    StoredDataType,
+)
 from app.models.db.external_storage_models import (
     ExternalDataDB,
-    ExternalDataUpdate,
     ExternalDataUpsert,
     PayloadType,
 )
@@ -32,23 +36,7 @@ class ExternalStorageService:
         entry = await self.repository.get_by_external_id_and_source_and_media_type(
             external_id, external_source, media_type
         )
-
-        if not entry:
-            return None
-
-        await self.repository.update_by_external_id_and_source_and_media_type(
-            external_id,
-            external_source,
-            media_type,
-            ExternalDataUpdate(last_accessed_at=datetime.now(timezone.utc)),
-        )
-        self.logger.info(
-            "Updated last accessed time for external data",
-            external_id=external_id,
-            external_source=external_source,
-            media_type=media_type,
-        )
-        return entry
+        return entry if entry else None
 
     async def delete(
         self,
@@ -75,7 +63,7 @@ class ExternalStorageService:
         payload_type: StoredDataType,
         expires_at: Optional[datetime] = None,
     ) -> ExternalDataDB:
-        
+
         insert_model = ExternalDataUpsert(
             external_id=external_id,
             external_source=external_source,
@@ -83,6 +71,7 @@ class ExternalStorageService:
             payload=payload,
             payload_type=payload_type,
             expires_at=expires_at,
+            freshness_status=DataFreshnessStatus.FRESH
         )
 
         res = await self.repository.upsert(insert_model)

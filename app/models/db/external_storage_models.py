@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from pyexpat import model
+from turtle import update
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -35,12 +36,9 @@ class ExternalDataUpsert(BaseModel):
     payload: PayloadType
     payload_type: StoredDataType
 
-    fetched_at: Optional[datetime] = Field(default_factory=utc_now)
-    last_accessed_at: Optional[datetime] = Field(default_factory=utc_now)
-    expires_at: Optional[datetime] = Field(
-        default_factory=lambda: utc_now() + timedelta(days=7)
-    )
-    freshness_status: Optional[DataFreshnessStatus] = DataFreshnessStatus.FRESH
+    expires_at: Optional[datetime] = None
+
+    freshness_status: Optional[DataFreshnessStatus] = None
 
 
 class ExternalDataDB(BaseModel):
@@ -53,9 +51,10 @@ class ExternalDataDB(BaseModel):
     payload: AnilistMediaDetailed | MovieWithCollection | TMDBTVDetail | OMDbData
     payload_type: StoredDataType
 
-    fetched_at: datetime
-    last_accessed_at: datetime
+    created_at: datetime
+    updated_at: datetime
     expires_at: datetime
+    
     freshness_status: DataFreshnessStatus
 
     @field_validator("id", mode="before")
@@ -63,14 +62,3 @@ class ExternalDataDB(BaseModel):
     def coerce_object_id(cls, v):
         return str(v)
 
-
-class ExternalDataUpdate(BaseModel):
-    expires_at: Optional[datetime] = None
-    freshness_status: Optional[DataFreshnessStatus] = None
-    last_accessed_at: Optional[datetime] = None
-
-    @model_validator(mode="after")
-    def at_least_one_field_set(cls, model):
-        if not any([model.expires_at, model.freshness_status, model.last_accessed_at]):
-            raise ValueError("At least one field must be provided for update")
-        return model
