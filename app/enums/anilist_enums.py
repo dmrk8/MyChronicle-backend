@@ -11,3 +11,13 @@ class AnilistSortOption(str, Enum):
     POPULARITY_ASC = "POPULARITY"
     TRENDING_DESC = "TRENDING_DESC"
     TRENDING_ASC = "TRENDING"
+
+
+class AnilistStatus(str, Enum):
+    FINISHED = "FINISHED"
+    RELEASING = "RELEASING"
+    NOT_YET_RELEASED = "NOT_YET_RELEASED"
+    CANCELLED = "CANCELLED"
+    HIATUS = "HIATUS"
+    
+    
