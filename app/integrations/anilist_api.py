@@ -94,8 +94,6 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="get_featured_media",
-            external_source="anilist",
-            media_type=media_type,
         )
 
         media_list = data.get("data", {}).get("Page", {}).get("media", [])
@@ -229,8 +227,6 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="search_media",
-            external_source="anilist",
-            media_type=media_type,
         )
 
         page_data = data.get("data", {}).get("Page", {})
@@ -256,6 +252,8 @@ class AnilistApi:
             "query": """
             query($mediaId: Int) {
               Media(id: $mediaId) {
+                id
+                idMal
                 averageScore
                 bannerImage
                 chapters
@@ -316,7 +314,6 @@ class AnilistApi:
                   native
                   romaji
                 }
-                idMal 
                 type
                 volumes
                 tags {
@@ -375,7 +372,6 @@ class AnilistApi:
                   }
                 }
 
-                id
               }
             }
             """,
@@ -390,8 +386,6 @@ class AnilistApi:
             params=None,
             graphql_query=graphql_query,
             action="get_media_detail",
-            external_source="anilist",
-            media_type=None,
         )
 
         media = data.get("data", {}).get("Media", {})

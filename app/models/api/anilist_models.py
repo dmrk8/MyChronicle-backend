@@ -163,11 +163,17 @@ class Recommendations(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class AnilistTrailer(BaseModel):
+    id: Optional[str] = None  
+    site: Optional[str] = None
+    thumbnail: Optional[str] = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 class AnilistMediaMinimal(BaseModel):
     id: int = Field(..., alias="id")
-    type: str
-    title: Title
+    type: Optional[str] = None
+    title: Optional[Title] = None
     format: Optional[str] = None
     genres: Optional[List[str]] = None
     episodes: Optional[int] = None
@@ -179,13 +185,13 @@ class AnilistMediaMinimal(BaseModel):
     next_airing_episode: Optional[NextAiringEpisode] = Field(
         None, alias="nextAiringEpisode"
     )
-    studios: Studios = Studios(edges=[])
+    studios: Optional[Studios] = Field(None, alias="studios")
     cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
     banner_image: Optional[str] = Field(None, alias="bannerImage")
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
     average_score: Optional[int] = Field(None, alias="averageScore")
-
+    
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
@@ -196,7 +202,7 @@ class AnilistMediaDetailed(BaseModel):
     banner_image: Optional[str] = Field(None, alias="bannerImage")
     chapters: Optional[int] = None
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
-    cover_image: CoverImage = Field(..., alias="coverImage")
+    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
     description: Optional[str] = None
     duration: Optional[int] = None
     end_date: Optional[MediaDate] = Field(None, alias="endDate")
@@ -207,21 +213,22 @@ class AnilistMediaDetailed(BaseModel):
     next_airing_episode: Optional[NextAiringEpisode] = Field(
         None, alias="nextAiringEpisode"
     )
-    relations: Relations = Relations(edges=[])
+    relations: Optional[Relations] = None
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
     source: Optional[str] = None
     start_date: Optional[MediaDate] = Field(None, alias="startDate")
     status: Optional[str] = None
     synonyms: Optional[List[str]] = None
-    title: Title
+    title: Optional[Title] = None
     popularity: Optional[int] = None
-    type: str
+    type: Optional[str] = None
     volumes: Optional[int] = None
-    tags: List[Tag] = []
-    studios: Studios = Studios(edges=[])
+    tags: Optional[List[Tag]] = None
+    studios: Optional[Studios] = None
     recommendations: Optional[Recommendations] = None
-    characters: Optional[Characters] = None
+    characters: Optional[Characters] = None 
+    trailer: Optional[AnilistTrailer] = None
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
