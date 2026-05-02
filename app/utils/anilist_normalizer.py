@@ -6,6 +6,7 @@ from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.api.anilist_models import (
     AnilistMediaDetailed,
     AnilistMediaMinimal,
+    AnilistTrailer,
     MediaDate,
     Relations,
     Recommendations,
@@ -22,6 +23,7 @@ from app.models.media_models import (
     MediaRelation,
     MediaStudio,
     MediaVoiceActor,
+    TrailerData,
 )
 
 logger = structlog.get_logger("anilist_normalizer")
@@ -79,6 +81,7 @@ class AnilistNormalizer:
 
             return AnimeDetailed(
                 id=media.id,
+                idMal=media.id_mal,
                 externalSource=MediaExternalSource.ANILIST,
                 mediaType=MediaType.ANIME,
                 title=AnilistNormalizer._get_title(media.title),
@@ -104,6 +107,7 @@ class AnilistNormalizer:
                 recommendations=recommendations,
                 characters=characters,
                 nextAiringEpisode=media.next_airing_episode,
+                trailer=AnilistNormalizer._convert_trailer_url(media.trailer),
             )
         except Exception as e:
             logger.error(
@@ -126,6 +130,7 @@ class AnilistNormalizer:
 
             return MangaDetailed(
                 id=media.id,
+                idMal=media.id_mal,
                 externalSource=MediaExternalSource.ANILIST,
                 mediaType=MediaType.MANGA,
                 title=AnilistNormalizer._get_title(media.title),
@@ -147,6 +152,7 @@ class AnilistNormalizer:
                 relations=relations,
                 recommendations=recommendations,
                 characters=characters,
+                trailer=AnilistNormalizer._convert_trailer_url(media.trailer),
             )
         except Exception as e:
             logger.error(
@@ -246,7 +252,7 @@ class AnilistNormalizer:
         return result
 
     @staticmethod
-    def _normalize_studios(studios: Studios) -> Optional[List[MediaStudio]]:
+    def _normalize_studios(studios: Optional[Studios]) -> Optional[List[MediaStudio]]:
         """Normalize studios (anime only)"""
         if not studios:
             return None
@@ -257,12 +263,14 @@ class AnilistNormalizer:
         ]
 
     @staticmethod
-    def _get_title(title: Title) -> str:
+    def _get_title(title: Optional[Title]) -> str:
         """Extract title with fallback logic"""
+        if not title:
+            return ""
         return title.english or title.romaji or title.native or ""
 
     @staticmethod
-    def _get_main_studio(studios: Studios) -> Optional[str]:
+    def _get_main_studio(studios: Optional[Studios]) -> Optional[str]:
         """Get main studio name from studios"""
         if not studios:
             return None
@@ -290,3 +298,16 @@ class AnilistNormalizer:
         if not text:
             return None
         return " ".join(word.capitalize() for word in text.replace("_", " ").split())
+
+    @staticmethod
+    def _convert_trailer_url(
+        trailer: Optional[AnilistTrailer],
+    ) -> Optional[TrailerData]:
+        """Convert trailer URL to embeddable format if it's a YouTube link"""
+        if not trailer:
+            return None
+
+        if trailer.site == "youtube" and trailer.id:
+            url = f"https://www.youtube.com/watch?v={trailer.id}"
+            thumbnail = trailer.thumbnail
+            return TrailerData(url=url, thumbnail=thumbnail)

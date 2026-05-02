@@ -52,7 +52,9 @@ class MediaPagination(BaseModel):
 
     model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
 
-
+class TrailerData(BaseModel):
+    url: Optional[str] = None
+    thumbnail: Optional[str] = None
 class MediaBase(BaseModel):
     id: int
     external_source: str = Field(alias="externalSource")
@@ -67,11 +69,11 @@ class MediaBase(BaseModel):
     is_adult: Optional[bool] = Field(None, alias="isAdult")
     synonyms: Optional[List[str]] = None
     media_scores: Optional[List[MediaScore]] = None
+    trailer: Optional[TrailerData] = None
 
     model_config = ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
-        from_attributes=True,
     )
 
 
@@ -118,6 +120,7 @@ class MediaCharacter(BaseModel):
 
 
 class AnimeDetailed(MediaBase):
+    id_mal: Optional[int] = Field(None, alias="idMal")
     episodes: Optional[int] = None
     studios: Optional[List[MediaStudio]] = None
     duration: Optional[int] = None
@@ -137,6 +140,7 @@ class AnimeDetailed(MediaBase):
 
 
 class MangaDetailed(MediaBase):
+    id_mal: Optional[int] = Field(None, alias="idMal")
     chapters: Optional[int] = None
     volumes: Optional[int] = None
     start_date: Optional[str] = Field(None, alias="startDate")
@@ -171,7 +175,7 @@ class MovieDetailed(MediaBase):
     budget: Optional[int] = None
     revenue: Optional[int] = None
     runtime: Optional[int] = None
-    origin_country: List[str] = Field(..., alias="originCountry")
+    origin_country: Optional[List[str]] = Field(None, alias="originCountry")
     original_language: Optional[str] = Field(None, alias="originalLanguage")
     belongs_to_collection: Optional[MediaBelongsToCollection] = Field(
         None, alias="belongsToCollection"
@@ -242,6 +246,5 @@ class MovieCollection(BaseModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class MovieDetailedWithCollection(BaseModel):
-    movie: MovieDetailed
+class MovieDetailedWithCollection(MovieDetailed):
     collection: Optional[MovieCollection] = None
