@@ -1,4 +1,3 @@
-from typing import cast
 import structlog
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -8,17 +7,19 @@ logger = structlog.get_logger()
 
 
 async def app_exception_handler(request: Request, exc: Exception):
-    app_exc = cast(AppException, exc)
-    if app_exc.status_code >= 500:
+    if not isinstance(exc, AppException):
+        return await unhandled_exception_handler(request, exc)
+    
+    if exc.status_code >= 500:
         logger.error(
             "app_exception",
             method=request.method,
             url=str(request.url),
-            status_code=app_exc.status_code,
-            detail=app_exc.detail,
+            status_code=exc.status_code,
+            detail=exc.detail,
         )
     return JSONResponse(
-        status_code=app_exc.status_code, content={"detail": app_exc.detail}
+        status_code=exc.status_code, content={"detail": exc.detail}
     )
 
 
