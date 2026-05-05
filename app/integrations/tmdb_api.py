@@ -1,7 +1,6 @@
 from typing import List, Optional
 import httpx
-import structlog
-from app.models.api.tmdb_models import (
+from app.models.providers.tmdb_models import (
     TMDBCollection,
     TMDBMediaMinimal,
     TMDBPageInfo,
@@ -12,7 +11,6 @@ from app.models.api.tmdb_models import (
 from app.integrations.http_helpers import perform_request
 
 
-logger = structlog.get_logger().bind(api="TMDBApi")
 
 
 class TMDBApi:
@@ -44,8 +42,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_trending_media",
-            external_source="tmdb",
-            media_type=media_type,
         )
 
         results = [
@@ -83,8 +79,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_search_movie",
-            external_source="tmdb",
-            media_type="movie",
         )
 
         results = [
@@ -122,8 +116,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_search_tv",
-            external_source="tmdb",
-            media_type="tv",
         )
 
         results = [
@@ -189,8 +181,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_discover_movie",
-            external_source="tmdb",
-            media_type="movie",
         )
 
         results = [
@@ -265,8 +255,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_discover_tv",
-            external_source="tmdb",
-            media_type="tv",
         )
 
         results = [
@@ -286,11 +274,11 @@ class TMDBApi:
         language: Optional[str],
     ) -> TMDBMovieDetail:
         """
-        Fetches detailed information for a specific movie from TMDB, including keywords.
+        Fetches detailed information for a specific movie from TMDB, including keywords and videos.
         """
         url = f"{self.BASE_URL}/movie/{movie_id}"
         params = {
-            "append_to_response": "keywords,recommendations,alternative_titles,credits",
+            "append_to_response": "keywords,recommendations,alternative_titles,credits,videos",
             "language": language,
         }
         data = await perform_request(
@@ -300,8 +288,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_movie_detail",
-            external_source="tmdb",
-            media_type="movie",
         )
 
         movie_detail = TMDBMovieDetail.model_validate(data)
@@ -314,11 +300,11 @@ class TMDBApi:
         language: Optional[str],
     ) -> TMDBTVDetail:
         """
-        Fetches detailed information for a specific TV show from TMDB, including keywords.
+        Fetches detailed information for a specific TV show from TMDB, including keywords and videos.
         """
         url = f"{self.BASE_URL}/tv/{tv_id}"
         params = {
-            "append_to_response": "keywords,credits,recommendations,alternative_titles,external_ids",
+            "append_to_response": "keywords,credits,recommendations,alternative_titles,external_ids,videos",
             "language": language,
         }
         data = await perform_request(
@@ -328,8 +314,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_tv_detail",
-            external_source="tmdb",
-            media_type="tv",
         )
 
         tv_detail = TMDBTVDetail.model_validate(data)
@@ -354,8 +338,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="get_collection_detail",
-            external_source="tmdb",
-            media_type=None,
         )
 
         collection_detail = TMDBCollection.model_validate(data)
@@ -381,8 +363,6 @@ class TMDBApi:
             headers=self.headers,
             params=params,
             action="search_keyword",
-            external_source="tmdb",
-            media_type=None,
         )
 
         results = data.get("results", [])

@@ -1,8 +1,8 @@
 from typing import List, Optional
 from httpx import AsyncClient
 
-from app.models.api.anilist_models import (
-    AnilistMediaDetailed,
+from app.models.providers.anilist_models import (
+    AnilistMediaDetail,
     AnilistMediaMinimal,
     AnilistPageInfo,
 )
@@ -240,7 +240,7 @@ class AnilistApi:
 
         return search_media, page_info
 
-    async def get_media_detail(self, media_id: int) -> AnilistMediaDetailed:
+    async def get_media_detail(self, media_id: int) -> AnilistMediaDetail:
         """
         Fetches detailed information for a specific media by ID.
         Uses the provided GraphQL query.
@@ -390,6 +390,6 @@ class AnilistApi:
 
         media = data.get("data", {}).get("Media", {})
 
-        detailed_media = AnilistMediaDetailed.model_validate(media)
+        detailed_media = AnilistMediaDetail.model_validate(media)
 
         return detailed_media

@@ -2,11 +2,11 @@ from typing import Optional, List
 
 from app.integrations.tmdb_api import TMDBApi
 
-from app.models.media_models import (
+from app.models.api.media_response import (
     MediaPagination,
 )
-from app.utils.tmdb_normalizer import TMDBNormalizer
-from app.models.api.tmdb_models import (
+from app.utils.normalizers.tmdb_normalizer import TMDBNormalizer
+from app.models.providers.tmdb_models import (
     TMDBMovieDetail,
     TMDBCollection,
     TMDBTVDetail,

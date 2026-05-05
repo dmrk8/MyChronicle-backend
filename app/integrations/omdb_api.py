@@ -1,7 +1,7 @@
 import httpx
 from typing import Optional
 from app.integrations.http_helpers import perform_request
-from app.models.api.omdb_models import OMDbData
+from app.models.providers.omdb_models import OMDbData
 
 OMDB_API_URL = "http://www.omdbapi.com/"
 
@@ -14,7 +14,7 @@ class OMDbApi:
 
     async def fetch_data(
         self, title: Optional[str] = None, imdb_id: Optional[str] = None
-    ) -> Optional[OMDbData]:
+    ) -> OMDbData:
         params = {"apikey": self.api_key}
         if title:
             params["t"] = title
@@ -27,7 +27,8 @@ class OMDbApi:
             params=params,
             headers=None,
             action="fetch_omdb_data",
-            external_source="omdb",
-            media_type=None,
         )
+        if data.get("Response") == "False":
+            raise ValueError(data.get("Error", "Unknown error from OMDb API"))
+
         return OMDbData.model_validate(data)

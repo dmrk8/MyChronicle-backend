@@ -2,15 +2,11 @@ from typing import List, Optional
 
 from app.integrations.anilist_api import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType
-from app.models.api.anilist_models import AnilistMediaDetailed
-from app.utils.anilist_normalizer import AnilistNormalizer
-from app.models.media_models import (
+from app.models.providers.anilist_models import AnilistMediaDetail
+from app.utils.normalizers.anilist_normalizer import AnilistNormalizer
+from app.models.api.media_response import (
     MediaPagination,
 )
-import structlog
-
-logger = structlog.get_logger("anilist_service")
-
 
 class AnilistService:
     def __init__(self, anilist_api: AnilistApi):
@@ -63,7 +59,5 @@ class AnilistService:
 
         return result
 
-    async def get_media_detail(
-        self, media_id: int
-    ) -> AnilistMediaDetailed:
+    async def get_media_detail(self, media_id: int) -> AnilistMediaDetail:
         return await self.anilist_api.get_media_detail(media_id)
