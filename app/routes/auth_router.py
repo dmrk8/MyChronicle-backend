@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, Response, HTTPException
+from fastapi import APIRouter, Body, Depends, Response
 from app.models.auth.auth_models import RegisterRequest
 from app.services.auth_service import AuthService
 from app.models.db.user_models import User
