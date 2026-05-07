@@ -1,10 +1,8 @@
-from datetime import datetime, timezone
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
-
+from pydantic import BaseModel, Field, ConfigDict
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.enums.user_media_entry_enums import UserMediaEntryStatus
-
+from app.models.db.base import SoftDeleteDBBase
 
 
 class UserMediaEntryCreate(BaseModel):
@@ -30,33 +28,29 @@ class UserMediaEntryCreate(BaseModel):
     is_adult: Optional[bool] = Field(
         False, alias="isAdult", description="Whether the media is adult content"
     )
-    status: Optional[UserMediaEntryStatus] = Field(
+    status: UserMediaEntryStatus = Field(
         UserMediaEntryStatus.PLANNING,
         alias="status",
         description="The user's consumption status for the media",
     )
-    repeat_count: Optional[int] = Field(
-        0,
-        alias="repeatCount",
-        description="How many times the user has consumed the media",
-    )
-    is_favorite: Optional[bool] = Field(
+    is_favorite: bool = Field(
         False,
         alias="isFavorite",
         description="Whether the user has marked this media as a favorite",
     )
-    in_library: Optional[bool] = Field(
-        True,
-        alias="inLibrary",
-        description="Whether the media is in the user's personal library",
+    repeat_count: Optional[int] = Field(
+        None,
+        ge=0,
+        alias="repeatCount",
+        description="How many times the user has consumed the media",
     )
 
-    @field_validator("repeat_count")
-    @classmethod
-    def repeat_count_non_negative(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("repeat_count must be non-negative")
-        return v
+    score: Optional[float] = Field(
+        None,
+        ge=0,
+        le=10,
+        description="User's score for the media, independent of reviews",
+    )
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -64,48 +58,12 @@ class UserMediaEntryCreate(BaseModel):
 class UserMediaEntryInsert(UserMediaEntryCreate):
     user_id: str = Field(...)
 
-    created_at: Optional[datetime] = Field(default=None)
-    updated_at: Optional[datetime] = Field(default=None)
-
-    @model_validator(mode="before")
-    @classmethod
-    def set_timestamps(cls, values):
-        now = datetime.now(timezone.utc)
-        values.setdefault("created_at", now)
-        values.setdefault("updated_at", now)
-        return values
-
-
-class UserMediaEntryDB(UserMediaEntryInsert):
-    id: str = Field(..., alias="_id")
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def coerce_object_id(cls, v):
-        return str(v)
-
 
 class UserMediaEntryUpdate(BaseModel):
-    """User preference updates"""
-
     status: Optional[UserMediaEntryStatus] = Field(None, alias="status")
-    repeat_count: Optional[int] = Field(None, alias="repeatCount")
+    repeat_count: Optional[int] = Field(None, ge=0, alias="repeatCount")
     is_favorite: Optional[bool] = Field(None, alias="isFavorite")
-    in_library: Optional[bool] = Field(None, alias="inLibrary")
-
-    def to_update_dict(self) -> dict:
-        data = self.model_dump(exclude_unset=True, by_alias=False)
-        if not data:
-            raise ValueError("No fields provided for update")
-        data["updated_at"] = datetime.now(timezone.utc)
-        return data
-
-    @field_validator("repeat_count")
-    @classmethod
-    def repeat_count_non_negative(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("repeat_count must be non-negative")
-        return v
+    score: Optional[float] = Field(None, ge=0, le=10, alias="score")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -123,16 +81,24 @@ class UserMediaEntrySyncMetadata(BaseModel):
         None, alias="isAdult", description="Synced adult status"
     )
 
-    def to_update_dict(self) -> dict:
-        data = self.model_dump(exclude_unset=True, by_alias=False)
-        if not data:
-            raise ValueError("No fields provided for update")
-        return data
-
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+class UserMediaEntryDB(SoftDeleteDBBase):
+    external_id: int
+    external_source: MediaExternalSource
+    media_type: MediaType
+    user_id: str
+    title: Optional[str] = None
+    cover_image: Optional[str] = None
+    is_adult: Optional[bool] = None
+    status: Optional[UserMediaEntryStatus] = None
+    repeat_count: Optional[int] = None
+    is_favorite: Optional[bool] = None
+    in_library: Optional[bool] = None
+    score: Optional[float] = None
 
 class UserMediaEntry(BaseModel):
+    """The main model used for API responses and business logic"""
     id: str
     external_id: int = Field(..., alias="externalId")
     external_source: MediaExternalSource = Field(..., alias="externalSource")
@@ -144,9 +110,6 @@ class UserMediaEntry(BaseModel):
     status: Optional[UserMediaEntryStatus] = None
     repeat_count: Optional[int] = Field(None, alias="repeatCount")
     is_favorite: Optional[bool] = Field(None, alias="isFavorite")
-    in_library: Optional[bool] = Field(None, alias="inLibrary")
-    created_at: datetime = Field(..., alias="createdAt")
-    updated_at: datetime = Field(..., alias="updatedAt")
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -156,7 +119,6 @@ class UserMediaEntry(BaseModel):
     @classmethod
     def from_db(cls, entry: UserMediaEntryDB) -> "UserMediaEntry":
         return cls(**entry.model_dump())
-
 
 class UserMediaEntryPagination(BaseModel):
     results: List[UserMediaEntry] = Field(...)
