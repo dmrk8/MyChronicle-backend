@@ -2,7 +2,7 @@ from fastapi import Depends, Request
 from app.core.exceptions import UnauthorizedException
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
-from app.models.db.user_models import User
+from app.models.db.user_models import UserDB
 from app.core.dependencies import get_auth_service, get_user_service
 from structlog.contextvars import bind_contextvars
 
@@ -11,7 +11,7 @@ async def get_current_user(
     request: Request,
     user_service: UserService = Depends(get_user_service),
     auth_service: AuthService = Depends(get_auth_service),
-) -> User:
+) -> UserDB:
     """get current authenticated user"""
 
     token = request.cookies.get("access_token")
