@@ -43,7 +43,8 @@ class ReviewCreate(BaseModel):
 
 class ReviewInsert(ReviewCreate):
     user_media_entry_id: str
-    user_id: str = Field(...)
+    user_id: str
+
 
 class ReviewUpdate(BaseModel):
     review: Optional[str] = Field(
