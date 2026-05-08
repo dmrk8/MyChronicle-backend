@@ -181,7 +181,7 @@ class CRUDRepository(
             context=context,
         )
         return self.db_model.model_validate(doc) if doc else None
-    
+
     async def _update_one(
         self, query: dict, update: dict, context: DBOpContext
     ) -> bool:
@@ -198,6 +198,24 @@ class CRUDRepository(
             context=context,
         )
         return result.modified_count > 0
+
+    async def _update_many(
+        self, query: dict, update: dict, context: DBOpContext
+    ) -> bool:
+        success_event, error_event = self._event("update_many")
+
+        async def _op():
+            return await self.collection.update_many(query, {"$set": update})
+
+        result = await run_db_op(
+            self.logger,
+            _op,
+            success_event=success_event,
+            error_event=error_event,
+            context=context,
+        )
+        return result.modified_count > 0
+
 
 class UpsertRepository(BaseRepository[DBModel], Generic[DBModel]):
     async def _upsert(
@@ -221,5 +239,3 @@ class UpsertRepository(BaseRepository[DBModel], Generic[DBModel]):
             context=context,
         )
         return self.db_model.model_validate(doc)
-
-

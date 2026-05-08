@@ -14,7 +14,7 @@ from app.models.db.user_media_entry_models import (
     UserMediaEntryUpdate,
     UserMediaEntryPagination,
 )
-from app.models.db.user_models import User
+from app.models.db.user_models import UserDB
 
 from app.services.review_service import ReviewService
 from app.services.user_media_entry_service import UserMediaEntryService
@@ -23,6 +23,7 @@ from app.auth.auth_dependencies import get_current_user
 from app.enums.user_media_entry_enums import (
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
+    UserMediaEntryStatus,
 )
 
 user_media_entry_router = APIRouter(
@@ -35,7 +36,7 @@ user_media_entry_router = APIRouter(
 )
 async def create_user_media_entry(
     entry: UserMediaEntryCreate,
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     return await service.create_entry(entry, user.id)
@@ -45,16 +46,17 @@ async def create_user_media_entry(
 async def update_user_media_entry(
     update: UserMediaEntryUpdate,
     entry_id: str,
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
-    return await service.update_entry(entry_id, update, user.id)
+    res = await service.update_entry(entry_id, update, user.id)
+    return UserMediaEntry.model_validate(res)
 
 
 @user_media_entry_router.delete("/{entry_id}", response_model=None)
 async def delete_user_media_entry(
     entry_id: str,
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     return await service.delete_entry(entry_id, user.id)
@@ -68,21 +70,13 @@ async def get_entry_by_external_id(
     external_id: int = Path(..., description="External ID"),
     external_source: MediaExternalSource = Path(..., description="External Source"),
     media_type: MediaType = Path(..., description="Media Type"),
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
-    return await service.get_entry_by_external_id_and_source_and_media_type(
+    res = await service.get_entry_by_external_id_and_external_source_and_media_type(
         external_id, external_source, user.id, media_type
     )
-
-
-@user_media_entry_router.get("/{entry_id}", response_model=UserMediaEntry)
-async def get_user_media_entry_by_id(
-    entry_id: str = Path(..., description="User Media Entry ID"),
-    user: User = Depends(get_current_user),
-    service: UserMediaEntryService = Depends(get_user_media_entry_service),
-):
-    return await service.get_entry_by_id(entry_id, user.id)
+    return UserMediaEntry.model_validate(res)
 
 
 @user_media_entry_router.get("/", response_model=UserMediaEntryPagination)
@@ -105,8 +99,10 @@ async def get_user_media_entries(
     is_favorite: Optional[bool] = Query(
         None, alias="isFavorite", description="Filter by isFavorite"
     ),
-    status: Optional[str] = Query(None, alias="status", description="Filter by status"),
-    media_type: Optional[str] = Query(
+    status: Optional[UserMediaEntryStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    media_type: Optional[MediaType] = Query(
         None, alias="mediaType", description="Filter by media type"
     ),
     title_search: Optional[str] = Query(
@@ -115,21 +111,30 @@ async def get_user_media_entries(
     is_adult: Optional[bool] = Query(
         None, alias="isAdult", description="Filter by adult content"
     ),
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
-    return await service.get_entries(
-        user_id=user.id,
-        in_library=in_library,
-        is_favorite=is_favorite,
-        status=status,
-        media_type=media_type,
+    entries, page, per_page, has_next_page, total = (
+        await service.get_entries_by_filters(
+            user_id=user.id,
+            in_library=in_library,
+            is_favorite=is_favorite,
+            status=status,
+            media_type=media_type,
+            page=page,
+            per_page=per_page,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            title_search=title_search,
+            is_adult=is_adult,
+        )
+    )
+    return UserMediaEntryPagination(
+        results=[UserMediaEntry.model_validate(entry) for entry in entries],
         page=page,
-        per_page=per_page,
-        sort_by=sort_by,
-        sort_order=sort_order,
-        title_search=title_search,
-        is_adult=is_adult,
+        perPage=per_page,
+        hasNextPage=has_next_page,
+        total=total,
     )
 
 
@@ -137,36 +142,42 @@ async def get_user_media_entries(
 async def sync_user_media_entry_metadata(
     metadata: UserMediaEntrySyncMetadata,
     entry_id: str,
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     """Sync metadata (title, cover_image, is_adult) from external API"""
-    return await service.sync_entry_metadata(entry_id, metadata, user.id)
+    res = await service.sync_entry_metadata(entry_id, metadata, user.id)
+    return UserMediaEntry.model_validate(res)
+
+
+# Review routes for a specific user media entry
 
 
 @user_media_entry_router.post("/{entry_id}/reviews", response_model=Review)
 async def create_review_for_user_media_entry(
     review: ReviewCreate,
-    entry_id: str = Path(..., description="User Media Entry ID"),
-    user: User = Depends(get_current_user),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.create_review(review, entry_id, user.id)
+    res = await service.create_review(review, entry_id, user.id)
+    return Review.model_validate(res)
 
 
 @user_media_entry_router.get("/{entry_id}/reviews", response_model=list[Review])
 async def get_reviews_for_user_media_entry(
-    entry_id: str = Path(..., description="User Media Entry ID"),
-    user: User = Depends(get_current_user),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.get_reviews_for_user_media_entry(entry_id, user.id)
+    res = await service.get_reviews_for_user_media_entry(entry_id, user.id)
+    return [Review.model_validate(review) for review in res]
 
 
 @user_media_entry_router.get("/{entry_id}/reviews/count", response_model=int)
 async def count_reviews_for_user_media_entry(
-    entry_id: str = Path(..., description="User Media Entry ID"),
-    user: User = Depends(get_current_user),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
     return await service.count_reviews_for_user_media_entry(entry_id, user.id)
@@ -174,32 +185,34 @@ async def count_reviews_for_user_media_entry(
 
 @user_media_entry_router.get("/{entry_id}/reviews/{review_id}", response_model=Review)
 async def get_review_by_id(
-    entry_id: str = Path(..., description="User Media Entry ID"),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.get_review_by_id(review_id, user.id, entry_id)
+    res = await service.get_review_by_id(review_id, user.id, entry_id)
+    return Review.model_validate(res)
 
 
 @user_media_entry_router.patch("/{entry_id}/reviews/{review_id}", response_model=Review)
 async def update_review_for_user_media_entry(
     update: ReviewUpdate,
-    entry_id: str = Path(..., description="User Media Entry ID"),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
-    return await service.update_review(review_id, entry_id, update, user.id)
+    res = await service.update_review(review_id, entry_id, update, user.id)
+    return Review.model_validate(res)
 
 
 @user_media_entry_router.delete(
     "/{entry_id}/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_review_for_user_media_entry(
-    entry_id: str = Path(..., description="User Media Entry ID"),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
-    user: User = Depends(get_current_user),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
     return await service.delete_review(entry_id, review_id, user.id)
@@ -209,8 +222,8 @@ async def delete_review_for_user_media_entry(
     "/{entry_id}/reviews", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_reviews_for_user_media_entry(
-    entry_id: str = Path(..., description="User Media Entry ID"),
-    user: User = Depends(get_current_user),
+    entry_id: str = Path(..., description="UserDB Media Entry ID"),
+    user: UserDB = Depends(get_current_user),
     service: ReviewService = Depends(get_review_service),
 ):
     return await service.delete_reviews_for_user_media_entry(entry_id, user.id)

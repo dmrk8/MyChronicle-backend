@@ -21,6 +21,8 @@ class UserMediaEntryCreate(BaseModel):
         alias="mediaType",
         description="The type of media (e.g., anime, manga, game, movie, TV)",
     )
+
+    # Metadata
     title: str = Field(..., alias="title", description="The title of the media")
     cover_image: Optional[str] = Field(
         None, alias="coverImage", description="The cover image URL of the media"
@@ -28,6 +30,8 @@ class UserMediaEntryCreate(BaseModel):
     is_adult: Optional[bool] = Field(
         False, alias="isAdult", description="Whether the media is adult content"
     )
+
+    # User-specific fields
     status: UserMediaEntryStatus = Field(
         UserMediaEntryStatus.PLANNING,
         alias="status",
@@ -83,6 +87,7 @@ class UserMediaEntrySyncMetadata(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
+
 class UserMediaEntryDB(SoftDeleteDBBase):
     external_id: int
     external_source: MediaExternalSource
@@ -94,11 +99,12 @@ class UserMediaEntryDB(SoftDeleteDBBase):
     status: Optional[UserMediaEntryStatus] = None
     repeat_count: Optional[int] = None
     is_favorite: Optional[bool] = None
-    in_library: Optional[bool] = None
     score: Optional[float] = None
 
+
 class UserMediaEntry(BaseModel):
-    """The main model used for API responses and business logic"""
+    """The main model used for API responses"""
+
     id: str
     external_id: int = Field(..., alias="externalId")
     external_source: MediaExternalSource = Field(..., alias="externalSource")
@@ -110,15 +116,13 @@ class UserMediaEntry(BaseModel):
     status: Optional[UserMediaEntryStatus] = None
     repeat_count: Optional[int] = Field(None, alias="repeatCount")
     is_favorite: Optional[bool] = Field(None, alias="isFavorite")
+    score: Optional[float] = None
 
     model_config = ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
     )
 
-    @classmethod
-    def from_db(cls, entry: UserMediaEntryDB) -> "UserMediaEntry":
-        return cls(**entry.model_dump())
 
 class UserMediaEntryPagination(BaseModel):
     results: List[UserMediaEntry] = Field(...)
