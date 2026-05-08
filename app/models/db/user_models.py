@@ -23,18 +23,22 @@ class UserUpdate(BaseModel):
     hash_password: Optional[str] = Field(None, description="Hashed password")
 
 
-class UserUpdateRequest(BaseModel):
+class UsernameUpdateRequest(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
-    new_password: Optional[str] = Field(
-        None, alias="newPassword", description="New hashed password"
+
+
+class PasswordUpdateRequest(BaseModel):
+    current_password: str = Field(
+        ..., alias="currentPassword", description="Current hashed password"
+    )
+    new_password: str = Field(
+        ..., alias="newPassword", description="New hashed password"
     )
 
     @field_validator("new_password")
     @classmethod
-    def validate_password(cls, v: Optional[str]):
-        if v is not None:
-            return validate_password_strength(v)
-        return v
+    def validate_password(cls, v: str):
+        return validate_password_strength(v)
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
