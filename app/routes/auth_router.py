@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Response
-from app.models.auth.auth_models import RegisterRequest
+from app.models.auth.auth_models import LoginRequest, RegisterRequest
 from app.services.auth_service import AuthService
-from app.models.db.user_models import User
+from app.models.db.user_models import User, UserDB
 from app.auth.auth_dependencies import get_current_user
 from app.core.dependencies import get_auth_service
 from app.core.config import get_settings
@@ -29,11 +29,10 @@ async def register(
 @auth_router.post("/login")
 async def login(
     response: Response,
-    username: str = Body(...),
-    password: str = Body(...),
+    login_request: LoginRequest = Body(...),
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    access_token = await auth_service.login(username, password)
+    access_token = await auth_service.login(login_request)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -58,6 +57,6 @@ async def logout(
 
 @auth_router.get("/me")
 async def get_current_user_info(
-    current_user: User = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_user),
 ):
-    return current_user
+    return User.from_db(current_user)

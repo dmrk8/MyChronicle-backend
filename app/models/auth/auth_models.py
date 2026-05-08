@@ -14,3 +14,6 @@ class RegisterRequest(CredentialsBase):
     @field_validator("password")
     def validate_password(cls, v: str):
         return validate_password_strength(v)
+
+class LoginRequest(CredentialsBase):
+    pass

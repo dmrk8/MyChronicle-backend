@@ -2,7 +2,7 @@
 
 from app.auth.jwt_handler import JWTHandler
 from app.core.exceptions import UnauthorizedException
-from app.models.auth.auth_models import RegisterRequest
+from app.models.auth.auth_models import LoginRequest, RegisterRequest
 from app.services.user_service import UserService
 
 logger = structlog.get_logger("auth_service")
@@ -41,13 +41,23 @@ class AuthService:
         return claims.sub
 
     async def register(self, register_request: RegisterRequest) -> str:
+        """Creates a new user and returns an access token
+
+        Args:
+            register_request (RegisterRequest): Request object containing username and password
+
+        Returns:
+            str: Access token for the newly created user
+        """
         user = await self.user_service.create_user(
             register_request.username, register_request.password
         )
         return self.create_access_token(user.id)
 
-    async def login(self, username: str, password: str) -> str:
-        user = await self.user_service.verify_credentials(username, password)
+    async def login(self, login_request: LoginRequest) -> str:
+        user = await self.user_service.verify_credentials(
+            login_request.username, login_request.password
+        )
         if not user:
             raise UnauthorizedException("Invalid username or password")
         return self.create_access_token(user.id)
