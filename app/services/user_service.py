@@ -3,7 +3,6 @@ import structlog
 from typing import Optional
 
 from app.auth import password_handler
-from app.core.event_bus import EventBus
 from app.core.exceptions import (
     ConflictException,
     InternalServerErrorException,
@@ -27,11 +26,9 @@ class UserService:
         self,
         user_repository: UserRepository,
         password_handler: password_handler.PasswordHandler,
-        event_bus: EventBus | None = None,
     ):
         self.user_repository = user_repository
         self.password_handler = password_handler
-        self.event_bus = event_bus
         self.logger = logger.bind(service="UserService")
 
     async def create_user(self, username: str, password: str) -> UserDB:
@@ -79,8 +76,6 @@ class UserService:
         deleted = await self.user_repository.soft_delete_by_id(user_id)
         if not deleted:
             raise NotFoundException("User not found")
-        if self.event_bus:
-            await self.event_bus.publish("user.soft_deleted", user_id=user_id)
         self.logger.info("user_soft_deleted", user_id=user_id)
 
     async def get_by_id(self, user_id: str) -> Optional[UserDB]:

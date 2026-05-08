@@ -55,6 +55,4 @@ class User(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    @classmethod
-    def from_db(cls, user: UserDB) -> "User":
-        return cls(**user.model_dump())
+   

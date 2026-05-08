@@ -106,6 +106,3 @@ class Review(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    @classmethod
-    def from_db(cls, review: ReviewDB) -> "Review":
-        return cls(**review.model_dump())

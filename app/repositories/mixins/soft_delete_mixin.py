@@ -20,6 +20,15 @@ class SoftDeleteMixin:
                 context,
             )
         )
+    
+    async def _soft_delete_many(self, query: dict, context: DBOpContext) -> bool:
+        return bool(
+            await self._update_many(  # type: ignore
+                {**query, "is_deleted": False},
+                {"is_deleted": True, "deleted_at": utc_now()},
+                context,
+            )
+        )
 
     async def _restore(self, query: dict, context: DBOpContext) -> bool:
         return bool(
