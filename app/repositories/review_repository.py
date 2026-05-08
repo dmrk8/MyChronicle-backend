@@ -78,7 +78,7 @@ class ReviewRepository(CRUDRepository[ReviewDB, ReviewInsert, ReviewUpdate]):
             ),
         )
 
-    async def get_review_by_id(
+    async def get_review_by_id_and_entry_id_and_user_id(
         self, review_id: str, user_id: str, user_media_entry_id: str
     ) -> Optional[ReviewDB]:
         return await self._find_one(
@@ -119,7 +119,7 @@ class ReviewRepository(CRUDRepository[ReviewDB, ReviewInsert, ReviewUpdate]):
             ),
         )
 
-    async def delete_by_user_id(self, user_id: str) -> bool:
+    async def delete_reviews_by_user_id(self, user_id: str) -> bool:
         return await self._delete_many(
             {"user_id": user_id},
             self._make_context(
