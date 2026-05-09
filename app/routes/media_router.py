@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 from fastapi import APIRouter, Path, Query, Depends
 
 from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
-from app.models.media_models import AnimeDetailed, MangaDetailed, MediaPagination
+from app.models.api.media_response import AnimeDetailed, MangaDetailed, MediaPagination
 from app.enums.anilist_enums import AnilistSortOption, AnilistMediaType
 from app.services.media_service import MediaService
 from app.core.dependencies import get_media_service

@@ -16,10 +16,10 @@ from app.utils.normalizers.media_db_normalizer import MediaDBNormalizer
 logger = structlog.get_logger()
 
 
-class MediaDatabaseService:
+class MediaCoreService:
     def __init__(self, repository: MediaCoreRepository):
         self.repository = repository
-        self.logger = logger.bind(service="MediaDatabaseService")
+        self.logger = logger.bind(service="MediaCoreService")
 
     async def create_anilist_detail(
         self, anilist_media: AnilistMediaDetail

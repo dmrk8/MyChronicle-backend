@@ -4,7 +4,7 @@ import structlog
 from datetime import datetime, timedelta, timezone
 
 from app.enums.anilist_enums import AnilistStatus
-from app.utils.omdb_normalizer import OMDbNormalizer
+from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
 from app.utils.time_helpers import utc_now
 
 from app.enums.media_enums import (
@@ -12,18 +12,17 @@ from app.enums.media_enums import (
     MediaType,
     StoredDataType,
 )
-from app.models.api.anilist_models import AnilistMediaDetailed
-from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBMovieDetail, TMDBTVDetail
+from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.omdb_models import OMDbData
+from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.models.db.external_storage_models import MovieWithCollection
 from app.services.anilist_service import AnilistService
 from app.services.external_storage_service import ExternalStorageService
-from app.services.media_db_service import MediaDatabaseService
+from app.services.media_core_service import MediaCoreService
 from app.services.omdb_service import OMDbService
 from app.services.tmdb_service import TMDBService
 
 logger = structlog.get_logger()
-
 
 class SyncService:
     def __init__(
@@ -31,13 +30,13 @@ class SyncService:
         anilist_service: AnilistService,
         tmdb_service: TMDBService,
         external_storage_service: ExternalStorageService,
-        media_database_service: MediaDatabaseService,
+        media_core_service: MediaCoreService,
         omdb_service: OMDbService,
     ):
         self.anilist_service = anilist_service
         self.tmdb_service = tmdb_service
         self.external_storage_service = external_storage_service
-        self.media_database_service = media_database_service
+        self.media_core_service = media_core_service
         self.omdb_service = omdb_service
         self.logger = logger.bind(service="SyncService")
 
@@ -54,9 +53,16 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        await self.media_database_service.create_anilist_detail(anilist_media)
+        
+        existing = await self.media_core_service.get_media(
+            external_id=external_id,
+            external_source=MediaExternalSource.ANILIST,
+            media_type=media_type
+        )
+        if not existing:
+            await self.media_core_service.create_anilist_detail(anilist_media)
 
-        self.logger.info(
+        self.logger.debug(
             "Synced Anilist media",
             external_id=external_id,
             media_type=media_type,
@@ -91,11 +97,19 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        await self.media_database_service.create_tmdb_movie_detail(
-            tmdb_movie, omdb_data
+        
+        existing = await self.media_core_service.get_media(
+            external_id=external_id,
+            external_source=MediaExternalSource.TMDB,
+            media_type=media_type
+        
         )
+        if not existing:
+            await self.media_core_service.create_tmdb_movie_detail(
+                tmdb_movie, omdb_data
+            )
 
-        self.logger.info(
+        self.logger.debug(
             "Synced TMDB movie",
             external_id=external_id,
             media_type=media_type,
@@ -122,9 +136,16 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        await self.media_database_service.create_tmdb_tv_detail(tmdb_tv, omdb_data)
+        
+        existing = await self.media_core_service.get_media(
+            external_id=external_id,
+            external_source=MediaExternalSource.TMDB,
+            media_type=media_type
+        )
+        if not existing:
+            await self.media_core_service.create_tmdb_tv_detail(tmdb_tv, omdb_data)
 
-        self.logger.info(
+        self.logger.debug(
             "Synced TMDB TV show",
             external_id=external_id,
             media_type=media_type,
@@ -160,8 +181,8 @@ class SyncService:
             payload_type=StoredDataType.OMDB_DATA,
             expires_at=expires_at,
         )
-        
-        self.logger.info(
+
+        self.logger.debug(
             "Synced OMDb data",
             external_id=external_id,
             media_type=media_type,
@@ -202,7 +223,7 @@ class SyncService:
         return None  # Older media, unlikely to change (stable)
 
     async def _calculate_anilist_sync_expiry(
-        self, media: AnilistMediaDetailed
+        self, media: AnilistMediaDetail
     ) -> datetime:
         """
         Calculate Anilist media sync expiry based on media status
@@ -213,7 +234,7 @@ class SyncService:
             since details are unlikely to change.
 
         Args:
-            media (AnilistMediaDetailed):
+            media (AnilistMediaDetail):
 
         Returns:
             _type_: datetime: The calculated expiry datetime for the Anilist media sync.

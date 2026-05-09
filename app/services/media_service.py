@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import structlog
 from app.cache.anilist_cache import (
-    ANILITS_DETAIL_TTL,
+    ANILIST_DETAIL_TTL,
     anilist_detail_key,
     anilist_search_key,
     get_anilist_search_ttl,
@@ -18,9 +18,15 @@ from app.core.exceptions import NotFoundException
 from app.enums.anilist_enums import AnilistMediaType, AnilistSortOption
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
-from app.models.api.anilist_models import AnilistMediaDetailed
-from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBCollection, TMDBTVDetail
+from app.models.api.media_response import (
+    AnimeDetailed,
+    MangaDetailed,
+    MediaPagination,
+    MovieDetailedWithCollection,
+)
+from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.omdb_models import OMDbData
+from app.models.providers.tmdb_models import TMDBCollection, TMDBTVDetail
 from app.models.cache.cache_models import (
     CachedAnimeDetail,
     CachedMangaDetail,
@@ -30,22 +36,13 @@ from app.models.cache.cache_models import (
     CachedTVDetail,
 )
 from app.models.db.external_storage_models import MovieWithCollection
-from app.models.media_models import (
-    AnimeDetailed,
-    MangaDetailed,
-    MediaPagination,
-    MovieDetailedWithCollection,
-)
 from app.services.anilist_service import AnilistService
 from app.services.external_storage_service import ExternalStorageService
-from app.services.media_db_service import MediaDatabaseService
+from app.services.media_core_service import MediaCoreService
 from app.services.redis_service import RedisService
-from app.services.sync_service import SyncService
+from app.services.media_sync_service import SyncService
 from app.services.tmdb_service import TMDBService
-from app.utils.media_normalizer import MediaNormalizer
-
-
-logger = structlog.get_logger()
+from app.utils.normalizers.media_response_normalizer import MediaNormalizer
 
 
 class MediaService:
@@ -55,14 +52,14 @@ class MediaService:
         anilist_service: AnilistService,
         tmdb_service: TMDBService,
         sync_service: SyncService,
-        media_database_service: MediaDatabaseService,
+        media_core_service: MediaCoreService,
         external_storage_service: ExternalStorageService,
     ):
         self.redis_service = redis_service
         self.anilist_service = anilist_service
         self.tmdb_service = tmdb_service
         self.sync_service = sync_service
-        self.media_database_service = media_database_service
+        self.media_core_service = media_core_service
         self.external_storage_service = external_storage_service
 
     async def search_media_anilist(
@@ -118,17 +115,7 @@ class MediaService:
                 model=CachedMediaPagination,
             )
             if cached:
-                logger.info(
-                    "cache_hit",
-                    cache_key=cache_key,
-                    service="redis",
-                    endpoint=f"/media/anilist/search/{media_type}",
-                )
                 return cached.data
-
-            logger.info("cache_miss", key=cache_key)
-        else:
-            logger.debug("skipping_cache", reason="advanced_filters_provided")
 
         res = await self.anilist_service.search_media(
             page,
@@ -176,9 +163,7 @@ class MediaService:
                 model=cache_model,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
                 return cached.data
-            logger.info("cache_miss", key=cache_key)
 
         data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             media_id, MediaExternalSource.ANILIST, media_type
@@ -188,7 +173,7 @@ class MediaService:
             data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 media_id, MediaExternalSource.ANILIST, media_type=media_type
             )
-        elif data and data.freshness_status != "FRESH":
+        elif data and not data.is_fresh:
             asyncio.create_task(
                 self.sync_service.sync_anilist_media(media_id, media_type)
             )
@@ -202,28 +187,28 @@ class MediaService:
         raise NotFoundException()
 
     async def get_media_detail_anilist(
-        self,  media_id: int, media_type: AnilistMediaType
+        self, media_id: int, media_type: AnilistMediaType
     ) -> Union[AnimeDetailed, MangaDetailed]:
         key = anilist_detail_key(media_type, media_id)
         if media_type == AnilistMediaType.ANIME:
             return await self._get_and_normalize_anilist_media(
                 media_id=media_id,
                 media_type=MediaType.ANIME,
-                expected_payload_type=AnilistMediaDetailed,
+                expected_payload_type=AnilistMediaDetail,
                 normalizer_func=MediaNormalizer.to_anime_detailed,
                 cache_key=key,
                 cache_model=CachedAnimeDetail,
-                cache_ttl=ANILITS_DETAIL_TTL,
+                cache_ttl=ANILIST_DETAIL_TTL,
             )
         else:
             return await self._get_and_normalize_anilist_media(
                 media_id=media_id,
                 media_type=MediaType.MANGA,
-                expected_payload_type=AnilistMediaDetailed,
+                expected_payload_type=AnilistMediaDetail,
                 normalizer_func=MediaNormalizer.to_manga_detailed,
                 cache_key=key,
                 cache_model=CachedMangaDetail,
-                cache_ttl=ANILITS_DETAIL_TTL,
+                cache_ttl=ANILIST_DETAIL_TTL,
             )
 
     async def get_trending_media_tmdb(
@@ -285,13 +270,7 @@ class MediaService:
                 model=CachedMediaPagination,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
                 return cached.data
-            logger.info("cache_miss", key=cache_key)
-        else:
-            logger.debug(
-                "skipping_cache", reason="advanced_filters_provided_or_non_default_sort"
-            )
 
         res = await self.tmdb_service.search_movie(
             search=search,
@@ -365,14 +344,7 @@ class MediaService:
                 model=CachedMediaPagination,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
                 return cached.data
-            logger.info("cache_miss", key=cache_key)
-
-        else:
-            logger.debug(
-                "skipping_cache", reason="advanced_filters_provided_or_non_default_sort"
-            )
 
         res = await self.tmdb_service.search_tv(
             search=search,
@@ -414,9 +386,7 @@ class MediaService:
                 model=CachedMovieDetailWithCollection,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
                 return cached.data
-            logger.info("cache_miss", key=cache_key)
 
         data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             movie_id, MediaExternalSource.TMDB, MediaType.MOVIE
@@ -427,10 +397,11 @@ class MediaService:
             data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 movie_id, MediaExternalSource.TMDB, MediaType.MOVIE
             )
-        elif data and data.freshness_status != "FRESH":
+        elif data and not data.is_fresh:
             asyncio.create_task(
                 self.sync_service.sync_tmdb_movie(movie_id, MediaType.MOVIE)
             )
+
         if data and isinstance(data.payload, MovieWithCollection):
             omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 movie_id, MediaExternalSource.OMDB, MediaType.MOVIE
@@ -465,9 +436,7 @@ class MediaService:
                 model=CachedTVDetail,
             )
             if cached:
-                logger.info("cache_hit", key=cache_key)
                 return cached.data
-            logger.info("cache_miss", key=cache_key)
         data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             tv_id, MediaExternalSource.TMDB, MediaType.TV
         )
@@ -476,7 +445,7 @@ class MediaService:
             data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 tv_id, MediaExternalSource.TMDB, MediaType.TV
             )
-        elif data and data.freshness_status != "FRESH":
+        elif data and not data.is_fresh:
             asyncio.create_task(self.sync_service.sync_tmdb_tv(tv_id, MediaType.TV))
         if data and isinstance(data.payload, TMDBTVDetail):
             omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
