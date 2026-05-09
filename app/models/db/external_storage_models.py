@@ -1,19 +1,22 @@
-from datetime import datetime, timedelta, timezone
-from pyexpat import model
-from turtle import update
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
 
 from app.enums.media_enums import (
-    DataFreshnessStatus,
     MediaExternalSource,
     MediaType,
     StoredDataType,
 )
-from app.models.api.anilist_models import AnilistMediaDetailed
-from app.models.api.omdb_models import OMDbData
-from app.models.api.tmdb_models import TMDBCollection, TMDBMovieDetail, TMDBTVDetail
+from app.models.db.base import DBBase
+from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.omdb_models import OMDbData
+from app.models.providers.tmdb_models import (
+    TMDBCollection,
+    TMDBMovieDetail,
+    TMDBTVDetail,
+)
+from app.utils.time_helpers import utc_now
 
 
 class MovieWithCollection(BaseModel):
@@ -21,11 +24,7 @@ class MovieWithCollection(BaseModel):
     collection: Optional[TMDBCollection] = None
 
 
-PayloadType = AnilistMediaDetailed | MovieWithCollection | TMDBTVDetail | OMDbData
-
-
-def utc_now():
-    return datetime.now(timezone.utc)
+PayloadType = AnilistMediaDetail | MovieWithCollection | TMDBTVDetail | OMDbData
 
 
 class ExternalDataUpsert(BaseModel):
@@ -38,27 +37,21 @@ class ExternalDataUpsert(BaseModel):
 
     expires_at: Optional[datetime] = None
 
-    freshness_status: Optional[DataFreshnessStatus] = None
 
-
-class ExternalDataDB(BaseModel):
-    id: str = Field(..., alias="_id")
-
+class ExternalDataDB(DBBase):
     external_id: int
     external_source: MediaExternalSource
     media_type: MediaType
 
-    payload: AnilistMediaDetailed | MovieWithCollection | TMDBTVDetail | OMDbData
+    payload: AnilistMediaDetail | MovieWithCollection | TMDBTVDetail | OMDbData
     payload_type: StoredDataType
 
-    created_at: datetime
-    updated_at: datetime
-    expires_at: datetime
-    
-    freshness_status: DataFreshnessStatus
+    expires_at: Optional[datetime] = Field(
+        description="If data is None, it never expires or handled manually. If set, it is considered stale after this time and should be refreshed on next access.   "
+    )
 
-    @field_validator("id", mode="before")
-    @classmethod
-    def coerce_object_id(cls, v):
-        return str(v)
-
+    @property
+    def is_fresh(self) -> bool:
+        if self.expires_at is None:
+            return True
+        return self.expires_at > utc_now()

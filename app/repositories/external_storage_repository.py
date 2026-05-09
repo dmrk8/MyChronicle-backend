@@ -1,28 +1,15 @@
 from typing import Optional
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from pymongo import ReturnDocument
-from pymongo.results import DeleteResult
 from app.enums.media_enums import MediaExternalSource, MediaType
-from app.models.db.db_context_model import DBOpContext
 from app.models.db.external_storage_models import (
     ExternalDataDB,
     ExternalDataUpsert,
 )
-from app.repositories._repo_observability import run_db_op
-import structlog
+from app.repositories._base_repository import UpsertRepository
 
 from app.utils.time_helpers import utc_now
 
-logger = structlog.get_logger()
-
-
-class ExternalStorageRepository:
-    def __init__(self, db: AsyncIOMotorDatabase, collection_name: str):
-        self.db = db
-        self.collection = self.db[collection_name]
-        self.logger = logger.bind(
-            repository="ExternalStorageRepository", collection=collection_name
-        )
+class ExternalStorageRepository(UpsertRepository[ExternalDataDB]):
+    db_model = ExternalDataDB
 
     async def init_indexes(self) -> None:
         await self.collection.create_index(
@@ -40,14 +27,6 @@ class ExternalStorageRepository:
         )
 
     async def upsert(self, external_data: ExternalDataUpsert) -> ExternalDataDB:
-        context = DBOpContext(
-            external_id=external_data.external_id,
-            external_source=external_data.external_source,
-            media_type=external_data.media_type,
-            operation="upsert",
-            collection=self.collection.name,
-        )
-
         filter_query = {
             "external_id": external_data.external_id,
             "external_source": external_data.external_source,
@@ -71,23 +50,16 @@ class ExternalStorageRepository:
             },
         }
 
-        async def _op():
-            return await self.collection.find_one_and_update(
-                filter_query,
-                update_doc,
-                upsert=True,
-                return_document=ReturnDocument.AFTER,
-            )
-
-        doc = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_external_details_upsert",
-            error_event="mongo_external_details_upsert_error",
-            context=context,
+        return await self._upsert(
+            filter_query,
+            update_doc,
+            self._make_context(
+                operation="upsert",
+                external_id=external_data.external_id,
+                external_source=external_data.external_source,
+                media_type=external_data.media_type,
+            ),
         )
-
-        return ExternalDataDB.model_validate(doc)
 
     async def get_by_external_id_and_source_and_media_type(
         self,
@@ -95,32 +67,21 @@ class ExternalStorageRepository:
         external_source: MediaExternalSource,
         media_type: MediaType,
     ) -> Optional[ExternalDataDB]:
-        context = DBOpContext(
-            external_id=external_id,
-            external_source=external_source,
-            media_type=media_type,
-            operation="find_one",
-            collection=self.collection.name,
+        filter_query = {
+            "external_id": external_id,
+            "external_source": external_source,
+            "media_type": media_type,
+        }
+
+        return await self._find_one(
+            filter_query,
+            self._make_context(
+                operation="find_one",
+                external_id=external_id,
+                external_source=external_source,
+                media_type=media_type,
+            ),
         )
-
-        async def _op():
-            return await self.collection.find_one(
-                {
-                    "external_id": external_id,
-                    "external_source": external_source,
-                    "media_type": media_type,
-                }
-            )
-
-        doc = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_external_details_find_one_by_external_id_source_query",
-            error_event="mongo_external_details_find_one_by_external_id_source_error",
-            context=context,
-        )
-
-        return ExternalDataDB.model_validate(doc) if doc else None
 
     async def delete_by_external_id_and_source_and_media_type(
         self,
@@ -128,28 +89,16 @@ class ExternalStorageRepository:
         external_source: MediaExternalSource,
         media_type: MediaType,
     ) -> bool:
-        async def _op() -> DeleteResult:
-            return await self.collection.delete_one(
-                {
-                    "external_id": external_id,
-                    "external_source": external_source,
-                    "media_type": media_type,
-                }
-            )
-
-        context = DBOpContext(
-            external_id=external_id,
-            external_source=external_source,
-            media_type=media_type,
-            operation="delete_one",
-            collection=self.collection.name,
+        return await self._delete_one(
+            {
+                "external_id": external_id,
+                "external_source": external_source,
+                "media_type": media_type,
+            },
+            self._make_context(
+                operation="delete_one",
+                external_id=external_id,
+                external_source=external_source,
+                media_type=media_type,
+            ),
         )
-
-        result = await run_db_op(
-            self.logger,
-            _op,
-            success_event="mongo_external_details_delete_query",
-            error_event="mongo_external_details_delete_one_error",
-            context=context,
-        )
-        return result.deleted_count > 0

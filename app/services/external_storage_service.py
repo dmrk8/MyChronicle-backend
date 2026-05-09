@@ -4,7 +4,6 @@ import structlog
 from typing import Optional
 
 from app.enums.media_enums import (
-    DataFreshnessStatus,
     MediaExternalSource,
     MediaType,
     StoredDataType,
@@ -33,10 +32,9 @@ class ExternalStorageService:
         external_source: MediaExternalSource,
         media_type: MediaType,
     ) -> Optional[ExternalDataDB]:
-        entry = await self.repository.get_by_external_id_and_source_and_media_type(
+        return await self.repository.get_by_external_id_and_source_and_media_type(
             external_id, external_source, media_type
         )
-        return entry if entry else None
 
     async def delete(
         self,
@@ -47,7 +45,7 @@ class ExternalStorageService:
         await self.repository.delete_by_external_id_and_source_and_media_type(
             external_id, external_source, media_type
         )
-        self.logger.info(
+        self.logger.debug(
             "Deleted external data",
             external_id=external_id,
             external_source=external_source,
@@ -71,12 +69,11 @@ class ExternalStorageService:
             payload=payload,
             payload_type=payload_type,
             expires_at=expires_at,
-            freshness_status=DataFreshnessStatus.FRESH
         )
 
         res = await self.repository.upsert(insert_model)
 
-        self.logger.info(
+        self.logger.debug(
             "Upserted external data",
             external_id=external_id,
             external_source=external_source,

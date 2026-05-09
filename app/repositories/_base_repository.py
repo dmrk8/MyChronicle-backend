@@ -226,7 +226,7 @@ class UpsertRepository(BaseRepository[DBModel], Generic[DBModel]):
         async def _op():
             return await self.collection.find_one_and_update(
                 filter_query,
-                {"$set": update_doc},
+                update_doc,
                 upsert=True,
                 return_document=ReturnDocument.AFTER,
             )
