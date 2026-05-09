@@ -28,7 +28,6 @@ class AppState(BaseModel):
     redis_client: Optional[Redis] = None
     anilist_client: Optional[AsyncClient] = None
     tmdb_client: Optional[AsyncClient] = None
-    event_bus: Optional[EventBus] = None
     password_handler: Optional[PasswordHandler] = None
     jwt_handler: Optional[JWTHandler] = None
     repos: Optional[dict] = None

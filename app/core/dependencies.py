@@ -2,7 +2,6 @@ from fastapi import Depends, Request
 from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
-from app.core.event_bus import EventBus
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.repositories import Repositories
@@ -11,12 +10,12 @@ from app.services.anilist_service import AnilistService
 from app.integrations.anilist_api import AnilistApi
 
 from app.services.external_storage_service import ExternalStorageService
-from app.services.media_db_service import  MediaDatabaseService
+from app.services.media_core_service import MediaCoreService
 from app.services.media_service import MediaService
 from app.services.omdb_service import OMDbService
 from app.services.redis_service import RedisService
 from app.services.review_service import ReviewService
-from app.services.sync_service import SyncService
+from app.services.media_sync_service import SyncService
 from app.services.tmdb_service import TMDBService
 from app.integrations.tmdb_api import TMDBApi
 
@@ -66,10 +65,6 @@ def get_redis_service(redis_client: Redis = Depends(get_redis)) -> RedisService:
     return RedisService(redis_client=redis_client)
 
 
-def get_event_bus(request: Request) -> EventBus:
-    return request.app.state.event_bus
-
-
 def get_anilist_service(
     anilist_api: AnilistApi = Depends(get_anilist_api),
 ) -> AnilistService:
@@ -87,12 +82,10 @@ def get_jwt_handler(request: Request) -> JWTHandler:
 def get_user_service(
     repos: Repositories = Depends(get_repositories),
     password_handler: PasswordHandler = Depends(get_password_handler),
-    event_bus: EventBus = Depends(get_event_bus),
 ) -> UserService:
     return UserService(
         user_repository=repos.user,
         password_handler=password_handler,
-        event_bus=event_bus,
     )
 
 
@@ -111,21 +104,17 @@ def get_review_service(
 ) -> ReviewService:
     return ReviewService(
         review_repository=repos.review,
-        user_media_entry_repository=repos.user_media_entry,
     )
 
 
 def get_user_media_entry_service(
     repos: Repositories = Depends(get_repositories),
     review_service: ReviewService = Depends(get_review_service),
-    event_bus: EventBus = Depends(get_event_bus),
 ) -> UserMediaEntryService:
     return UserMediaEntryService(
         repository=repos.user_media_entry,
         review_service=review_service,
-        event_bus=event_bus,
     )
-
 
 
 def get_omdb_service(
@@ -140,14 +129,14 @@ def get_external_storage_service(
     return ExternalStorageService(repository=repo.external_storage)
 
 
-def get_media_database_service(
+def get_media_core_service(
     repo: Repositories = Depends(get_repositories),
-) -> MediaDatabaseService:
-    return MediaDatabaseService(repository=repo.media)
+) -> MediaCoreService:
+    return MediaCoreService(repository=repo.media_core)
 
 
 def get_sync_service(
-    media_database_service: MediaDatabaseService = Depends(get_media_database_service),
+    media_core_service: MediaCoreService = Depends(get_media_core_service),
     anilist_service: AnilistService = Depends(get_anilist_service),
     tmdb_service: TMDBService = Depends(get_tmdb_service),
     omdb_service: OMDbService = Depends(get_omdb_service),
@@ -156,7 +145,7 @@ def get_sync_service(
     ),
 ) -> SyncService:
     return SyncService(
-        media_database_service=media_database_service,
+        media_core_service=media_core_service,
         anilist_service=anilist_service,
         tmdb_service=tmdb_service,
         omdb_service=omdb_service,
@@ -172,7 +161,7 @@ def get_media_service(
     external_storage_service: ExternalStorageService = Depends(
         get_external_storage_service
     ),
-    media_database_service: MediaDatabaseService = Depends(get_media_database_service),
+    media_core_service: MediaCoreService = Depends(get_media_core_service),
 ) -> MediaService:
     return MediaService(
         redis_service=redis_service,
@@ -180,5 +169,5 @@ def get_media_service(
         tmdb_service=tmdb_service,
         sync_service=sync_service,
         external_storage_service=external_storage_service,
-        media_database_service=media_database_service,
+        media_core_service=media_core_service,
     )

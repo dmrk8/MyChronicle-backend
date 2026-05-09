@@ -2,9 +2,6 @@ from app.core.config import Settings
 import logging
 import structlog.stdlib
 
-from structlog.stdlib import LoggerFactory
-
-
 from rich.console import Console
 from rich.pretty import Pretty
 from rich.text import Text
