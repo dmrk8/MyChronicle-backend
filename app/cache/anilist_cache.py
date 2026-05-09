@@ -4,7 +4,7 @@ from typing import Optional
 from app.enums.anilist_enums import AnilistMediaType, AnilistSortOption
 
 
-ANILITS_DETAIL_TTL = 60 * 60 * 24  # 24 hours ANILIST_POPULAR_TTL = 60 * 60 * 12  # 12 hours ANILIST_POPULAR_TTL = 60 * 60 * 12  # 12 hours
+ANILIST_DETAIL_TTL = 60 * 60 * 24  # 24 hours
 ANILIST_POPULAR_TTL = 60 * 60 * 12  # 12 hours
 ANILIST_TRENDING_TTL = 60 * 60 * 6  # 6 hours
 
