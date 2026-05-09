@@ -1,36 +1,16 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field
 from app.enums.media_enums import (
     MediaExternalSource,
     MediaType,
 )
+from app.models.db.base import DBBase
+from app.models.shared.media import MediaScore, MediaTag, MediaTitle
 
 
-class MediaScore(BaseModel):
-    source: str
-    value: float  # ALWAYS 0–100
-    vote_count: Optional[int] = None
-
-
-class MediaTag(BaseModel):
-    name: str
-    is_media_spoiler: bool
-    is_general_spoiler: bool
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class MediaTitle(BaseModel):
-    title: str
-    normalized: str
-    romaji: Optional[str]
-    native: Optional[str]
-    english: Optional[str]
-
-
-class MediaUpsert(BaseModel):
+class MediaDBUpsert(BaseModel):
     external_id: int
     external_source: MediaExternalSource
     media_type: MediaType
@@ -56,7 +36,8 @@ class MediaUpsert(BaseModel):
 
     scores: Optional[List[MediaScore]] = Field(
         None,
-        description="Computed / externally aggregated field. Managed separately from primary media ingestion pipeline.",
+        description="Computed / externally aggregated field.\n"
+        "Managed separately from primary media ingestion pipeline.",
     )
 
     popularity: Optional[float] = None
@@ -65,13 +46,12 @@ class MediaUpsert(BaseModel):
     tags: Optional[List[MediaTag]] = None
     keywords: Optional[List[str]] = None
     synonyms: Optional[List[str]] = None
+    alternative_titles: Optional[List[str]] = None
 
     slug: Optional[str] = None
 
 
-class MediaDB(BaseModel):
-    id: str = Field(..., alias="_id")
-
+class MediaDB(DBBase):
     external_id: int
     external_source: MediaExternalSource
     media_type: MediaType
@@ -103,13 +83,3 @@ class MediaDB(BaseModel):
     synonyms: Optional[List[str]] = None
 
     slug: Optional[str] = None
-
-    created_at: datetime
-    updated_at: datetime
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def coerce_object_id(cls, v):
-        return str(v)
-
-
