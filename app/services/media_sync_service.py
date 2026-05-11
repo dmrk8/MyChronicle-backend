@@ -265,7 +265,7 @@ class SyncService:
                 return max(start_dt, now) + timedelta(hours=3)
             except Exception:
                 pass
-        return now + timedelta(days=30)
+        return now + timedelta(days=90)
 
     async def _calculate_tmdb_movie_sync_expiry(
         self, media: TMDBMovieDetail

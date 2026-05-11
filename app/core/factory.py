@@ -33,6 +33,7 @@ def create_app(settings) -> FastAPI:
             serverSelectionTimeoutMS=3000,
             connectTimeoutMS=3000,
             socketTimeoutMS=5000,
+            tz_aware=True,
         )
         await app.state.mongo_client.admin.command("ping")
 

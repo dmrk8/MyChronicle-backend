@@ -14,7 +14,8 @@ from app.utils.time_helpers import utc_now
 
 
 class MediaCoreRepository(UpsertRepository[MediaDB]):
-
+    db_model = MediaDB
+    
     async def init_indexes(self) -> None:
         await self.collection.create_index(
             [("external_id", 1), ("external_source", 1), ("media_type", 1)],

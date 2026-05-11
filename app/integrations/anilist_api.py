@@ -314,6 +314,11 @@ class AnilistApi:
                   native
                   romaji
                 }
+                trailer {
+                  id
+                  site
+                  thumbnail
+                }
                 type
                 volumes
                 tags {

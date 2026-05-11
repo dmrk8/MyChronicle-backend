@@ -57,7 +57,7 @@ async def search_anilist(
     "/anilist/{media_type}/{media_id}",
     response_model=Union[AnimeDetailed, MangaDetailed],
 )
-async def get_media_detail(
+async def get_media_detail_anilist(
     media_type: str = Path(..., description="Media type (ANIME or MANGA)"),
     media_id: int = Path(..., ge=1, description="Media ID"),
     service: MediaService = Depends(get_media_service),

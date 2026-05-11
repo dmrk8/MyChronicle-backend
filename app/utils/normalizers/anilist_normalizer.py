@@ -1,5 +1,4 @@
 from typing import List, Optional
-import structlog
 import calendar
 
 from app.enums.media_enums import MediaExternalSource, MediaType
@@ -43,7 +42,7 @@ class AnilistNormalizer:
                 id=media.id,
                 mediaType=media.type,
                 externalSource=MediaExternalSource.ANILIST,
-                title=AnilistNormalizer._build_title(media.title),
+                title=AnilistNormalizer._get_title(media.title),
                 format=media.format,
                 genres=media.genres,
                 status=AnilistNormalizer._convert_enum_field(media.status),
@@ -94,7 +93,7 @@ class AnilistNormalizer:
             startDate=start_date,
             endDate=end_date,
             tags=(
-                [MediaTag.model_validate(tag) for tag in media.tags]
+                [MediaTag.model_validate(tag.model_dump()) for tag in media.tags]
                 if media.tags
                 else []
             ),
@@ -115,12 +114,15 @@ class AnilistNormalizer:
             **shared_data.model_dump(),
             season=AnilistNormalizer._convert_enum_field(media.season),
             seasonYear=media.season_year,
-            source=AnilistNormalizer._convert_enum_field(media.source),
             episodes=media.episodes,
             duration=media.duration,
             studios=studios,
-            nextAiringEpisode=AniMediaNextAiringEpisode.model_validate(
-                media.next_airing_episode
+            nextAiringEpisode=(
+                AniMediaNextAiringEpisode.model_validate(
+                    media.next_airing_episode.model_dump()
+                )
+                if media.next_airing_episode
+                else None
             ),
         )
 
