@@ -13,6 +13,7 @@ from app.utils.normalizers.text_utils import (
     build_search_tokens,
     build_slug,
     normalize_title_text,
+    strip_html,
 )
 from app.utils.normalizers.tmdb_normalizer import TMDBNormalizer
 
@@ -94,7 +95,7 @@ class MediaDBNormalizer:
             media_type=MediaType[media.type.upper()],
             title=title,
             search_tokens=search_tokens,
-            description=media.description,
+            description=strip_html(media.description),
             is_adult=media.is_adult or False,
             status=media.status,
             format=media.format,
