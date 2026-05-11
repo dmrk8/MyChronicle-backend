@@ -193,7 +193,7 @@ class TMDBNormalizer:
             inProduction=media.in_production,
             languages=media.languages,
             lastEpisodeToAir=(
-                TMDBMediaLastEpisodeToAir.model_validate(media.last_episode_to_air)
+                TMDBMediaLastEpisodeToAir.model_validate(media.last_episode_to_air.model_dump())
                 if media.last_episode_to_air
                 else None
             ),
@@ -464,26 +464,26 @@ class TMDBNormalizer:
         )
 
     @staticmethod
-    def convert_trailer(trailer: Optional[TMDBVideos]) -> Optional[Trailer]:
+    def convert_trailer(trailer: Optional[TMDBVideos]) -> Optional[List[Trailer]]:
         """Convert TMDB trailer data to Trailer."""
         if not trailer or not trailer.results:
             return None
 
         # Find the first YouTube trailer
+        trailers = []
         for video in trailer.results:
             if (
                 video.site
                 and video.site.lower() == "youtube"
                 and video.type
                 and video.type.lower() == "trailer"
-                and video.official
             ):
-                return Trailer(
+                trailers.append(Trailer(
                     url=f"https://www.youtube.com/watch?v={video.key}",
                     thumbnail=f"https://i.ytimg.com/vi/{video.key}/hqdefault.jpg",
-                )
+                ))
 
-        return None
+        return trailers if trailers else None
 
     @staticmethod
     def _convert_title(

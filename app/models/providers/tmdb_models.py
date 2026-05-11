@@ -243,7 +243,7 @@ class TMDBVideo(BaseModel):
 
 
 class TMDBVideos(BaseModel):
-    id: int
+    id: Optional[int] = None
     results: List[TMDBVideo]
 
 

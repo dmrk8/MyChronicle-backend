@@ -46,7 +46,7 @@ class ExternalDataDB(DBBase):
     payload: AnilistMediaDetail | MovieWithCollection | TMDBTVDetail | OMDbData
     payload_type: StoredDataType
 
-    expires_at: Optional[datetime] = Field(
+    expires_at: Optional[datetime] = Field(None,
         description="If data is None, it never expires or handled manually. If set, it is considered stale after this time and should be refreshed on next access.   "
     )
 

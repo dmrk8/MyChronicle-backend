@@ -287,7 +287,7 @@ class AnilistNormalizer:
     @staticmethod
     def _convert_trailer_url(
         trailer: Optional[AnilistTrailer],
-    ) -> Optional[Trailer]:
+    ) -> Optional[List[Trailer]]:
         """Convert trailer URL to embeddable format if it's a YouTube link"""
         if not trailer:
             return None
@@ -295,7 +295,7 @@ class AnilistNormalizer:
         if trailer.site == "youtube" and trailer.id:
             url = f"https://www.youtube.com/watch?v={trailer.id}"
             thumbnail = trailer.thumbnail
-            return Trailer(url=url, thumbnail=thumbnail)
+            return [Trailer(url=url, thumbnail=thumbnail)]
 
     @staticmethod
     def _get_title(title: Optional[Title]) -> Optional[str]:

@@ -12,9 +12,9 @@ class MediaScore(BaseModel):
 class MediaTitle(BaseModel):
     title: str
     normalized: str
-    romaji: Optional[str]
-    native: Optional[str]
-    english: Optional[str]
+    romaji: Optional[str] = None
+    native: Optional[str] = None
+    english: Optional[str] = None
     
 class MediaTag(BaseModel):
     name: str

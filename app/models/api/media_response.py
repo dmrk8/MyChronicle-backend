@@ -195,7 +195,7 @@ class MediaBase(BaseModel):
     # --- Media Assets ---
     cover_image: Optional[str] = Field(None, alias="coverImage")
     banner_image: Optional[str] = Field(None, alias="bannerImage")
-    trailer: Optional[Trailer] = None
+    trailer: Optional[List[Trailer]] = None
 
     # --- Scores ---
     scores: Optional[List[MediaScore]] = None
