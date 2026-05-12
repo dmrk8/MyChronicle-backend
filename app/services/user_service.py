@@ -62,6 +62,11 @@ class UserService:
         self, user_id: str, update_password: PasswordUpdateRequest
     ) -> UserDB:
         """User is already authenticated in router. No need for additional authentication."""
+        user = await self.user_repository.get_by_id(user_id)
+        if not user or not self.password_handler.verify_password(
+            update_password.current_password, user.hash_password
+        ):
+            raise UnauthorizedException("Current password does not match")
 
         new_hash = self.password_handler.hash_password(update_password.new_password)
         user_update = UserUpdate(hash_password=new_hash)  # type: ignore
