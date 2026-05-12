@@ -59,4 +59,4 @@ async def logout(
 async def get_current_user_info(
     current_user: UserDB = Depends(get_current_user),
 ):
-    return User.from_db(current_user)
+    return User.model_validate(current_user.model_dump())

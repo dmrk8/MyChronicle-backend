@@ -143,6 +143,11 @@ class CRUDRepository(
         raw = data.model_dump()
         raw["created_at"] = utc_now()
         raw["updated_at"] = utc_now()
+        
+        if "is_deleted" in self.db_model.model_fields:
+            raw.setdefault("is_deleted", False)
+        if "deleted_at" in self.db_model.model_fields:
+            raw.setdefault("deleted_at", None)
 
         success_event, error_event = self._event("insert_one")
 
