@@ -11,7 +11,6 @@ from app.models.db.user_media_entry_models import (
     UserMediaEntryUpdate,
 )
 from app.repositories.user_media_entry_repository import UserMediaEntryRepository
-from app.services.review_service import ReviewService
 from app.enums.user_media_entry_enums import (
     UserMediaEntrySortFields,
     UserMediaEntrySortOptions,
@@ -28,10 +27,8 @@ class UserMediaEntryService:
     def __init__(
         self,
         repository: UserMediaEntryRepository,
-        review_service: ReviewService,
     ):
         self.repository = repository
-        self.review_service = review_service
         self.logger = logger.bind(service="UserMediaEntryService")
 
     async def _verify_ownership(self, entry_id: str, user_id: str) -> UserMediaEntryDB:

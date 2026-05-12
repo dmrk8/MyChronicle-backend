@@ -88,8 +88,8 @@ class ReviewDB(DBBase):
 
     review: Optional[str] = None
     rating: Optional[float] = None
-    review_progress: Optional[int] = Field(None, alias="reviewProgress")
-    written_at: Optional[datetime] = Field(None, alias="writtenAt")
+    review_progress: Optional[int] = None
+    written_at: Optional[datetime] = None
 
 
 class Review(BaseModel):

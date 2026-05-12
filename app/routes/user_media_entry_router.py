@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from typing import Optional
 
 from app.core.dependencies import (
@@ -50,7 +50,7 @@ async def update_user_media_entry(
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
     res = await service.update_entry(entry_id, update, user.id)
-    return UserMediaEntry.model_validate(res)
+    return UserMediaEntry.model_validate(res.model_dump())
 
 
 @user_media_entry_router.delete("/{entry_id}", response_model=None)
@@ -68,15 +68,21 @@ async def delete_user_media_entry(
 )
 async def get_entry_by_external_id(
     external_id: int = Path(..., description="External ID"),
-    external_source: MediaExternalSource = Path(..., description="External Source"),
-    media_type: MediaType = Path(..., description="Media Type"),
+    external_source: str = Path(..., description="External Source"),
+    media_type: str = Path(..., description="Media Type"),
     user: UserDB = Depends(get_current_user),
     service: UserMediaEntryService = Depends(get_user_media_entry_service),
 ):
+    try:
+        external_source_enum = MediaExternalSource(external_source.upper())
+        media_type_enum = MediaType(media_type.upper())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid enum value in path")
+
     res = await service.get_entry_by_external_id_and_external_source_and_media_type(
-        external_id, external_source, user.id, media_type
+        external_id, external_source_enum, user.id, media_type_enum
     )
-    return UserMediaEntry.model_validate(res)
+    return UserMediaEntry.model_validate(res.model_dump())
 
 
 @user_media_entry_router.get("/", response_model=UserMediaEntryPagination)
@@ -130,7 +136,9 @@ async def get_user_media_entries(
         )
     )
     return UserMediaEntryPagination(
-        results=[UserMediaEntry.model_validate(entry) for entry in entries],
+        results=[
+            UserMediaEntry.model_validate(entry.model_dump()) for entry in entries
+        ],
         page=page,
         perPage=per_page,
         hasNextPage=has_next_page,
@@ -147,7 +155,7 @@ async def sync_user_media_entry_metadata(
 ):
     """Sync metadata (title, cover_image, is_adult) from external API"""
     res = await service.sync_entry_metadata(entry_id, metadata, user.id)
-    return UserMediaEntry.model_validate(res)
+    return UserMediaEntry.model_validate(res.model_dump())
 
 
 # Review routes for a specific user media entry
@@ -161,7 +169,7 @@ async def create_review_for_user_media_entry(
     service: ReviewService = Depends(get_review_service),
 ):
     res = await service.create_review(review, entry_id, user.id)
-    return Review.model_validate(res)
+    return Review.model_validate(res.model_dump())
 
 
 @user_media_entry_router.get("/{entry_id}/reviews", response_model=list[Review])
@@ -171,7 +179,7 @@ async def get_reviews_for_user_media_entry(
     service: ReviewService = Depends(get_review_service),
 ):
     res = await service.get_reviews_for_user_media_entry(entry_id, user.id)
-    return [Review.model_validate(review) for review in res]
+    return [Review.model_validate(review.model_dump()) for review in res]
 
 
 @user_media_entry_router.get("/{entry_id}/reviews/count", response_model=int)
@@ -191,11 +199,11 @@ async def get_review_by_id(
     service: ReviewService = Depends(get_review_service),
 ):
     res = await service.get_review_by_id(review_id, user.id, entry_id)
-    return Review.model_validate(res)
+    return Review.model_validate(res.model_dump())
 
 
 @user_media_entry_router.patch("/{entry_id}/reviews/{review_id}", response_model=Review)
-async def update_review_for_user_media_entry(
+async def update_review(
     update: ReviewUpdate,
     entry_id: str = Path(..., description="UserDB Media Entry ID"),
     review_id: str = Path(..., description="Review ID"),
@@ -203,7 +211,7 @@ async def update_review_for_user_media_entry(
     service: ReviewService = Depends(get_review_service),
 ):
     res = await service.update_review(review_id, entry_id, update, user.id)
-    return Review.model_validate(res)
+    return Review.model_validate(res.model_dump()) if res else None
 
 
 @user_media_entry_router.delete(
