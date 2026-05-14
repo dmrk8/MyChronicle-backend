@@ -4,7 +4,7 @@ from app.enums.media_enums import MediaExternalSource
 from app.models.providers.anilist_models import AnilistMediaDetail
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
-from app.models.db.media_db_models import MediaScore
+from app.models.shared.media import MediaScore
 from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
 
 

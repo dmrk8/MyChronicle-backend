@@ -2,7 +2,7 @@ from typing import List, Optional
 from pymongo import ReturnDocument
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.db_context_model import DBOpContext
-from app.models.db.media_db_models import (
+from app.models.db.media_core_models import (
     MediaDB,
     MediaScore,
     MediaDBUpsert,

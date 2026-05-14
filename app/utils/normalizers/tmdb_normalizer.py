@@ -1,7 +1,7 @@
 from typing import Callable, List, Optional
 
 from app.enums.media_enums import MediaExternalSource, MediaType
-from app.models.db.media_db_models import MediaTitle
+from app.models.shared.media import MediaTitle
 from app.models.api.media_response import (
     MediaBelongsToCollection,
     MediaCast,
@@ -193,7 +193,9 @@ class TMDBNormalizer:
             inProduction=media.in_production,
             languages=media.languages,
             lastEpisodeToAir=(
-                TMDBMediaLastEpisodeToAir.model_validate(media.last_episode_to_air.model_dump())
+                TMDBMediaLastEpisodeToAir.model_validate(
+                    media.last_episode_to_air.model_dump()
+                )
                 if media.last_episode_to_air
                 else None
             ),
@@ -478,10 +480,12 @@ class TMDBNormalizer:
                 and video.type
                 and video.type.lower() == "trailer"
             ):
-                trailers.append(Trailer(
-                    url=f"https://www.youtube.com/watch?v={video.key}",
-                    thumbnail=f"https://i.ytimg.com/vi/{video.key}/hqdefault.jpg",
-                ))
+                trailers.append(
+                    Trailer(
+                        url=f"https://www.youtube.com/watch?v={video.key}",
+                        thumbnail=f"https://i.ytimg.com/vi/{video.key}/hqdefault.jpg",
+                    )
+                )
 
         return trailers if trailers else None
 

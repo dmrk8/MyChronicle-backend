@@ -2,7 +2,7 @@ from typing import List, List, Optional
 
 import structlog
 from app.enums.media_enums import MediaExternalSource, MediaType
-from app.models.db.media_db_models import (
+from app.models.db.media_core_models import (
     MediaDB,
     MediaScore,
 )
@@ -11,7 +11,7 @@ from app.models.providers.anilist_models import AnilistMediaDetail
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.repositories.media_core_repository import MediaCoreRepository
-from app.utils.normalizers.media_db_normalizer import MediaDBNormalizer
+from app.utils.normalizers.media_core_normalizer import MediaDBNormalizer
 
 logger = structlog.get_logger()
 

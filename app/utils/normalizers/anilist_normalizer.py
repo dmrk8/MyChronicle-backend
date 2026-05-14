@@ -13,7 +13,7 @@ from app.models.providers.anilist_models import (
     Studios,
     Title,
 )
-from app.models.db.media_db_models import MediaTitle
+from app.models.shared.media import MediaTitle
 from app.models.api.media_response import (
     AniMediaBase,
     AniMediaNextAiringEpisode,

@@ -3,7 +3,7 @@ from datetime import timezone
 from typing import List, Optional
 
 
-from app.models.db.media_db_models import MediaScore
+from app.models.shared.media import MediaScore
 
 
 from app.models.providers.omdb_models import OMDbData

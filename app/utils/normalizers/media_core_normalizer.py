@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from app.models.providers.anilist_models import AnilistMediaDetail
 from app.models.providers.omdb_models import OMDbData
-from app.models.db.media_db_models import (
+from app.models.db.media_core_models import (
     MediaTitle,
     MediaTag,
     MediaDBUpsert,
