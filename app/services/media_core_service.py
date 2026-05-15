@@ -4,10 +4,13 @@ import structlog
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.media_core_models import (
     MediaDB,
-    MediaScore,
 )
 
+from app.models.shared.media import MediaScore
+
 from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.mal_models import MALMangaResponse, MALMangaResponse
+from app.models.providers.mal_models import MALAnimeResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.repositories.media_core_repository import MediaCoreRepository
@@ -21,10 +24,14 @@ class MediaCoreService:
         self.repository = repository
         self.logger = logger.bind(service="MediaCoreService")
 
-    async def create_anilist_detail(
-        self, anilist_media: AnilistMediaDetail
+    async def create_anime_detail(
+        self,
+        anilist_media: AnilistMediaDetail,
+        mal_data: Optional[MALAnimeResponse] = None,
     ) -> MediaDB:
-        media_insert = MediaDBNormalizer.normalize_anilist_to_media_core(anilist_media)
+        media_insert = MediaDBNormalizer.normalize_anime_or_manga_to_media_core(
+            anilist_media, mal_data
+        )
         res = await self.repository.upsert(media_insert)
         self.logger.debug(
             "Inserted Anilist media into database",
@@ -33,7 +40,23 @@ class MediaCoreService:
         )
         return res
 
-    async def create_tmdb_movie_detail(
+    async def create_manga_detail(
+        self,
+        anilist_media: AnilistMediaDetail,
+        mal_data: Optional[MALMangaResponse] = None,
+    ) -> MediaDB:
+        media_insert = MediaDBNormalizer.normalize_anime_or_manga_to_media_core(
+            anilist_media, mal_data
+        )
+        res = await self.repository.upsert(media_insert)
+        self.logger.debug(
+            "Inserted Anilist media into database",
+            external_id=anilist_media.id,
+            media_type=anilist_media.type,
+        )
+        return res
+
+    async def create_movie_detail(
         self, tmdb_movie: TMDBMovieDetail, omdb_data: Optional[OMDbData] = None
     ) -> MediaDB:
         media_insert = MediaDBNormalizer.normalize_tmdb_movie_to_media_core(
@@ -47,7 +70,7 @@ class MediaCoreService:
         )
         return res
 
-    async def create_tmdb_tv_detail(
+    async def create_tv_detail(
         self, tmdb_tv: TMDBTVDetail, omdb_data: Optional[OMDbData] = None
     ) -> MediaDB:
         media_insert = MediaDBNormalizer.normalize_tmdb_tv_to_media_core(
@@ -79,10 +102,8 @@ class MediaCoreService:
         scores: List[MediaScore],
     ) -> Optional[MediaDB]:
 
-        res = (
-            await self.repository.update_media_scores_by_external_id_and_source_and_media_type(
-                external_id, external_source, media_type, scores
-            )
+        res = await self.repository.update_media_scores_by_external_id_and_source_and_media_type(
+            external_id, external_source, media_type, scores
         )
 
         self.logger.debug(

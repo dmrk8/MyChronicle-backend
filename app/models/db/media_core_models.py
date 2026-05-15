@@ -10,10 +10,17 @@ from app.models.db.base import DBBase
 from app.models.shared.media import MediaScore, MediaTag, MediaTitle
 
 
+class ExternalReference(BaseModel):
+    id: str
+    source: MediaExternalSource
+
+
 class MediaDBUpsert(BaseModel):
-    external_id: int
-    external_source: MediaExternalSource
+    primary_id: int
+    primary_source: MediaExternalSource
     media_type: MediaType
+    
+    external_ids: List[ExternalReference]
 
     # base
     title: MediaTitle
@@ -52,8 +59,7 @@ class MediaDBUpsert(BaseModel):
 
 
 class MediaDB(DBBase):
-    external_id: int
-    external_source: MediaExternalSource
+    external_ids: List[ExternalReference]
     media_type: MediaType
 
     title: MediaTitle

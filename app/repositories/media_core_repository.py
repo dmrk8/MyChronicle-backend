@@ -18,7 +18,7 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
     
     async def init_indexes(self) -> None:
         await self.collection.create_index(
-            [("external_id", 1), ("external_source", 1), ("media_type", 1)],
+            [("primary_id", 1), ("primary_source", 1), ("media_type", 1)],
             unique=True,
             name="external_id_source_media_type_idx",
         )
@@ -32,7 +32,7 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
         now = utc_now()
 
         data = media.model_dump(
-            exclude={"scores", "external_id", "external_source", "media_type"},
+            exclude={"scores", "primary_id", "primary_source", "media_type"},
             exclude_none=True,
         )
 
@@ -42,23 +42,23 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
                 "updated_at": now,
             },
             "$setOnInsert": {
-                "external_id": media.external_id,
-                "external_source": media.external_source,
+                "primary_id": media.primary_id,
+                "primary_source": media.primary_source,
                 "media_type": media.media_type,
                 "created_at": now,
             },
         }
         return await self._upsert(
             {
-                "external_id": media.external_id,
-                "external_source": media.external_source,
+                "primary_id": media.primary_id,
+                "primary_source": media.primary_source,
                 "media_type": media.media_type,
             },
             update_doc,
             self._make_context(
                 operation="upsert_media",
-                external_id=media.external_id,
-                external_source=media.external_source,
+                external_id=media.primary_id,
+                external_source=media.primary_source,
                 media_type=media.media_type,
             ),
         )
@@ -72,8 +72,8 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
 
         return await self._find_one(
             {
-                "external_id": external_id,
-                "external_source": external_source,
+                "primary_id": external_id,
+                "primary_source": external_source,
                 "media_type": media_type,
             },
             self._make_context(
@@ -103,8 +103,8 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
         async def _op():
             return await self.collection.find_one_and_update(
                 {
-                    "external_id": external_id,
-                    "external_source": external_source,
+                    "primary_id": external_id,
+                    "primary_source": external_source,
                     "media_type": media_type,
                 },
                 {"$set": {**data, "updated_at": utc_now()}},

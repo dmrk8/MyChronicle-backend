@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.db.media_core_models import (
+    ExternalReference,
     MediaTitle,
     MediaTag,
     MediaDBUpsert,
@@ -41,7 +43,10 @@ class MediaDBNormalizer:
             return None
 
     @staticmethod
-    def normalize_anilist_to_media_core(media: AnilistMediaDetail) -> MediaDBUpsert:
+    def normalize_anime_or_manga_to_media_core(
+        media: AnilistMediaDetail,
+        mal_data: Optional[MALAnimeResponse | MALMangaResponse] = None,
+    ) -> MediaDBUpsert:
         raw_title = (
             media.title.english or media.title.romaji or media.title.native or ""
             if media.title
@@ -86,13 +91,24 @@ class MediaDBNormalizer:
 
         slug = build_slug(title.normalized, media.id)
 
-        scores = ScoreBuilder.build_anilist_score(media)
+        scores = ScoreBuilder.build_anilist_score(media, mal_data)
+        external_ids = [
+            ExternalReference(
+                id=str(media.id),
+                source=MediaExternalSource.ANILIST,
+            ),
+            ExternalReference(
+                id=str(media.id_mal),
+                source=MediaExternalSource.MAL,
+            ),
+        ]
 
         # Compose MediaDBUpsert
         return MediaDBUpsert(
-            external_id=media.id,
-            external_source=MediaExternalSource.ANILIST,
+            primary_id=media.id,
+            primary_source=MediaExternalSource.ANILIST,
             media_type=MediaType[media.type.upper()],
+            external_ids=external_ids,
             title=title,
             search_tokens=search_tokens,
             description=strip_html(media.description),
@@ -157,10 +173,25 @@ class MediaDBNormalizer:
 
         scores = ScoreBuilder.build_tmdb_score(tv, omdb_data)
 
+        external_ids = [
+            ExternalReference(
+                id=str(tv.id),
+                source=MediaExternalSource.TMDB,
+            )
+        ]
+        if omdb_data and omdb_data.imdbID:
+            external_ids.append(
+                ExternalReference(
+                    id=(omdb_data.imdbID),
+                    source=MediaExternalSource.OMDB,
+                )
+            )
+
         return MediaDBUpsert(
-            external_id=tv.id,
-            external_source=MediaExternalSource.TMDB,
+            primary_id=tv.id,
+            primary_source=MediaExternalSource.TMDB,
             media_type=MediaType.TV,
+            external_ids=external_ids,
             title=title,
             search_tokens=search_tokens,
             description=tv.overview,
@@ -215,10 +246,25 @@ class MediaDBNormalizer:
 
         scores = ScoreBuilder.build_tmdb_score(movie, omdb_data)
 
+        external_ids = [
+            ExternalReference(
+                id=str(movie.id),
+                source=MediaExternalSource.TMDB,
+            )
+        ]
+        if omdb_data and omdb_data.imdbID:
+            external_ids.append(
+                ExternalReference(
+                    id=(omdb_data.imdbID),
+                    source=MediaExternalSource.OMDB,
+                )
+            )
+
         return MediaDBUpsert(
-            external_id=movie.id,
-            external_source=MediaExternalSource.TMDB,
+            primary_id=movie.id,
+            primary_source=MediaExternalSource.TMDB,
             media_type=MediaType.MOVIE,
+            external_ids=external_ids,
             title=title,
             search_tokens=search_tokens,
             description=movie.overview,
