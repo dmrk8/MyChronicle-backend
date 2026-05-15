@@ -10,6 +10,7 @@ from app.enums.media_enums import (
 )
 from app.models.db.base import DBBase
 from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import (
     TMDBCollection,
@@ -24,7 +25,14 @@ class MovieWithCollection(BaseModel):
     collection: Optional[TMDBCollection] = None
 
 
-PayloadType = AnilistMediaDetail | MovieWithCollection | TMDBTVDetail | OMDbData
+PayloadModel = (
+    AnilistMediaDetail
+    | MovieWithCollection
+    | TMDBTVDetail
+    | OMDbData
+    | MALAnimeResponse
+    | MALMangaResponse
+)
 
 
 class ExternalDataUpsert(BaseModel):
@@ -32,7 +40,7 @@ class ExternalDataUpsert(BaseModel):
     external_source: MediaExternalSource
     media_type: MediaType
 
-    payload: PayloadType
+    payload: PayloadModel
     payload_type: StoredDataType
 
     expires_at: Optional[datetime] = None
@@ -43,11 +51,12 @@ class ExternalDataDB(DBBase):
     external_source: MediaExternalSource
     media_type: MediaType
 
-    payload: AnilistMediaDetail | MovieWithCollection | TMDBTVDetail | OMDbData
+    payload: PayloadModel
     payload_type: StoredDataType
 
-    expires_at: Optional[datetime] = Field(None,
-        description="If data is None, it never expires or handled manually. If set, it is considered stale after this time and should be refreshed on next access.   "
+    expires_at: Optional[datetime] = Field(
+        None,
+        description="If data is None, it never expires or handled manually. If set, it is considered stale after this time and should be refreshed on next access.   ",
     )
 
     @property
