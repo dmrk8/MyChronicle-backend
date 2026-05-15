@@ -327,6 +327,7 @@ class AnilistApi:
                   isGeneralSpoiler
                   rank
                   description
+                  category
                 }
                 studios {
                   edges {

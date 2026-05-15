@@ -15,12 +15,14 @@ class MediaTitle(BaseModel):
     romaji: Optional[str] = None
     native: Optional[str] = None
     english: Optional[str] = None
-    
+
+
 class MediaTag(BaseModel):
     name: str
-    is_media_spoiler: bool
-    is_general_spoiler: bool
 
     # optional / extended
+    is_media_spoiler: Optional[bool] = None
+    is_general_spoiler: Optional[bool] = None
     rank: Optional[int] = None
     description: Optional[str] = None
+    category: Optional[str] = None

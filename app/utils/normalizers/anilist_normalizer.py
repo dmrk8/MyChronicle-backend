@@ -101,6 +101,7 @@ class AnilistNormalizer:
             recommendations=recommendations,
             characters=characters,
             trailer=AnilistNormalizer._convert_trailer_url(media.trailer),
+            background=None,  # AniList does not provide background info
         )
 
     @staticmethod

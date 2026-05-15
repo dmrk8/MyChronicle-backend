@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from app.enums.media_enums import MediaExternalSource
 from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.models.shared.media import MediaScore
@@ -10,7 +11,10 @@ from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
 
 class ScoreBuilder:
     @staticmethod
-    def build_anilist_score(media: AnilistMediaDetail) -> Optional[List[MediaScore]]:
+    def build_anilist_score(
+        media: AnilistMediaDetail,
+        mal_data: Optional[MALAnimeResponse | MALMangaResponse],
+    ) -> Optional[List[MediaScore]]:
         scores = []
 
         if media.average_score is not None:
@@ -18,6 +22,14 @@ class ScoreBuilder:
                 MediaScore(
                     value=float(media.average_score),
                     source=MediaExternalSource.ANILIST,
+                )
+            )
+        if mal_data and mal_data.data.score is not None:
+            scores.append(
+                MediaScore(
+                    value=float(mal_data.data.score),
+                    source=MediaExternalSource.MAL,
+                    vote_count=mal_data.data.scored_by,
                 )
             )
         return scores

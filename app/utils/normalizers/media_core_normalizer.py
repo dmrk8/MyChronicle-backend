@@ -67,8 +67,7 @@ class MediaDBNormalizer:
             [
                 MediaTag(
                     name=tag.name,
-                    is_media_spoiler=tag.is_media_spoiler,
-                    is_general_spoiler=tag.is_general_spoiler,
+                    rank=tag.rank,
                 )
                 for tag in media.tags
             ]
