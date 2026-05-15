@@ -1,21 +1,16 @@
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
-from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.media_enums import  MediaType
 from app.enums.user_media_entry_enums import UserMediaEntryStatus
 from app.models.db.base import SoftDeleteDBBase
 
 
 class UserMediaEntryCreate(BaseModel):
-    external_id: int = Field(
-        ...,
-        alias="externalId",
-        description="The external ID of the media from the source API",
+    media_id: UUID = Field(
+        ..., alias="mediaId", description="The internal ID of the media in the system"
     )
-    external_source: MediaExternalSource = Field(
-        ...,
-        alias="externalSource",
-        description="The source of the media (e.g., AniList, TMDB, IGDB)",
-    )
+
     media_type: MediaType = Field(
         ...,
         alias="mediaType",
@@ -60,7 +55,7 @@ class UserMediaEntryCreate(BaseModel):
 
 
 class UserMediaEntryInsert(UserMediaEntryCreate):
-    user_id: str = Field(...)
+    user_id: UUID = Field(...)
 
 
 class UserMediaEntryUpdate(BaseModel):
@@ -89,10 +84,9 @@ class UserMediaEntrySyncMetadata(BaseModel):
 
 
 class UserMediaEntryDB(SoftDeleteDBBase):
-    external_id: int
-    external_source: MediaExternalSource
+    media_id: UUID
     media_type: MediaType
-    user_id: str
+    user_id: UUID
     title: Optional[str] = None
     cover_image: Optional[str] = None
     is_adult: Optional[bool] = None
@@ -105,11 +99,10 @@ class UserMediaEntryDB(SoftDeleteDBBase):
 class UserMediaEntry(BaseModel):
     """The main model used for API responses"""
 
-    id: str
-    external_id: int = Field(..., alias="externalId")
-    external_source: MediaExternalSource = Field(..., alias="externalSource")
+    id: UUID = Field(..., alias="id", description="The unique ID of the user media entry")
+    media_id: UUID = Field(..., alias="mediaId")
     media_type: MediaType = Field(..., alias="mediaType")
-    user_id: str = Field(..., alias="userId")
+    user_id: UUID = Field(..., alias="userId")
     title: Optional[str] = None
     cover_image: Optional[str] = Field(None, alias="coverImage")
     is_adult: Optional[bool] = Field(None, alias="isAdult")

@@ -1,22 +1,16 @@
-
-
 from datetime import datetime
 from typing import Optional
 
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field
+from uuid import UUID
+import uuid
 
 class DBBase(BaseModel):
-    id: str = Field(..., alias="_id")
+    id: UUID = Field(default_factory=uuid.uuid4, alias="_id")
     created_at: datetime
     updated_at: datetime
-    
-    @field_validator("id", mode="before")
-    @classmethod
-    def coerce_object_id(cls, v):
-        return str(v)
-    
+
 
 class SoftDeleteDBBase(DBBase):
     is_deleted: bool = False
