@@ -8,7 +8,7 @@ from app.enums.media_enums import (
     MediaType,
     StoredDataType,
 )
-from app.models.db.base import DBBase
+from app.models.db.base import MongoBase
 from app.models.providers.anilist_models import AnilistMediaDetail
 from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
@@ -46,7 +46,7 @@ class ExternalDataUpsert(BaseModel):
     expires_at: Optional[datetime] = None
 
 
-class ExternalDataDB(DBBase):
+class ExternalDataDB(MongoBase):
     external_id: int
     external_source: MediaExternalSource
     media_type: MediaType

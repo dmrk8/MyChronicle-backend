@@ -43,8 +43,8 @@ class ReviewCreate(BaseModel):
 
 
 class ReviewInsert(ReviewCreate):
-    user_media_entry_id: UUID
-    user_id: UUID
+    user_media_entry_id: str
+    user_id: str
 
 
 class ReviewUpdate(BaseModel):
@@ -96,9 +96,9 @@ class ReviewDB(DBBase):
 class Review(BaseModel):
     """The main model used for API responses and business logic"""
 
-    id: UUID
-    user_media_entry_id: UUID = Field(..., alias="userMediaEntryId")
-    user_id: UUID = Field(..., alias="userId")
+    id: str
+    user_media_entry_id: str = Field(..., alias="userMediaEntryId")
+    user_id: str = Field(..., alias="userId")
 
     review: Optional[str] = None
     rating: Optional[float] = None

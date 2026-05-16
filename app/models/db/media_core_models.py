@@ -8,8 +8,6 @@ from app.enums.media_enums import (
 )
 from app.models.db.base import DBBase
 from app.models.shared.media import MediaScore, MediaTag, MediaTitle
-
-
 class ExternalReference(BaseModel):
     id: str
     source: MediaExternalSource
@@ -59,6 +57,9 @@ class MediaDBUpsert(BaseModel):
 
 
 class MediaDB(DBBase):
+    primary_id: int
+    primary_source: MediaExternalSource
+    
     external_ids: List[ExternalReference]
     media_type: MediaType
 
