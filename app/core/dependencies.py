@@ -5,11 +5,13 @@ from app.core.config import Settings, get_settings
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.repositories import Repositories
+from app.integrations.jikan_api import JikanAPI
 from app.integrations.omdb_api import OMDbApi
 from app.services.anilist_service import AnilistService
 from app.integrations.anilist_api import AnilistApi
 
 from app.services.external_storage_service import ExternalStorageService
+from app.services.jikan_service import JikanService
 from app.services.media_core_service import MediaCoreService
 from app.services.media_service import MediaService
 from app.services.omdb_service import OMDbService
@@ -43,6 +45,8 @@ def get_omdb_api(
 ) -> OMDbApi:
     return OMDbApi(settings.omdb_api_key, request.app.state.omdb_client)
 
+def get_jikan_api(request: Request) -> JikanAPI:
+    return JikanAPI(request.app.state.jikan_client)
 
 def get_password_handler(request: Request) -> PasswordHandler:
     return request.app.state.password_handler
@@ -74,6 +78,11 @@ def get_anilist_service(
 def get_tmdb_service(tmdb_api: TMDBApi = Depends(get_tmdb_api)) -> TMDBService:
     return TMDBService(tmdb_api=tmdb_api)
 
+def get_omdb_service(omdb_api: OMDbApi = Depends(get_omdb_api)) -> OMDbService:
+    return OMDbService(omdb_api=omdb_api)
+
+def get_jikan_service(jikan_api: JikanAPI = Depends(get_jikan_api)) -> JikanService:
+    return JikanService(jikan_api=jikan_api)
 
 def get_jwt_handler(request: Request) -> JWTHandler:
     return request.app.state.jwt_handler
@@ -109,18 +118,10 @@ def get_review_service(
 
 def get_user_media_entry_service(
     repos: Repositories = Depends(get_repositories),
-    review_service: ReviewService = Depends(get_review_service),
 ) -> UserMediaEntryService:
     return UserMediaEntryService(
         repository=repos.user_media_entry,
-        review_service=review_service,
     )
-
-
-def get_omdb_service(
-    omdb_api: OMDbApi = Depends(get_omdb_api),
-) -> OMDbService:
-    return OMDbService(omdb_api=omdb_api)
 
 
 def get_external_storage_service(
@@ -140,6 +141,7 @@ def get_sync_service(
     anilist_service: AnilistService = Depends(get_anilist_service),
     tmdb_service: TMDBService = Depends(get_tmdb_service),
     omdb_service: OMDbService = Depends(get_omdb_service),
+    jikan_service: JikanService = Depends(get_jikan_service), 
     external_storage_service: ExternalStorageService = Depends(
         get_external_storage_service
     ),
@@ -149,6 +151,7 @@ def get_sync_service(
         anilist_service=anilist_service,
         tmdb_service=tmdb_service,
         omdb_service=omdb_service,
+        jikan_service=jikan_service,
         external_storage_service=external_storage_service,
     )
 

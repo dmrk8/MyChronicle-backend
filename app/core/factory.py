@@ -47,6 +47,7 @@ def create_app(settings) -> FastAPI:
         app.state.anilist_client = AsyncClient(timeout=10.0)
         app.state.tmdb_client = AsyncClient(timeout=10.0)
         app.state.omdb_client = AsyncClient(timeout=10.0)
+        app.state.jikan_client = AsyncClient(timeout=10.0)
 
         # Core services
         app.state.password_handler = PasswordHandler()
@@ -70,6 +71,8 @@ def create_app(settings) -> FastAPI:
         await app.state.redis_client.close()
         await app.state.anilist_client.aclose()
         await app.state.tmdb_client.aclose()
+        await app.state.omdb_client.aclose()
+        await app.state.jikan_client.aclose()
 
     app = FastAPI(title=settings.service_name, lifespan=lifespan)
 
