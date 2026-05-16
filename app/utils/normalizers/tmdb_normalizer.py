@@ -2,7 +2,7 @@ from typing import Callable, List, Optional
 
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.shared.media import MediaTitle
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     MediaBelongsToCollection,
     MediaCast,
     MediaMinimal,
@@ -116,8 +116,6 @@ class TMDBNormalizer:
         )
 
         return TMDBMediaBase(
-            id=media.id,
-            externalSource=MediaExternalSource.TMDB,
             mediaType=(
                 MediaType.MOVIE if isinstance(media, TMDBMovieDetail) else MediaType.TV
             ),

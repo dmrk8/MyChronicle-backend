@@ -1,5 +1,6 @@
 # app/utils/text_utils.py
 import re
+from html.parser import HTMLParser
 from typing import List, Optional
 
 
@@ -34,4 +35,26 @@ def build_search_tokens(title: str, synonyms: Optional[List[str]] = None) -> Lis
 def strip_html(text: Optional[str]) -> Optional[str]:
     if not text:
         return None
-    return re.sub(r"<[^>]+>", "", text)
+
+    class HTMLStripper(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.reset()
+            self.fed = []
+
+        def handle_data(self, data: str) -> None:
+            self.fed.append(data)
+
+        def get_data(self) -> str:
+            return "".join(self.fed)
+
+    stripper = HTMLStripper()
+    try:
+        stripper.feed(text)
+        result = stripper.get_data()
+        # Clean up extra whitespace
+        result = re.sub(r"\s+", " ", result).strip()
+        return result
+    except Exception:
+        # Fallback to regex if parsing fails
+        return re.sub(r"<[^>]+>", "", text).strip()

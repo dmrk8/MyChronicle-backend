@@ -1,7 +1,7 @@
+from ast import In
 import asyncio
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Type, TypeVar, Union
 
-import structlog
 from app.cache.anilist_cache import (
     ANILIST_DETAIL_TTL,
     anilist_detail_key,
@@ -14,17 +14,18 @@ from app.cache.tmdb_cache import (
     tmdb_detail_key,
     tmdb_search_key,
 )
-from app.core.exceptions import NotFoundException
+from app.core.exceptions import InternalServerErrorException, NotFoundException
 from app.enums.anilist_enums import AnilistMediaType, AnilistSortOption
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     AnimeDetailed,
     MangaDetailed,
     MediaPagination,
     MovieDetailedWithCollection,
 )
 from app.models.providers.anilist_models import AnilistMediaDetail
+from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBCollection, TMDBTVDetail
 from app.models.cache.cache_models import (
@@ -62,7 +63,7 @@ class MediaService:
         self.media_core_service = media_core_service
         self.external_storage_service = external_storage_service
 
-    async def search_media_anilist(
+    async def search_anime_manga(
         self,
         page: int,
         per_page: int,
@@ -144,12 +145,10 @@ class MediaService:
 
         return res
 
-    async def _get_and_normalize_anilist_media(
+    async def _get_and_normalize_anime(
         self,
         media_id: int,
         media_type: MediaType,
-        expected_payload_type: type,
-        normalizer_func,
         cache_key: str,
         cache_model,
         cache_ttl: int,
@@ -177,8 +176,32 @@ class MediaService:
             asyncio.create_task(
                 self.sync_service.sync_anilist_media(media_id, media_type)
             )
-        if data and isinstance(data.payload, expected_payload_type):
-            res = normalizer_func(data.payload)
+        if data and isinstance(data.payload, AnilistMediaDetail):
+            media_core = await self.media_core_service.get_media(
+                primary_id=media_id,
+                external_source=MediaExternalSource.ANILIST,
+                media_type=media_type,
+            )
+            if not media_core:
+                raise InternalServerErrorException(
+                    "Media core data not found for anime media",
+                )
+                
+            mal_data = (
+                await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                    data.payload.id_mal, MediaExternalSource.MAL, media_type
+                )
+                if data.payload.id_mal
+                else None
+            )
+
+            mal_payload = None
+            if mal_data and isinstance(mal_data.payload, (MALAnimeResponse)):
+                mal_payload = mal_data.payload
+            
+            res = MediaNormalizer.to_anime_detailed(
+                media_core, data.payload, mal_payload
+            )
             if cache_key:
                 await self.redis_service.set_cached(
                     cache_key, cache_model(data=res), ttl=cache_ttl
@@ -186,32 +209,89 @@ class MediaService:
             return res
         raise NotFoundException()
 
-    async def get_media_detail_anilist(
+    async def _get_and_normalize_manga(
+        self,
+        media_id: int,
+        media_type: MediaType,
+        cache_key: str,
+        cache_model,
+        cache_ttl: int,
+    ) -> Union[AnimeDetailed, MangaDetailed]:
+        if cache_key:
+            cached = await self.redis_service.get_cached(
+                key=cache_key,
+                endpoint=f"/media/anilist/{media_type}/:id",
+                service="anilist",
+                cache_type="media_detail",
+                model=cache_model,
+            )
+            if cached:
+                return cached.data
+
+        data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+            media_id, MediaExternalSource.ANILIST, media_type
+        )
+        if not data:
+            await self.sync_service.sync_anilist_media(media_id, media_type)
+            data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                media_id, MediaExternalSource.ANILIST, media_type=media_type
+            )
+        elif data and not data.is_fresh:
+            asyncio.create_task(
+                self.sync_service.sync_anilist_media(media_id, media_type)
+            )
+        if data and isinstance(data.payload, AnilistMediaDetail):
+            media_core = await self.media_core_service.get_media(
+                primary_id=media_id,
+                external_source=MediaExternalSource.ANILIST,
+                media_type=media_type,
+            )
+            if not media_core:
+                raise InternalServerErrorException(
+                    "Media core data not found for manga media",
+                )
+                
+            mal_data = (
+                await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+                    data.payload.id_mal, MediaExternalSource.MAL, media_type
+                )
+                if data.payload.id_mal
+                else None
+            )
+
+            mal_payload = None
+            if mal_data and isinstance(mal_data.payload, (MALMangaResponse)):
+                mal_payload = mal_data.payload
+            res = MediaNormalizer.to_manga_detailed(media_core, data.payload, mal_payload)
+            if cache_key:
+                await self.redis_service.set_cached(
+                    cache_key, cache_model(data=res), ttl=cache_ttl
+                )
+            return res
+        raise NotFoundException()
+
+    async def get_anime_or_manga_media_detail(
         self, media_id: int, media_type: AnilistMediaType
     ) -> Union[AnimeDetailed, MangaDetailed]:
         key = anilist_detail_key(media_type, media_id)
         if media_type == AnilistMediaType.ANIME:
-            return await self._get_and_normalize_anilist_media(
+            return await self._get_and_normalize_anime(
                 media_id=media_id,
                 media_type=MediaType.ANIME,
-                expected_payload_type=AnilistMediaDetail,
-                normalizer_func=MediaNormalizer.to_anime_detailed,
                 cache_key=key,
                 cache_model=CachedAnimeDetail,
                 cache_ttl=ANILIST_DETAIL_TTL,
             )
         else:
-            return await self._get_and_normalize_anilist_media(
+            return await self._get_and_normalize_manga(
                 media_id=media_id,
                 media_type=MediaType.MANGA,
-                expected_payload_type=AnilistMediaDetail,
-                normalizer_func=MediaNormalizer.to_manga_detailed,
                 cache_key=key,
                 cache_model=CachedMangaDetail,
                 cache_ttl=ANILIST_DETAIL_TTL,
             )
 
-    async def get_trending_media_tmdb(
+    async def get_trending_movie_or_tv(
         self,
         media_type: str,
         time_window: str,
@@ -225,7 +305,7 @@ class MediaService:
             page=page,
         )
 
-    async def search_movie_tmdb(
+    async def search_movie(
         self,
         search: Optional[str],
         page: int,
@@ -294,7 +374,7 @@ class MediaService:
             )
         return res
 
-    async def search_tv_tmdb(
+    async def search_tv(
         self,
         search: Optional[str],
         page: int,
@@ -371,7 +451,7 @@ class MediaService:
             )
         return res
 
-    async def get_movie_detail_tmdb(
+    async def get_movie_detail(
         self,
         movie_id: int,
         language: str,
@@ -403,13 +483,22 @@ class MediaService:
             )
 
         if data and isinstance(data.payload, MovieWithCollection):
+            media_core = await self.media_core_service.get_media(
+                primary_id=movie_id,
+                external_source=MediaExternalSource.TMDB,
+                media_type=MediaType.MOVIE,
+            )
+            if not media_core:
+                raise InternalServerErrorException(
+                    "Media core data not found for movie",
+                )
             omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 movie_id, MediaExternalSource.OMDB, MediaType.MOVIE
             )
             omdb_payload = None
             if omdb_data and isinstance(omdb_data.payload, OMDbData):
                 omdb_payload = omdb_data.payload
-            res = MediaNormalizer.to_movie_detailed_with_collection(
+            res = MediaNormalizer.to_movie_detailed_with_collection(media_core,
                 data.payload, omdb_payload
             )
             if cache_key:
@@ -421,7 +510,7 @@ class MediaService:
             return res
         raise NotFoundException()
 
-    async def get_tv_detail_tmdb(
+    async def get_tv_detail(
         self,
         tv_id: int,
         language: str,
@@ -448,13 +537,23 @@ class MediaService:
         elif data and not data.is_fresh:
             asyncio.create_task(self.sync_service.sync_tmdb_tv(tv_id, MediaType.TV))
         if data and isinstance(data.payload, TMDBTVDetail):
+            media_core = await self.media_core_service.get_media(
+                primary_id=tv_id,
+                external_source=MediaExternalSource.TMDB,
+                media_type=MediaType.TV,
+                )  
+            if not media_core:
+                raise InternalServerErrorException(
+                    "Media core data not found for TV media",
+                )
+                
             omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
                 tv_id, MediaExternalSource.OMDB, MediaType.TV
             )
             omdb_payload = None
             if omdb_data and isinstance(omdb_data.payload, OMDbData):
                 omdb_payload = omdb_data.payload
-            res = MediaNormalizer.to_tv_detailed(data.payload, omdb_payload)
+            res = MediaNormalizer.to_tv_detailed(media_core, data.payload, omdb_payload)
             if cache_key:
                 await self.redis_service.set_cached(
                     cache_key, CachedTVDetail(data=res), ttl=TMDB_DETAIL_TTL
@@ -462,14 +561,14 @@ class MediaService:
                 return res
         raise NotFoundException()
 
-    async def get_collection_detail_tmdb(
+    async def get_movie_collection_detail(
         self,
         collection_id: int,
         language: str,
     ) -> Optional[TMDBCollection]:
         return await self.tmdb_service.get_collection_detail(collection_id, language)
 
-    async def search_keyword_tmdb(
+    async def search_keyword_for_movie_or_tv(
         self,
         query: str,
     ) -> List[dict]:

@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from app.integrations.tmdb_api import TMDBApi
 
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     MediaPagination,
 )
 from app.utils.normalizers.tmdb_normalizer import TMDBNormalizer

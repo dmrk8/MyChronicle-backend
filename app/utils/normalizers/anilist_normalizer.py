@@ -14,7 +14,7 @@ from app.models.providers.anilist_models import (
     Title,
 )
 from app.models.shared.media import MediaTitle
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     AniMediaBase,
     AniMediaNextAiringEpisode,
     AnimeDetailed,
@@ -75,9 +75,7 @@ class AnilistNormalizer:
         end_date = AnilistNormalizer._convert_date(media.end_date)
 
         return AniMediaBase(
-            id=media.id,
             idMal=media.id_mal,
-            externalSource=MediaExternalSource.ANILIST,
             mediaType=MediaType.ANIME,
             title=AnilistNormalizer._build_title(media.title),
             format=AnilistNormalizer._convert_enum_field(media.format),

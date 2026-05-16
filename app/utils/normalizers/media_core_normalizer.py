@@ -90,7 +90,7 @@ class MediaDBNormalizer:
 
         slug = build_slug(title.normalized, media.id)
 
-        scores = ScoreBuilder.build_anilist_score(media, mal_data)
+        scores = ScoreBuilder.build_anime_or_manga_score(media, mal_data)
         external_ids = [
             ExternalReference(
                 id=str(media.id),
@@ -170,7 +170,7 @@ class MediaDBNormalizer:
 
         keywords = TMDBNormalizer.get_tv_keywords(tv.keywords)
 
-        scores = ScoreBuilder.build_tmdb_score(tv, omdb_data)
+        scores = ScoreBuilder.build_movie_or_tv_score(tv, omdb_data)
 
         external_ids = [
             ExternalReference(
@@ -178,6 +178,7 @@ class MediaDBNormalizer:
                 source=MediaExternalSource.TMDB,
             )
         ]
+        
         if omdb_data and omdb_data.imdbID:
             external_ids.append(
                 ExternalReference(
@@ -243,7 +244,7 @@ class MediaDBNormalizer:
 
         keywords = TMDBNormalizer.get_movie_keywords(movie.keywords)
 
-        scores = ScoreBuilder.build_tmdb_score(movie, omdb_data)
+        scores = ScoreBuilder.build_movie_or_tv_score(movie, omdb_data)
 
         external_ids = [
             ExternalReference(

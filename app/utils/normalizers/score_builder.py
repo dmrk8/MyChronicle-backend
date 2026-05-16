@@ -11,20 +11,20 @@ from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
 
 class ScoreBuilder:
     @staticmethod
-    def build_anilist_score(
+    def build_anime_or_manga_score(
         media: AnilistMediaDetail,
         mal_data: Optional[MALAnimeResponse | MALMangaResponse],
     ) -> Optional[List[MediaScore]]:
         scores = []
 
-        if media.average_score is not None:
+        if media.average_score:
             scores.append(
                 MediaScore(
                     value=float(media.average_score),
                     source=MediaExternalSource.ANILIST,
                 )
             )
-        if mal_data and mal_data.data.score is not None:
+        if mal_data and mal_data.data.score:
             scores.append(
                 MediaScore(
                     value=float(mal_data.data.score),
@@ -35,12 +35,12 @@ class ScoreBuilder:
         return scores
 
     @staticmethod
-    def build_tmdb_score(
+    def build_movie_or_tv_score(
         media: TMDBMovieDetail | TMDBTVDetail, omdb_data: Optional[OMDbData]
     ) -> Optional[List[MediaScore]]:
         scores = OMDbNormalizer.normalize_omdb_rating(omdb_data) if omdb_data else []
 
-        if media.vote_average is not None:
+        if media.vote_average:
             scores.append(
                 MediaScore(
                     value=float(media.vote_average),
@@ -48,5 +48,6 @@ class ScoreBuilder:
                     vote_count=media.vote_count,
                 )
             )
+        
 
         return scores
