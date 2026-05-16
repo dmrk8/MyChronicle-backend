@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from pymongo.errors import DuplicateKeyError
 from app.core.exceptions import ConflictException, NotFoundException
-from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.media_enums import MediaType
 from app.models.db.user_media_entry_models import (
     UserMediaEntryDB,
     UserMediaEntryCreate,
@@ -90,15 +90,13 @@ class UserMediaEntryService:
 
         self.logger.info("entry_soft_deleted", entry_id=entry_id)
 
-    async def get_entry_by_external_id_and_external_source_and_media_type(
+    async def get_entry_by_media_id_and_user_id(
         self,
-        external_id: int,
-        external_source: MediaExternalSource,
+        media_id: str,
         user_id: str,
-        media_type: MediaType,
     ) -> UserMediaEntryDB:
-        res = await self.repository.get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
-            external_id, external_source, user_id, media_type.value
+        res = await self.repository.get_entry_by_media_id_and_user_id(
+            media_id, user_id
         )
         if not res:
             raise NotFoundException("Entry not found")

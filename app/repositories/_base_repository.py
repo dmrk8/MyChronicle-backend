@@ -1,4 +1,5 @@
 from typing import Generic, List, Optional, Type, TypeVar
+import uuid
 
 from pydantic import BaseModel
 from pymongo import ReturnDocument
@@ -141,6 +142,7 @@ class CRUDRepository(
 ):
     async def _insert(self, data: InsertModel, context: DBOpContext) -> DBModel:
         raw = data.model_dump()
+        raw["_id"] = uuid.uuid4() 
         raw["created_at"] = utc_now()
         raw["updated_at"] = utc_now()
         

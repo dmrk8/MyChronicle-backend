@@ -36,6 +36,7 @@ class Tag(BaseModel):
     is_general_spoiler: bool = Field(..., alias="isGeneralSpoiler")
     rank: int
     description: str
+    category: str
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

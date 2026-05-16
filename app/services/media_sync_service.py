@@ -1,9 +1,12 @@
-from typing import Optional
+from typing import Optional, Union
 
 import structlog
 from datetime import datetime, timedelta, timezone
 
+
 from app.enums.anilist_enums import AnilistStatus
+from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
+from app.services.jikan_service import JikanService
 from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
 from app.utils.time_helpers import utc_now
 
@@ -24,6 +27,7 @@ from app.services.tmdb_service import TMDBService
 
 logger = structlog.get_logger()
 
+
 class SyncService:
     def __init__(
         self,
@@ -32,18 +36,27 @@ class SyncService:
         external_storage_service: ExternalStorageService,
         media_core_service: MediaCoreService,
         omdb_service: OMDbService,
+        jikan_service: JikanService,
     ):
         self.anilist_service = anilist_service
         self.tmdb_service = tmdb_service
         self.external_storage_service = external_storage_service
         self.media_core_service = media_core_service
         self.omdb_service = omdb_service
+        self.jikan_service = jikan_service
         self.logger = logger.bind(service="SyncService")
 
     async def sync_anilist_media(self, external_id: int, media_type: MediaType):
         anilist_media = await self.anilist_service.get_media_detail(external_id)
 
         expires_at = await self._calculate_anilist_sync_expiry(anilist_media)
+
+        mal_data = None
+        if anilist_media.id_mal:
+            mal_data = await self._get_or_sync_mal_data(
+                mal_id=anilist_media.id_mal,
+                media_type=media_type.value,
+            )
 
         await self.external_storage_service.upsert(
             external_id=external_id,
@@ -53,15 +66,26 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        
-        existing = await self.media_core_service.get_media(
-            external_id=external_id,
-            external_source=MediaExternalSource.ANILIST,
-            media_type=media_type
-        )
-        if not existing:
-            await self.media_core_service.create_anilist_detail(anilist_media)
 
+        existing = await self.media_core_service.get_media(
+            primary_id=external_id,
+            external_source=MediaExternalSource.ANILIST,
+            media_type=media_type,
+        
+        )
+        
+        if not existing:
+            if media_type == MediaType.ANIME and isinstance(mal_data, MALAnimeResponse):
+                await self.media_core_service.create_anime_detail(
+                    anilist_media, mal_data
+                )
+            elif media_type == MediaType.MANGA and isinstance(mal_data, MALMangaResponse):
+                await self.media_core_service.create_manga_detail(
+                    anilist_media, mal_data
+                )
+
+            
+        
         self.logger.debug(
             "Synced Anilist media",
             external_id=external_id,
@@ -97,15 +121,14 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        
+
         existing = await self.media_core_service.get_media(
-            external_id=external_id,
+            primary_id=external_id,
             external_source=MediaExternalSource.TMDB,
-            media_type=media_type
-        
+            media_type=media_type,
         )
         if not existing:
-            await self.media_core_service.create_tmdb_movie_detail(
+            await self.media_core_service.create_movie_detail(
                 tmdb_movie, omdb_data
             )
 
@@ -136,14 +159,14 @@ class SyncService:
             payload_type=StoredDataType.MEDIA_DETAILS,
             expires_at=expires_at,
         )
-        
+
         existing = await self.media_core_service.get_media(
-            external_id=external_id,
+            primary_id=external_id,
             external_source=MediaExternalSource.TMDB,
-            media_type=media_type
+            media_type=media_type,
         )
         if not existing:
-            await self.media_core_service.create_tmdb_tv_detail(tmdb_tv, omdb_data)
+            await self.media_core_service.create_tv_detail(tmdb_tv, omdb_data)
 
         self.logger.debug(
             "Synced TMDB TV show",
@@ -157,7 +180,7 @@ class SyncService:
         imdb_id: str,
         external_id: int,
         media_type: MediaType,
-    ):
+    ) -> OMDbData:
         omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             external_id=external_id,
             external_source=MediaExternalSource.OMDB,
@@ -181,13 +204,10 @@ class SyncService:
             payload_type=StoredDataType.OMDB_DATA,
             expires_at=expires_at,
         )
-
-        self.logger.debug(
-            "Synced OMDb data",
-            external_id=external_id,
-            media_type=media_type,
-            source=MediaExternalSource.OMDB,
-        )
+        
+        return omdb_data
+        
+        
 
     async def _calculate_omdb_sync_expiry(
         self, omdb_data: OMDbData
@@ -333,3 +353,54 @@ class SyncService:
                 pass
 
         return now + timedelta(days=90)
+
+    async def _calculate_mal_sync_expiry(
+        self, mal_data: MALAnimeResponse | MALMangaResponse
+    ) -> Optional[datetime]:
+        if isinstance(mal_data, MALAnimeResponse):
+            media = mal_data.data
+            now = utc_now()
+            if media.airing:
+                return now + timedelta(weeks=1)
+            else:
+                return None
+        if isinstance(mal_data, MALMangaResponse):
+            media = mal_data.data
+            now = utc_now()
+            if media.publishing:
+                return now + timedelta(days=60)
+            else:
+                return None
+
+    async def _get_or_sync_mal_data(
+        self, mal_id: int, media_type: str
+    ) -> Union[MALAnimeResponse, MALMangaResponse]:
+        mal_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
+            external_id=mal_id,
+            external_source=MediaExternalSource.MAL,
+            media_type=MediaType.ANIME if media_type == "ANIME" else MediaType.MANGA,
+        )
+        if mal_data and mal_data.is_fresh:
+            if media_type == "ANIME":
+                return MALAnimeResponse.model_validate(mal_data.payload)
+            else:
+                return MALMangaResponse.model_validate(mal_data.payload)
+
+        mal_data = (
+            await self.jikan_service.get_anime_details(mal_id)
+            if media_type == "ANIME"
+            else await self.jikan_service.get_manga_details(mal_id)
+        )
+
+        expires_at = await self._calculate_mal_sync_expiry(mal_data)
+
+        await self.external_storage_service.upsert(
+            external_id=mal_id,
+            external_source=MediaExternalSource.MAL,
+            media_type=MediaType.ANIME if media_type == "ANIME" else MediaType.MANGA,
+            payload=mal_data,
+            payload_type=StoredDataType.MAL_DATA,
+            expires_at=expires_at,
+        )
+        
+        return mal_data

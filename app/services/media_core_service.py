@@ -86,12 +86,12 @@ class MediaCoreService:
 
     async def get_media(
         self,
-        external_id: int,
+        primary_id: int,
         external_source: MediaExternalSource,
         media_type: MediaType,
     ) -> Optional[MediaDB]:
-        return await self.repository.get_media_by_external_id_and_source_and_media_type(
-            external_id, external_source, media_type
+        return await self.repository.get_media_by_primary_id_and_source_and_media_type(
+            primary_id, external_source, media_type
         )
 
     async def update_media_scores(
@@ -102,7 +102,7 @@ class MediaCoreService:
         scores: List[MediaScore],
     ) -> Optional[MediaDB]:
 
-        res = await self.repository.update_media_scores_by_external_id_and_source_and_media_type(
+        res = await self.repository.update_media_scores_by_primary_id_and_source_and_media_type(
             external_id, external_source, media_type, scores
         )
 
@@ -115,18 +115,18 @@ class MediaCoreService:
 
         return res
 
-    async def delete_media_by_external_id_and_source_and_media_type(
+    async def delete_media_by_primary_id_and_source_and_media_type(
         self,
-        external_id: int,
-        external_source: MediaExternalSource,
+        primary_id: int,
+        primary_source: MediaExternalSource,
         media_type: MediaType,
     ) -> None:
-        await self.repository.delete_media_by_external_id_and_source_and_media_type(
-            external_id, external_source, media_type
+        await self.repository.delete_media_by_primary_id_and_source_and_media_type(
+            primary_id, primary_source, media_type
         )
         self.logger.debug(
             "Deleted Media",
-            external_id=external_id,
-            external_source=external_source,
+            primary_id=primary_id,
+            primary_source=primary_source,
             media_type=media_type,
         )

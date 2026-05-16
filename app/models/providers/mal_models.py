@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field
 
 
 # =========================
@@ -29,39 +29,30 @@ class DatePart(BaseModel):
 
 
 class DateProp(BaseModel):
-    from_: Optional[DatePart] = None
+    from_: Optional[DatePart] = Field(None, alias="from")
     to: Optional[DatePart] = None
     string: Optional[str] = None
 
-    class Config:
-        fields = {
-            "from_": "from"
-        }
-
 
 class PublishedDate(BaseModel):
-    from_: Optional[str] = None
+    from_: Optional[str] = Field(None, alias="from")
     to: Optional[str] = None
     prop: Optional[DateProp] = None
 
-    class Config:
-        fields = {
-            "from_": "from"
-        }
-
+    
 
 class MALItem(BaseModel):
     mal_id: int
     type: str
     name: str
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
 
 
 class RelationEntry(BaseModel):
     mal_id: int
     type: str
     name: str
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
 
 
 class Relation(BaseModel):
@@ -71,7 +62,7 @@ class Relation(BaseModel):
 
 class ExternalLink(BaseModel):
     name: str
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
 
 
 # =========================
@@ -80,7 +71,7 @@ class ExternalLink(BaseModel):
 
 class MangaData(BaseModel):
     mal_id: int
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
     images: Optional[Images] = None
     approved: bool
 
@@ -133,8 +124,8 @@ class MALMangaResponse(BaseModel):
 
 class Trailer(BaseModel):
     youtube_id: Optional[str] = None
-    url: Optional[HttpUrl] = None
-    embed_url: Optional[HttpUrl] = None
+    url: Optional[str] = None
+    embed_url: Optional[str] = None
 
 
 class Broadcast(BaseModel):
@@ -151,7 +142,7 @@ class Theme(BaseModel):
 
 class AnimeData(BaseModel):
     mal_id: int
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
 
     images: Optional[Images] = None
     trailer: Optional[Trailer] = None

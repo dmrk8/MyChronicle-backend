@@ -1,4 +1,5 @@
 from typing import List, Optional
+import uuid
 from pymongo import ReturnDocument
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.db_context_model import DBOpContext
@@ -32,7 +33,7 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
         now = utc_now()
 
         data = media.model_dump(
-            exclude={"scores", "primary_id", "primary_source", "media_type"},
+            exclude={"primary_id", "primary_source", "media_type"},
             exclude_none=True,
         )
 
@@ -42,6 +43,7 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
                 "updated_at": now,
             },
             "$setOnInsert": {
+                "_id": str(uuid.uuid4()),
                 "primary_id": media.primary_id,
                 "primary_source": media.primary_source,
                 "media_type": media.media_type,
@@ -63,37 +65,37 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
             ),
         )
 
-    async def get_media_by_external_id_and_source_and_media_type(
+    async def get_media_by_primary_id_and_source_and_media_type(
         self,
-        external_id: int,
-        external_source: MediaExternalSource,
+        primary_id: int,
+        primary_source: MediaExternalSource,
         media_type: MediaType,
     ) -> Optional[MediaDB]:
 
         return await self._find_one(
             {
-                "primary_id": external_id,
-                "primary_source": external_source,
+                "primary_id": primary_id,
+                "primary_source": primary_source,
                 "media_type": media_type,
             },
             self._make_context(
-                operation="find_one_by_external_id_and_source_and_media_type",
-                external_id=external_id,
-                external_source=external_source,
+                operation="find_one_by_primary_id_and_source_and_media_type",
+                primary_id=primary_id,
+                primary_source=primary_source,
                 media_type=media_type,
             ),
         )
 
-    async def update_media_scores_by_external_id_and_source_and_media_type(
+    async def update_media_scores_by_primary_id_and_source_and_media_type(
         self,
-        external_id: int,
-        external_source: MediaExternalSource,
+        primary_id: int,
+        primary_source: MediaExternalSource,
         media_type: MediaType,
         scores: List[MediaScore],
     ) -> Optional[MediaDB]:
         context = DBOpContext(
-            external_id=external_id,
-            external_source=external_source,
+            external_id=primary_id,
+            external_source=primary_source,
             media_type=media_type,
             operation="update_scores",
             collection=self.collection.name,
@@ -103,8 +105,8 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
         async def _op():
             return await self.collection.find_one_and_update(
                 {
-                    "primary_id": external_id,
-                    "primary_source": external_source,
+                    "primary_id": primary_id,
+                    "primary_source": primary_source,
                     "media_type": media_type,
                 },
                 {"$set": {**data, "updated_at": utc_now()}},
@@ -121,22 +123,22 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
 
         return MediaDB.model_validate(doc) if doc else None
 
-    async def delete_media_by_external_id_and_source_and_media_type(
+    async def delete_media_by_primary_id_and_source_and_media_type(
         self,
-        external_id: int,
-        external_source: MediaExternalSource,
+        primary_id: int,
+        primary_source: MediaExternalSource,
         media_type: MediaType,
     ) -> bool:
         return await self._delete_one(
             {
-                "external_id": external_id,
-                "external_source": external_source,
+                "primary_id": primary_id,
+                "primary_source": primary_source,
                 "media_type": media_type,
             },
             self._make_context(
-                operation="delete_by_external_id_and_source_and_media_type",
-                external_id=external_id,
-                external_source=external_source,
+                operation="delete_by_primary_id_and_source_and_media_type",
+                primary_id=primary_id,
+                primary_source=primary_source,
                 media_type=media_type,
             ),
         )

@@ -4,7 +4,7 @@ from app.integrations.anilist_api import AnilistApi
 from app.enums.anilist_enums import AnilistMediaType
 from app.models.providers.anilist_models import AnilistMediaDetail
 from app.utils.normalizers.anilist_normalizer import AnilistNormalizer
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     MediaPagination,
 )
 

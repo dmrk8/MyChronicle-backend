@@ -38,8 +38,7 @@ class UserMediaEntryRepository(
             self._make_context(
                 operation="insert_one",
                 user_id=entry.user_id,
-                external_source=entry.external_source,
-                external_id=entry.external_id,
+                media_id=entry.media_id,
                 media_type=entry.media_type,
             ),
         )
@@ -56,26 +55,20 @@ class UserMediaEntryRepository(
             ),
         )
 
-    async def get_entry_by_external_id_and_external_source_and_user_id_and_media_type(
+    async def get_entry_by_media_id_and_user_id(
         self,
-        external_id: int,
-        external_source: str,
+        media_id: str,
         user_id: str,
-        media_type: str,
     ) -> Optional[UserMediaEntryDB]:
         return await self._find_one(
             {
-                "external_id": external_id,
-                "external_source": external_source,
+                "media_id": media_id,
                 "user_id": user_id,
-                "media_type": media_type,
             },
             self._make_context(
-                operation="find_one_by_external_id_and_user_id_and_media_type",
-                external_id=external_id,
-                external_source=external_source,
+                operation="find_one_by_media_id_and_user_id",
+                media_id=media_id,
                 user_id=user_id,
-                media_type=media_type,
             ),
         )
 
