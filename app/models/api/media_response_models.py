@@ -178,8 +178,7 @@ class MovieCollection(BaseModel):
 
 class MediaBase(BaseModel):
     # --- Identifiers ---
-    id: int
-    external_source: MediaExternalSource = Field(alias="externalSource")
+    id: Optional[str] = None
     media_type: MediaType = Field(alias="mediaType")
 
     # --- Titles & Description ---
@@ -217,20 +216,31 @@ class AniMediaBase(MediaBase):
     # --- Production ---
     country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
     source: Optional[str] = None
-    
+
     synonyms: Optional[List[str]] = None
-    
+
     # --- Metadata & Relations ---
     tags: Optional[List[MediaTag]] = None
     relations: Optional[List[MediaRelation]] = None
     recommendations: Optional[List[MediaRecommendation]] = None
     characters: Optional[List[MediaCharacter]] = None
 
+    background: Optional[str] = Field(
+        None,
+        description="Background information about the media, such as production details, trivia, etc.",
+    )
+    
+    
+
 
 class AnimeDetailed(AniMediaBase):
     # --- Content Structure ---
     episodes: Optional[int] = None
     duration: Optional[int] = None
+
+    rating: Optional[str] = Field(
+        None, description="Content rating, e.g. PG-13, R, etc."
+    )
 
     # --- Dates & Season ---
     season: Optional[str] = None
@@ -250,6 +260,8 @@ class MangaDetailed(AniMediaBase):
     chapters: Optional[int] = None
     volumes: Optional[int] = None
 
+    authors: Optional[List[str]] = None
+
 
 class TMDBMediaBase(MediaBase):
     original_language: Optional[str] = Field(None, alias="originalLanguage")
@@ -258,8 +270,9 @@ class TMDBMediaBase(MediaBase):
     keywords: Optional[List[str]] = None
     credits: Optional[List[MediaCast]] = None
     recommendations: Optional[List[MediaRecommendation]] = None
-    
+
     alternative_titles: Optional[List[str]] = Field(None, alias="alternativeTitles")
+
 
 class TVDetailed(TMDBMediaBase):
     # --- Dates ---
@@ -310,8 +323,6 @@ class MovieDetailed(TMDBMediaBase):
     belongs_to_collection: Optional[MediaBelongsToCollection] = Field(
         None, alias="belongsToCollection"
     )
-
-    
 
 
 class MovieDetailedWithCollection(MovieDetailed):

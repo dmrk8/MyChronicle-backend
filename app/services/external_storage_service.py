@@ -11,7 +11,7 @@ from app.enums.media_enums import (
 from app.models.db.external_storage_models import (
     ExternalDataDB,
     ExternalDataUpsert,
-    PayloadType,
+    PayloadModel,
 )
 from app.repositories.external_storage_repository import ExternalStorageRepository
 
@@ -57,7 +57,7 @@ class ExternalStorageService:
         external_id: int,
         external_source: MediaExternalSource,
         media_type: MediaType,
-        payload: PayloadType,
+        payload: PayloadModel,
         payload_type: StoredDataType,
         expires_at: Optional[datetime] = None,
     ) -> ExternalDataDB:

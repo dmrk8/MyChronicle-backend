@@ -18,7 +18,7 @@ async def change_username(
     user_service: UserService = Depends(get_user_service),
     current_user: UserDB = Depends(get_current_user),
 ):
-    await user_service.update_username(current_user.id, update_username)
+    await user_service.update_username(str(current_user.id), update_username)
 
 
 @user_router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
@@ -28,7 +28,7 @@ async def change_password(
     current_user: UserDB = Depends(get_current_user),
 ):
     await user_service.change_password(
-        current_user.id,
+        str(current_user.id),
         update_password,
     )
 
@@ -38,4 +38,4 @@ async def delete_user(
     user_service: UserService = Depends(get_user_service),
     current_user: UserDB = Depends(get_current_user),
 ):
-    await user_service.delete_user(current_user.id)
+    await user_service.delete_user(str(current_user.id))

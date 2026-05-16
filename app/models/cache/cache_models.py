@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.models.api.media_response import (
+from app.models.api.media_response_models import (
     AnimeDetailed,
     MangaDetailed,
     MediaPagination,

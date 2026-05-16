@@ -52,7 +52,7 @@ class AuthService:
         user = await self.user_service.create_user(
             register_request.username, register_request.password
         )
-        return self.create_access_token(user.id)
+        return self.create_access_token(str(user.id))
 
     async def login(self, login_request: LoginRequest) -> str:
         user = await self.user_service.verify_credentials(
@@ -60,4 +60,4 @@ class AuthService:
         )
         if not user:
             raise UnauthorizedException("Invalid username or password")
-        return self.create_access_token(user.id)
+        return self.create_access_token(str(user.id))
