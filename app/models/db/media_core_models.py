@@ -1,13 +1,16 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from uuid import UUID
 from app.enums.media_enums import (
     MediaExternalSource,
     MediaType,
 )
 from app.models.db.base import DBBase
 from app.models.shared.media import MediaScore, MediaTag, MediaTitle
+
+
 class ExternalReference(BaseModel):
     id: str
     source: MediaExternalSource
@@ -17,7 +20,7 @@ class MediaDBUpsert(BaseModel):
     primary_id: int
     primary_source: MediaExternalSource
     media_type: MediaType
-    
+
     external_ids: List[ExternalReference]
 
     # base
@@ -59,7 +62,7 @@ class MediaDBUpsert(BaseModel):
 class MediaDB(DBBase):
     primary_id: int
     primary_source: MediaExternalSource
-    
+
     external_ids: List[ExternalReference]
     media_type: MediaType
 
@@ -90,3 +93,48 @@ class MediaDB(DBBase):
     synonyms: Optional[List[str]] = None
 
     slug: Optional[str] = None
+
+
+class MediaCore(BaseModel):
+    id: str
+
+    primary_id: int
+    primary_source: MediaExternalSource
+
+    external_ids: List[ExternalReference]
+    media_type: MediaType
+
+    title: MediaTitle
+    search_tokens: List[str]
+
+    description: Optional[str] = None
+
+    is_adult: bool
+    status: Optional[str] = None
+    format: Optional[str] = None
+
+    season: Optional[str] = None
+    season_year: Optional[int] = None
+
+    release_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    cover_image: Optional[str] = None
+    banner_image: Optional[str] = None
+
+    scores: Optional[List[MediaScore]] = None
+    popularity: Optional[float] = None
+
+    genres: Optional[List[str]] = None
+    tags: Optional[List[MediaTag]] = None
+    keywords: Optional[List[str]] = None
+    synonyms: Optional[List[str]] = None
+
+    slug: Optional[str] = None
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, UUID):
+            return str(v)
+        return v

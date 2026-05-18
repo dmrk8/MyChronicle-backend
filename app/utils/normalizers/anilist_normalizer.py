@@ -240,10 +240,10 @@ class AnilistNormalizer:
         ]
 
     @staticmethod
-    def _build_title(title: Optional[Title]) -> Optional[MediaTitle]:
+    def _build_title(title: Optional[Title]) -> MediaTitle:
         """Extract title with fallback logic"""
         if not title:
-            return None
+            return MediaTitle(title="", normalized="")
         raw_title = title.english or title.romaji or title.native or ""
         return MediaTitle(
             title=raw_title,

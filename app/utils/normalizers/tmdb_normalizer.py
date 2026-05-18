@@ -182,7 +182,7 @@ class TMDBNormalizer:
             numberOfEpisodes=media.number_of_episodes,
             numberOfSeasons=media.number_of_seasons,
             nextAiringEpisode=(
-                TMDBMediaNextAiringEpisode.model_validate(media.next_episode_to_air)
+                TMDBMediaNextAiringEpisode.model_validate(media.next_episode_to_air.model_dump())
                 if media.next_episode_to_air
                 else None
             ),

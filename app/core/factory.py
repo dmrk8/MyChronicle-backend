@@ -120,10 +120,12 @@ def create_app(settings) -> FastAPI:
     from app.routes.user_router import user_router
     from app.routes.media_router import media_router
     from app.routes.user_media_entry_router import user_media_entry_router
-
+    from app.routes.media_core_router import media_core_router
+    
     app.include_router(auth_router)
     app.include_router(user_router)
     app.include_router(media_router)
     app.include_router(user_media_entry_router)
-
+    app.include_router(media_core_router)
+    
     return app

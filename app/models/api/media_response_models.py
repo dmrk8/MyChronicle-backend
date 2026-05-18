@@ -1,4 +1,3 @@
-from token import OP
 
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
@@ -178,11 +177,13 @@ class MovieCollection(BaseModel):
 
 class MediaBase(BaseModel):
     # --- Identifiers ---
-    id: Optional[str] = None
+    id: Optional[str] = (
+        None  # Internal ID (UUID) Optional because when creating a new media using third party api responses with normalizer we do not have internal ID yet. It can be added but extra dependency need to be added to get the internal ID
+    )
     media_type: MediaType = Field(alias="mediaType")
 
     # --- Titles & Description ---
-    title: Optional[MediaTitle] = None
+    title: MediaTitle
     description: Optional[str] = None
 
     # --- Media Details ---
@@ -229,8 +230,6 @@ class AniMediaBase(MediaBase):
         None,
         description="Background information about the media, such as production details, trivia, etc.",
     )
-    
-    
 
 
 class AnimeDetailed(AniMediaBase):
