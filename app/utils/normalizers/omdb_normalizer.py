@@ -3,7 +3,7 @@ from datetime import timezone
 from typing import List, Optional
 
 
-from app.models.shared.media import MediaScore
+from app.models.shared.media import MediaScore, MediaScoreSource
 
 
 from app.models.providers.omdb_models import OMDbData
@@ -61,19 +61,29 @@ class OMDbNormalizer:
                     scores.append(
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
-                            source=rating.Source,
+                            source=MediaScoreSource.IMDB,
                             vote_count=OMDbNormalizer.parse_vote_count(
                                 omdb_data.imdb_votes
                             ),
                         )
                     )
-                else:
+                elif rating.Source == "Rotten Tomatoes":
                     scores.append(
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
-                            source=rating.Source,
+                            source=MediaScoreSource.ROTTEN_TOMATOES,
                         )
                     )
+
+                elif rating.Source == "Metacritic":
+                    scores.append(
+                        MediaScore(
+                            value=OMDbNormalizer.normalize_score_value(rating.Value),
+                            source=MediaScoreSource.METACRITIC,
+                        )
+                    )
+                else:
+                    continue
 
         return scores
 

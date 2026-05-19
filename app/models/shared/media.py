@@ -1,10 +1,18 @@
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
 
-
+class MediaScoreSource(str, Enum):
+    ANILIST = "ANILIST"
+    MAL = "MAL"
+    TMDB = "TMDB"
+    IMDB = "IMDB"
+    METACRITIC = "METACRITIC"
+    ROTTEN_TOMATOES = "ROTTEN_TOMATOES"
+    
 class MediaScore(BaseModel):
-    source: str
+    source: MediaScoreSource
     value: float  # ALWAYS 0–100
     vote_count: Optional[int] = None
 

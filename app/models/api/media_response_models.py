@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
-from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.media_enums import MediaType
 
 from app.models.shared.media import MediaTag, MediaTitle, MediaScore
 
@@ -20,19 +20,10 @@ class TMDBMediaLastEpisodeToAir(BaseModel):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class TMDBMediaNextAiringEpisode(BaseModel):
-    air_date: Optional[str] = Field(None, alias="airDate")
+class MediaNextAiringEpisode(BaseModel):
     episode_number: Optional[int] = Field(None, alias="episodeNumber")
+    airing_at: Optional[str] = Field(None, alias="airingAt")
     season_number: Optional[int] = Field(None, alias="seasonNumber")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class AniMediaNextAiringEpisode(BaseModel):
-    episode: Optional[int] = None
-    airing_at: Optional[int] = Field(None, alias="airingAt")
-    time_until_airing: Optional[int] = Field(None, alias="timeUntilAiring")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -199,6 +190,10 @@ class MediaBase(BaseModel):
 
     # --- Scores ---
     scores: Optional[List[MediaScore]] = None
+    
+    content_rating: Optional[str] = Field(
+        None, description="Content rating, e.g. PG-13, R, etc.", alias="contentRating"
+    )
 
     model_config = ConfigDict(
         validate_by_name=True,
@@ -237,16 +232,14 @@ class AnimeDetailed(AniMediaBase):
     episodes: Optional[int] = None
     duration: Optional[int] = None
 
-    rating: Optional[str] = Field(
-        None, description="Content rating, e.g. PG-13, R, etc."
-    )
+    
 
     # --- Dates & Season ---
     season: Optional[str] = None
     season_year: Optional[int] = Field(None, alias="seasonYear")
 
     # --- Airing Info ---
-    next_airing_episode: Optional[AniMediaNextAiringEpisode] = Field(
+    next_airing_episode: Optional[MediaNextAiringEpisode] = Field(
         None, alias="nextAiringEpisode"
     )
 
@@ -283,7 +276,7 @@ class TVDetailed(TMDBMediaBase):
     number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
 
     # --- Airing Info ---
-    next_airing_episode: Optional[TMDBMediaNextAiringEpisode] = Field(
+    next_airing_episode: Optional[MediaNextAiringEpisode] = Field(
         None, alias="nextAiringEpisode"
     )
     last_episode_to_air: Optional[TMDBMediaLastEpisodeToAir] = Field(

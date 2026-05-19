@@ -338,7 +338,7 @@ class AnilistApi:
                     }
                   }
                 }
-                recommendations(sort: RATING_DESC, page: 1, perPage: 7) {
+                recommendations(sort: RATING_DESC, page: 1, perPage: 20) {
                   edges {
                     node {
                       mediaRecommendation {
@@ -356,7 +356,7 @@ class AnilistApi:
                     }
                   }
                 }
-                characters(sort: RELEVANCE, page: 1, perPage: 6) {
+                characters(sort: RELEVANCE, page: 1, perPage: 20) {
                   edges {
                     node {
                       image {

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
 from app.enums.media_enums import MediaExternalSource, MediaType
@@ -6,6 +7,7 @@ from app.models.api.media_response_models import (
     MediaBelongsToCollection,
     MediaCast,
     MediaMinimal,
+    MediaNextAiringEpisode,
     MediaRecommendation,
     MediaSeason,
     MovieCollection,
@@ -13,7 +15,6 @@ from app.models.api.media_response_models import (
     MovieDetailed,
     TMDBMediaBase,
     TMDBMediaLastEpisodeToAir,
-    TMDBMediaNextAiringEpisode,
     TVDetailed,
     Trailer,
 )
@@ -27,6 +28,7 @@ from app.models.providers.tmdb_models import (
     TMDBMediaMinimalRecommendation,
     TMDBMovieDetail,
     TMDBMovieKeywords,
+    TMDBNextEpisodeToAir,
     TMDBPaginationRecommendation,
     TMDBSeason,
     TMDBTVDetail,
@@ -133,6 +135,7 @@ class TMDBNormalizer:
             keywords=keywords,
             credits=credits,
             recommendations=recommendations,
+            contentRating=None
         )
 
     @staticmethod
@@ -181,10 +184,8 @@ class TMDBNormalizer:
             ),
             numberOfEpisodes=media.number_of_episodes,
             numberOfSeasons=media.number_of_seasons,
-            nextAiringEpisode=(
-                TMDBMediaNextAiringEpisode.model_validate(media.next_episode_to_air.model_dump())
-                if media.next_episode_to_air
-                else None
+            nextAiringEpisode=TMDBNormalizer._build_next_airing_episode(
+                media.next_episode_to_air
             ),
             seasons=seasons,
             type=media.type,
@@ -508,3 +509,19 @@ class TMDBNormalizer:
             native=None,
             english=None,
         )
+
+    @staticmethod
+    def _build_next_airing_episode(
+        next_episode: Optional[TMDBNextEpisodeToAir],
+    ) -> Optional[MediaNextAiringEpisode]:
+        """Convert TMDB next airing episode data to MediaNextAiringEpisode."""
+        if not next_episode or not next_episode.air_date :
+            return None
+
+        air_date = datetime.strptime(next_episode.air_date, "%Y-%m-%d")
+        airing_at_str = air_date.replace(tzinfo=timezone.utc).isoformat()
+        return MediaNextAiringEpisode(
+            episodeNumber=next_episode.episode_number,
+            airingAt=airing_at_str,
+            seasonNumber=next_episode.season_number,
+        )  

@@ -1,6 +1,5 @@
-from ast import In
 import asyncio
-from typing import Callable, List, Optional, Type, TypeVar, Union
+from typing import  List, Optional, Union
 
 from app.cache.anilist_cache import (
     ANILIST_DETAIL_TTL,

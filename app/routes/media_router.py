@@ -10,7 +10,7 @@ from app.core.dependencies import get_media_service
 media_router = APIRouter(prefix="/media")
 
 
-@media_router.get("/search/{media_type}", response_model=MediaPagination)
+@media_router.get("/ani/search/{media_type}", response_model=MediaPagination)
 async def search_anime_manga(
     media_type: str = Path(...),
     page: int = Query(1, ge=1),

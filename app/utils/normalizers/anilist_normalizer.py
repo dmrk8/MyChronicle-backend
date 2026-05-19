@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import List, Optional
 import calendar
 
@@ -7,6 +8,7 @@ from app.models.providers.anilist_models import (
     AnilistMediaMinimal,
     AnilistTrailer,
     MediaDate,
+    NextAiringEpisode,
     Relations,
     Recommendations,
     Characters,
@@ -16,11 +18,11 @@ from app.models.providers.anilist_models import (
 from app.models.shared.media import MediaTitle
 from app.models.api.media_response_models import (
     AniMediaBase,
-    AniMediaNextAiringEpisode,
     AnimeDetailed,
     MangaDetailed,
     MediaCharacter,
     MediaMinimal,
+    MediaNextAiringEpisode,
     MediaRecommendation,
     MediaRelation,
     MediaStudio,
@@ -99,7 +101,8 @@ class AnilistNormalizer:
             recommendations=recommendations,
             characters=characters,
             trailer=AnilistNormalizer._convert_trailer_url(media.trailer),
-            background=None,  # AniList does not provide background info
+            background=None,  
+            contentRating=None,  
         )
 
     @staticmethod
@@ -116,12 +119,8 @@ class AnilistNormalizer:
             episodes=media.episodes,
             duration=media.duration,
             studios=studios,
-            nextAiringEpisode=(
-                AniMediaNextAiringEpisode.model_validate(
-                    media.next_airing_episode.model_dump()
-                )
-                if media.next_airing_episode
-                else None
+            nextAiringEpisode=AnilistNormalizer._build_next_airing_episode(
+                media.next_airing_episode
             ),
         )
 
@@ -302,3 +301,20 @@ class AnilistNormalizer:
         if not title:
             return None
         return title.english or title.romaji or title.native or None
+
+    @staticmethod
+    def _build_next_airing_episode(
+        airing: Optional[NextAiringEpisode],
+    ) -> Optional[MediaNextAiringEpisode]:
+        """Convert AniList's next airing episode to our common format"""
+        if not airing or airing.airing_at is None:
+            return None
+
+        airing_datetime = datetime.fromtimestamp(
+            airing.airing_at, tz=timezone.utc
+        ).isoformat()
+        return MediaNextAiringEpisode(
+            episodeNumber=airing.episode,
+            airingAt=airing_datetime,
+            seasonNumber=None,
+        )
