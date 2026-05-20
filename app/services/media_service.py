@@ -22,6 +22,7 @@ from app.models.api.media_response_models import (
     MangaDetailed,
     MediaPagination,
     MovieDetailedWithCollection,
+    TVDetailed,
 )
 from app.models.providers.anilist_models import AnilistMediaDetail
 from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
@@ -513,7 +514,7 @@ class MediaService:
         self,
         tv_id: int,
         language: str,
-    ):
+    ) -> TVDetailed:
         cache_key = tmdb_detail_key("tv", tv_id)
         if cache_key:
             cached = await self.redis_service.get_cached(
@@ -572,3 +573,29 @@ class MediaService:
         query: str,
     ) -> List[dict]:
         return await self.tmdb_service.search_keyword(query=query)
+    
+    async def get_media_with_internal_id(
+        self,
+        media_id: str,
+    ) -> Union[AnimeDetailed, MangaDetailed, MovieDetailedWithCollection, TVDetailed]:
+        media_core = await self.media_core_service.get_media_by_internal_id(media_id)
+        if not media_core:
+            raise NotFoundException("Media not found with the provided id")
+        
+        if media_core.primary_source == MediaExternalSource.ANILIST:
+            return await self.get_anime_or_manga_media_detail(
+                media_id=media_core.primary_id,
+                media_type=AnilistMediaType(media_core.media_type.value),
+            )
+        elif media_core.primary_source == MediaExternalSource.TMDB:
+            if media_core.media_type == MediaType.MOVIE:
+                return await self.get_movie_detail(
+                    movie_id=media_core.primary_id,
+                    language="en-US",
+                )
+            elif media_core.media_type == MediaType.TV:
+                return await self.get_tv_detail(
+                    tv_id=media_core.primary_id,
+                    language="en-US",
+                )
+        raise NotFoundException("Media not found with the provided id")

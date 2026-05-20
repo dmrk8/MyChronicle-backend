@@ -1,4 +1,5 @@
 from typing import List, List, Optional
+from uuid import UUID
 
 import structlog
 from app.enums.media_enums import MediaExternalSource, MediaType
@@ -93,6 +94,9 @@ class MediaCoreService:
         return await self.repository.get_media_by_primary_id_and_source_and_media_type(
             primary_id, external_source, media_type
         )
+
+    async def get_media_by_internal_id(self, id: str) -> Optional[MediaDB]:
+        return await self.repository.get_media_by_id(UUID(id))
 
     async def update_media_scores(
         self,

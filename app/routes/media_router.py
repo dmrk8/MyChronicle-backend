@@ -261,3 +261,11 @@ async def search_keyword(
     service: MediaService = Depends(get_media_service),
 ):
     return await service.search_keyword_for_movie_or_tv(query=query)
+
+
+@media_router.get("/by-internal-id/{media_id}")
+async def get_media_with_internal_id(
+    media_id: str = Path(..., description="Internal media ID"),
+    service: MediaService = Depends(get_media_service),
+):
+    return await service.get_media_with_internal_id(media_id=media_id)
