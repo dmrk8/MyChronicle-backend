@@ -25,5 +25,5 @@ async def get_media_core_by_external_id(
         media_type=media_type_enum,
     )
     if not res:
-        return NotFoundException("Media not found")
+        raise NotFoundException("Media not found")
     return MediaCore.model_validate(res.model_dump())
