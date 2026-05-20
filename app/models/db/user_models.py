@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 
@@ -52,6 +53,7 @@ class UserDB(SoftDeleteDBBase):
 class User(BaseModel):
     username: str
     role: UserRole
+    created_at: datetime = Field(..., alias="createdAt")
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

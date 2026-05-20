@@ -1,4 +1,6 @@
 
+import uuid
+
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import structlog
@@ -34,6 +36,7 @@ def create_app(settings) -> FastAPI:
             connectTimeoutMS=3000,
             socketTimeoutMS=5000,
             tz_aware=True,
+            uuidRepresentation="standard",
         )
         await app.state.mongo_client.admin.command("ping")
 
@@ -62,6 +65,7 @@ def create_app(settings) -> FastAPI:
         # Repositories
         db = app.state.mongo_client[settings.database_name]
         app.state.repositories = await init_repositories(db, settings)
+        
 
         yield
 

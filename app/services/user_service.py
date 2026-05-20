@@ -1,4 +1,6 @@
-﻿from pymongo.errors import DuplicateKeyError
+﻿from uuid import UUID
+
+from pymongo.errors import DuplicateKeyError
 import structlog
 from typing import Optional
 
@@ -50,7 +52,7 @@ class UserService:
     ) -> UserDB:
         update_data = UserUpdate(username=update.username)  # type: ignore
         try:
-            res = await self.user_repository.update(user_id, update_data)
+            res = await self.user_repository.update(UUID(user_id), update_data)
         except DuplicateKeyError:
             raise ConflictException("Username already exists")
         if res is None:
@@ -62,7 +64,7 @@ class UserService:
         self, user_id: str, update_password: PasswordUpdateRequest
     ) -> UserDB:
         """User is already authenticated in router. No need for additional authentication."""
-        user = await self.user_repository.get_by_id(user_id)
+        user = await self.user_repository.get_by_id(UUID(user_id))
         if not user or not self.password_handler.verify_password(
             update_password.current_password, user.hash_password
         ):
@@ -71,20 +73,20 @@ class UserService:
         new_hash = self.password_handler.hash_password(update_password.new_password)
         user_update = UserUpdate(hash_password=new_hash)  # type: ignore
 
-        res = await self.user_repository.update(user_id, user_update)
+        res = await self.user_repository.update(UUID(user_id), user_update)
         if res is None:
             raise InternalServerErrorException("Password update failed.")
         self.logger.info("password_updated", user_id=user_id)
         return res
 
     async def delete_user(self, user_id: str) -> None:
-        deleted = await self.user_repository.soft_delete_by_id(user_id)
+        deleted = await self.user_repository.soft_delete_by_id(UUID(user_id))
         if not deleted:
             raise NotFoundException("User not found")
         self.logger.info("user_soft_deleted", user_id=user_id)
 
     async def get_by_id(self, user_id: str) -> Optional[UserDB]:
-        user = await self.user_repository.get_by_id(user_id)
+        user = await self.user_repository.get_by_id(UUID(user_id))
         if not user:
             raise NotFoundException("User not found")
         return user

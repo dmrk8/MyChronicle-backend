@@ -7,7 +7,7 @@ from app.models.db.base import SoftDeleteDBBase
 
 
 class UserMediaEntryCreate(BaseModel):
-    media_id: str = Field(
+    media_id: UUID = Field(
         ..., alias="mediaId", description="The internal ID of the media in the system"
     )
 
@@ -55,7 +55,7 @@ class UserMediaEntryCreate(BaseModel):
 
 
 class UserMediaEntryInsert(UserMediaEntryCreate):
-    user_id: str = Field(...)
+    user_id: UUID = Field(...)
 
 
 class UserMediaEntryUpdate(BaseModel):
@@ -99,10 +99,10 @@ class UserMediaEntryDB(SoftDeleteDBBase):
 class UserMediaEntry(BaseModel):
     """The main model used for API responses"""
 
-    id: str = Field(..., alias="id", description="The unique ID of the user media entry")
-    media_id: str = Field(..., alias="mediaId")
+    id: UUID = Field(..., alias="id", description="The unique ID of the user media entry")
+    media_id: UUID = Field(..., alias="mediaId")
     media_type: MediaType = Field(..., alias="mediaType")
-    user_id: str = Field(..., alias="userId")
+    user_id: UUID = Field(..., alias="userId")
     title: Optional[str] = None
     cover_image: Optional[str] = Field(None, alias="coverImage")
     is_adult: Optional[bool] = Field(None, alias="isAdult")

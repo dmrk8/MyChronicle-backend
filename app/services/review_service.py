@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from app.core.exceptions import (
     InternalServerErrorException,
@@ -33,8 +34,8 @@ class ReviewService:
     ) -> ReviewDB:
         review_data = ReviewInsert(
             **review_request.model_dump(),
-            user_id=user_id,
-            user_media_entry_id=entry_id,
+            user_id=UUID(user_id),
+            user_media_entry_id=UUID(entry_id),
         )
         result = await self.repository.insert_review(review_data)
         if result is None:
@@ -56,7 +57,10 @@ class ReviewService:
     ) -> Optional[ReviewDB]:
 
         updated_review = await self.repository.update_review(
-            review_id, entry_id, update_request, user_id
+            review_id=UUID(review_id),
+            user_media_entry_id=UUID(entry_id),
+            update=update_request,
+            user_id=UUID(user_id)
         )
 
         if updated_review is None:
@@ -70,7 +74,7 @@ class ReviewService:
         return updated_review
 
     async def delete_review(self, entry_id: str, review_id: str, user_id: str) -> None:
-        deleted = await self.repository.delete_review(review_id, user_id, entry_id)
+        deleted = await self.repository.delete_review(review_id=UUID(review_id), user_id=UUID(user_id), user_media_entry_id=UUID(entry_id))
         if not deleted:
             raise NotFoundException("Review not found")
 
@@ -85,14 +89,18 @@ class ReviewService:
         self, entry_id: str, user_id: str
     ) -> List[ReviewDB]:
         return await self.repository.get_reviews_by_user_media_entry_id_and_user_id(
-            entry_id, user_id
+            user_media_entry_id=UUID(entry_id), user_id=UUID(user_id)
         )
 
     async def get_review_by_id(
         self, review_id: str, user_id: str, entry_id: str
     ) -> ReviewDB:
 
-        res = await self.repository.get_review_by_id_and_entry_id_and_user_id(review_id, user_id, entry_id)
+        res = await self.repository.get_review_by_id_and_entry_id_and_user_id(
+            review_id=UUID(review_id),
+            user_id=UUID(user_id),
+            user_media_entry_id=UUID(entry_id)
+        )
         if res is None:
             raise NotFoundException(f"Review not found")
         return res
@@ -102,13 +110,15 @@ class ReviewService:
     ) -> int:
 
         return await self.repository.count_reviews_by_user_media_entry_id(
-            entry_id, user_id
+            user_media_entry_id=UUID(entry_id), user_id=UUID(user_id)
         )
 
     async def delete_reviews_for_user_media_entry(
         self, entry_id: str, user_id: str
     ) -> None:
-        await self.repository.delete_reviews_by_user_media_entry_id(entry_id, user_id)
+        await self.repository.delete_reviews_by_user_media_entry_id(
+            user_media_entry_id=UUID(entry_id), user_id=UUID(user_id)
+        )
 
         self.logger.info(
             "reviews_deleted",
@@ -117,7 +127,7 @@ class ReviewService:
         )
 
     async def delete_all_reviews_for_user(self, user_id: str) -> None:
-        await self.repository.delete_reviews_by_user_id(user_id)
+        await self.repository.delete_reviews_by_user_id(user_id=UUID(user_id))
 
         self.logger.info(
             "all_reviews_deleted_for_user",

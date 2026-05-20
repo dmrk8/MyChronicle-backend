@@ -1,4 +1,5 @@
 from typing import Any, Optional
+from uuid import UUID
 from pymongo.errors import DuplicateKeyError
 from app.core.exceptions import ConflictException, NotFoundException
 from app.enums.media_enums import MediaType
@@ -44,7 +45,7 @@ class UserMediaEntryService:
         Returns:
             UserMediaEntryDB: The verified user media entry
         """
-        entry = await self.repository.get_entry_by_id_and_user_id(entry_id, user_id)
+        entry = await self.repository.get_entry_by_id_and_user_id(UUID(entry_id), UUID(user_id))
         if not entry:
             raise NotFoundException("Entry not found")
         return entry
@@ -55,13 +56,13 @@ class UserMediaEntryService:
 
         entry_data = UserMediaEntryInsert(
             **entry_request.model_dump(),
-            user_id=user_id,
+            user_id=UUID(user_id),
         )
         try:
             res = await self.repository.insert_entry(entry_data)
         except DuplicateKeyError:
             raise ConflictException("Entry is existing already in the library")
-        self.logger.info("entry_created", entry_id=res.id, user_id=user_id)
+        self.logger.info("entry_created", entry_id=str(res.id), user_id=str(user_id))
         return res
 
     async def get_entry_by_id(self, entry_id: str, user_id: str) -> UserMediaEntryDB:
@@ -76,19 +77,19 @@ class UserMediaEntryService:
         await self._verify_ownership(entry_id, user_id)
 
         updated_entry = await self.repository.update_entry(
-            entry_id, user_id, update_data
+            UUID(entry_id), UUID(user_id), update_data
         )
         if updated_entry is None:
             raise NotFoundException("Entry Not Found")
-        self.logger.info("entry_updated", entry_id=entry_id, user_id=user_id)
+        self.logger.info("entry_updated", entry_id=str(updated_entry.id), user_id=str(user_id))
 
         return updated_entry
 
     async def delete_entry(self, entry_id: str, user_id: str) -> None:
         await self._verify_ownership(entry_id, user_id)
-        await self.repository.soft_delete_by_id(entry_id, user_id)
+        await self.repository.soft_delete_by_id(UUID(entry_id), UUID(user_id))
 
-        self.logger.info("entry_soft_deleted", entry_id=entry_id)
+        self.logger.info("entry_soft_deleted", entry_id=str(entry_id))
 
     async def get_entry_by_media_id_and_user_id(
         self,
@@ -96,7 +97,7 @@ class UserMediaEntryService:
         user_id: str,
     ) -> UserMediaEntryDB:
         res = await self.repository.get_entry_by_media_id_and_user_id(
-            media_id, user_id
+            UUID(media_id), UUID(user_id)
         )
         if not res:
             raise NotFoundException("Entry not found")
@@ -144,24 +145,24 @@ class UserMediaEntryService:
             per_page=per_page,
             sort_by=sort_by.value,
             sort_order=sort_order.value,
-            user_id=user_id,
+            user_id=UUID(user_id),
         )
         total = await self.repository.count_entries_with_filters(
-            user_id=user_id, filters=filters
+            user_id=UUID(user_id), filters=filters
         )
         has_next_page = (page * per_page) < total
 
         return entries, page, per_page, has_next_page, total
 
     async def count_entries_for_user(self, user_id: str) -> int:
-        count = await self.repository.count_entries_by_user_id(user_id)
+        count = await self.repository.count_entries_by_user_id(UUID(user_id))
         return count
 
     async def delete_all_entries_for_user(self, user_id: str) -> None:
         """Delete all media entries (and their reviews) for a user."""
-        await self.repository.soft_delete_many_by_user_id(user_id)
+        await self.repository.soft_delete_many_by_user_id(UUID(user_id))
 
-        self.logger.info("all_entries_soft_deleted_for_user", user_id=user_id)
+        self.logger.info("all_entries_soft_deleted_for_user", user_id=str(UUID(user_id)))
 
     async def sync_entry_metadata(
         self, entry_id: str, metadata: UserMediaEntrySyncMetadata, user_id: str
@@ -170,7 +171,7 @@ class UserMediaEntryService:
         await self._verify_ownership(entry_id, user_id)
 
         synced_entry = await self.repository.sync_entry_metadata(
-            entry_id, user_id, metadata
+            UUID(entry_id), UUID(user_id), metadata
         )
         if synced_entry is None:
             raise NotFoundException("Entry Not Found")

@@ -1,5 +1,6 @@
 from typing import List, Optional
 import uuid
+from uuid import UUID
 from pymongo import ReturnDocument
 from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.db.db_context_model import DBOpContext
@@ -16,7 +17,7 @@ from app.utils.time_helpers import utc_now
 
 class MediaCoreRepository(UpsertRepository[MediaDB]):
     db_model = MediaDB
-    
+
     async def init_indexes(self) -> None:
         await self.collection.create_index(
             [("primary_id", 1), ("primary_source", 1), ("media_type", 1)],
@@ -43,7 +44,7 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
                 "updated_at": now,
             },
             "$setOnInsert": {
-                "_id": str(uuid.uuid4()),
+                "_id": uuid.uuid4(),
                 "primary_id": media.primary_id,
                 "primary_source": media.primary_source,
                 "media_type": media.media_type,
@@ -63,6 +64,12 @@ class MediaCoreRepository(UpsertRepository[MediaDB]):
                 external_source=media.primary_source,
                 media_type=media.media_type,
             ),
+        )
+
+    async def get_media_by_id(self, id: UUID) -> Optional[MediaDB]:
+        return await self._find_one(
+            {"_id": id},
+            self._make_context(operation="find_one_by_id", id=id),
         )
 
     async def get_media_by_primary_id_and_source_and_media_type(

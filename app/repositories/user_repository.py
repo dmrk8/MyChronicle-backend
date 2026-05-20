@@ -1,5 +1,5 @@
 from typing import Optional
-from bson import ObjectId
+from uuid import UUID
 
 from app.models.db.user_models import UserDB, UserInsert, UserUpdate
 from app.repositories._base_repository import CRUDRepository
@@ -23,22 +23,22 @@ class UserRepository(CRUDRepository[UserDB, UserInsert, UserUpdate], SoftDeleteM
             user, self._make_context(operation="insert_one", username=user.username)
         )
 
-    async def update(self, id: str, update_data: UserUpdate) -> Optional[UserDB]:
+    async def update(self, id: UUID, update_data: UserUpdate) -> Optional[UserDB]:
         return await self._find_one_and_update(
-            {"_id": ObjectId(id), "is_deleted": False},
+            {"_id": id, "is_deleted": False},
             update_data,
             self._make_context(operation="update_one", user_id=id),
         )
 
-    async def delete(self, user_id: str) -> bool:
+    async def delete(self, user_id: UUID) -> bool:
         return await self._delete_one(
-            {"_id": ObjectId(user_id), "is_deleted": False},
+            {"_id": user_id, "is_deleted": False},
             self._make_context(operation="delete_one", user_id=user_id),
         )
 
-    async def get_by_id(self, id: str) -> Optional[UserDB]:
+    async def get_by_id(self, id: UUID) -> Optional[UserDB]:
         return await self._find_one(
-            {"_id": ObjectId(id), "is_deleted": False},
+            {"_id": id, "is_deleted": False},
             self._make_context(operation="find_one_by_id", user_id=id),
         )
 
@@ -48,8 +48,8 @@ class UserRepository(CRUDRepository[UserDB, UserInsert, UserUpdate], SoftDeleteM
             self._make_context(operation="find_one_by_username", username=username),
         )
 
-    async def soft_delete_by_id(self, user_id: str) -> bool:
+    async def soft_delete_by_id(self, user_id: UUID) -> bool:
         return await self._soft_delete(
-            {"_id": ObjectId(user_id)},
+            {"_id": user_id, "is_deleted": False},
             self._make_context(operation="soft_delete_one", user_id=user_id),
         )
