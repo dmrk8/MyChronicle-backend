@@ -29,6 +29,6 @@ class OMDbApi:
             action="fetch_omdb_data",
         )
         if data.get("Response") == "False":
-            raise ValueError(data.get("Error", "Unknown error from OMDb API"))
+            raise ValueError(data.get("Error", "Unknown error or Data not found"))
 
         return OMDbData.model_validate(data)

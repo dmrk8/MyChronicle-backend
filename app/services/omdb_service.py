@@ -9,5 +9,8 @@ class OMDbService:
 
     async def fetch_data(
         self, title: Optional[str] = None, imdb_id: Optional[str] = None
-    ) -> OMDbData:
-        return await self.omdb_api.fetch_data(title=title, imdb_id=imdb_id)
+    ) -> Optional[OMDbData]:
+        try:
+            return await self.omdb_api.fetch_data(title=title, imdb_id=imdb_id)
+        except ValueError:
+            return None

@@ -180,7 +180,7 @@ class SyncService:
         imdb_id: str,
         external_id: int,
         media_type: MediaType,
-    ) -> OMDbData:
+    ) -> Optional[OMDbData]:
         omdb_data = await self.external_storage_service.get_by_external_id_and_source_and_media_type(
             external_id=external_id,
             external_source=MediaExternalSource.OMDB,
@@ -191,6 +191,9 @@ class SyncService:
             return OMDbData.model_validate(omdb_data.payload)
 
         omdb_data = await self.omdb_service.fetch_data(imdb_id=imdb_id)
+        
+        if not omdb_data:
+            return None
 
         expires_at = await self._calculate_omdb_sync_expiry(omdb_data)
 
