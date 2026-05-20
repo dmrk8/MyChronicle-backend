@@ -68,7 +68,7 @@ class MediaDBNormalizer:
                 MediaTag(
                     name=tag.name,
                     rank=tag.rank,
-                )
+                ) # type: ignore
                 for tag in media.tags
             ]
             if media.tags

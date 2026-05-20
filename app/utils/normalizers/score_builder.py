@@ -21,6 +21,7 @@ class ScoreBuilder:
                 MediaScore(
                     value=float(media.average_score),
                     source=MediaScoreSource.ANILIST,
+                    voteCount=None
                 )
             )
         if mal_data and mal_data.data.score:
@@ -28,7 +29,7 @@ class ScoreBuilder:
                 MediaScore(
                     value=float(mal_data.data.score) * 10,
                     source=MediaScoreSource.MAL,
-                    vote_count=mal_data.data.scored_by,
+                    voteCount=mal_data.data.scored_by,
                 )
             )
         return scores
@@ -44,7 +45,7 @@ class ScoreBuilder:
                 MediaScore(
                     value=float(media.vote_average) * 10,
                     source=MediaScoreSource.TMDB,
-                    vote_count=media.vote_count,
+                    voteCount=media.vote_count,
                 )
             )
         

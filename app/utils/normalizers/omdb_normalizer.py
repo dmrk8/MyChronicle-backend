@@ -62,7 +62,7 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.IMDB,
-                            vote_count=OMDbNormalizer.parse_vote_count(
+                            vote_count=OMDbNormalizer.parse_vote_count( # type: ignore
                                 omdb_data.imdb_votes
                             ),
                         )
@@ -72,7 +72,8 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.ROTTEN_TOMATOES,
-                        )
+                            voteCount=None
+                        ) 
                     )
 
                 elif rating.Source == "Metacritic":
@@ -80,6 +81,7 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.METACRITIC,
+                            voteCount=None
                         )
                     )
                 else:
