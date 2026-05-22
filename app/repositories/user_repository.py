@@ -27,19 +27,19 @@ class UserRepository(CRUDRepository[UserDB, UserInsert, UserUpdate], SoftDeleteM
         return await self._find_one_and_update(
             {"_id": id, "is_deleted": False},
             update_data,
-            self._make_context(operation="update_one", user_id=id),
+            self._make_context(operation="update_one", user_id=str(id)),
         )
 
     async def delete(self, user_id: UUID) -> bool:
         return await self._delete_one(
             {"_id": user_id, "is_deleted": False},
-            self._make_context(operation="delete_one", user_id=user_id),
+            self._make_context(operation="delete_one", user_id=str(user_id)),
         )
 
     async def get_by_id(self, id: UUID) -> Optional[UserDB]:
         return await self._find_one(
             {"_id": id, "is_deleted": False},
-            self._make_context(operation="find_one_by_id", user_id=id),
+            self._make_context(operation="find_one_by_id", user_id=str(id)),
         )
 
     async def get_by_username(self, username: str) -> Optional[UserDB]:
@@ -51,5 +51,5 @@ class UserRepository(CRUDRepository[UserDB, UserInsert, UserUpdate], SoftDeleteM
     async def soft_delete_by_id(self, user_id: UUID) -> bool:
         return await self._soft_delete(
             {"_id": user_id, "is_deleted": False},
-            self._make_context(operation="soft_delete_one", user_id=user_id),
+            self._make_context(operation="soft_delete_one", user_id=str(user_id)),
         )

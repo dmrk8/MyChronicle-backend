@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
-from app.enums.media_enums import MediaType
+from app.enums.media_enums import MediaExternalSource, MediaType
 
 from app.models.shared.media import MediaTag, MediaTitle, MediaScore
 
@@ -77,7 +77,7 @@ class MediaCharacter(BaseModel):
 
 class MediaMinimal(BaseModel):
     id: int
-    external_source: str = Field(alias="externalSource")
+    external_source: MediaExternalSource = Field(alias="externalSource")
     media_type: MediaType = Field(alias="mediaType")
 
     # shared

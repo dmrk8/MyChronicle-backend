@@ -20,6 +20,7 @@ from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
 from app.models.api.media_response_models import (
     AnimeDetailed,
     MangaDetailed,
+    MediaMinimal,
     MediaPagination,
     MovieDetailedWithCollection,
     TVDetailed,
@@ -574,7 +575,7 @@ class MediaService:
     ) -> List[dict]:
         return await self.tmdb_service.search_keyword(query=query)
     
-    async def get_media_with_internal_id(
+    async def get_media_detail_with_internal_id(
         self,
         media_id: str,
     ) -> Union[AnimeDetailed, MangaDetailed, MovieDetailedWithCollection, TVDetailed]:
@@ -599,3 +600,22 @@ class MediaService:
                     language="en-US",
                 )
         raise NotFoundException("Media not found with the provided id")
+
+    async def get_media_minimal_with_internal_id(
+        self,
+        media_id: str,
+    ) -> MediaMinimal:
+        media_core = await self.media_core_service.get_media_by_internal_id(media_id)
+        if not media_core:
+            raise NotFoundException("Media not found with the provided id")
+        
+        return MediaMinimal(
+            id=media_core.primary_id,
+            externalSource=media_core.primary_source,
+            mediaType=media_core.media_type,
+            title=media_core.title.title,
+            coverImage=media_core.cover_image,
+        ) # type: ignore
+        
+            
+        
