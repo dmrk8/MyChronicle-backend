@@ -50,11 +50,17 @@ def strip_html(text: Optional[str]) -> Optional[str]:
 
     stripper = HTMLStripper()
     try:
+        # Replace line breaks with newlines BEFORE parsing
+        text = re.sub(r"<br\s*/?>\s*</?\s*br\s*>?", "\n", text, flags=re.IGNORECASE)
+
         stripper.feed(text)
         result = stripper.get_data()
-        # Clean up extra whitespace
-        result = re.sub(r"\s+", " ", result).strip()
-        return result
+        # Clean up extra whitespace but preserve newlines
+        result = re.sub(r"[ \t]+", " ", result)  # Collapse spaces/tabs
+        result = re.sub(r"\n\s*\n", "\n", result)  # Remove extra blank lines
+        return result.strip()
     except Exception:
         # Fallback to regex if parsing fails
-        return re.sub(r"<[^>]+>", "", text).strip()
+        text = re.sub(r"<br\s*/?>\s*</?\s*br\s*>?", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", "", text)
+        return text.strip()
