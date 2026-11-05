@@ -1,180 +1,141 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field
 from typing import List, Optional
 
+from app.models.shared.base import AniListBaseModel
 
-class Title(BaseModel):
+
+class Title(AniListBaseModel):
     english: Optional[str] = None
     romaji: Optional[str] = None
     native: Optional[str] = None
 
 
-class NextAiringEpisode(BaseModel):
+class NextAiringEpisode(AniListBaseModel):
     episode: Optional[int] = None
-    airing_at: Optional[int] = Field(None, alias="airingAt")
-    time_until_airing: Optional[int] = Field(None, alias="timeUntilAiring")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    airing_at: Optional[int] = None
+    time_until_airing: Optional[int] = None
 
 
-class MediaDate(BaseModel):
+class MediaDate(AniListBaseModel):
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None
 
 
-class CoverImage(BaseModel):
+class CoverImage(AniListBaseModel):
     medium: Optional[str] = None
     large: Optional[str] = None
-    extra_large: Optional[str] = Field(None, alias="extraLarge")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    extra_large: Optional[str] = None
 
 
-class Tag(BaseModel):
+class Tag(AniListBaseModel):
     name: str
-    is_media_spoiler: bool = Field(..., alias="isMediaSpoiler")
-    is_general_spoiler: bool = Field(..., alias="isGeneralSpoiler")
+    is_media_spoiler: bool 
+    is_general_spoiler: bool
     rank: int
     description: str
     category: str
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class RelationNode(BaseModel):
+class RelationNode(AniListBaseModel):
     id: int
     title: Title
     format: Optional[str] = None
     status: Optional[str] = None
-    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+    cover_image: Optional[CoverImage] = None
     type: str
-    
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
-class RelationEdge(BaseModel):
-    relation_type: str = Field(..., alias="relationType")
+class RelationEdge(AniListBaseModel):
+    relation_type: str 
     node: RelationNode
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class Relations(BaseModel):
+class Relations(AniListBaseModel):
     edges: List[RelationEdge]
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class StudioNode(BaseModel):
+class StudioNode(AniListBaseModel):
     id: int
     name: str
 
 
-class StudioEdge(BaseModel):
-    is_main: bool = Field(..., alias="isMain")
+class StudioEdge(AniListBaseModel):
+    is_main: bool = Field(...)
     node: StudioNode
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class Studios(BaseModel):
+class Studios(AniListBaseModel):
     edges: List[StudioEdge]
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class CharacterImage(BaseModel):
+class CharacterImage(AniListBaseModel):
     large: Optional[str] = None
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class CharacterName(BaseModel):
+class CharacterName(AniListBaseModel):
     full: str
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class VoiceActorName(BaseModel):
+class VoiceActorName(AniListBaseModel):
     full: str
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class VoiceActorImage(BaseModel):
+class VoiceActorImage(AniListBaseModel):
     large: Optional[str] = None
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class VoiceActor(BaseModel):
+class VoiceActor(AniListBaseModel):
     name: VoiceActorName
     image: VoiceActorImage
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class CharacterNode(BaseModel):
+class CharacterNode(AniListBaseModel):
     image: CharacterImage
     name: CharacterName
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class CharacterEdge(BaseModel):
+class CharacterEdge(AniListBaseModel):
     node: CharacterNode
     role: str
-    voice_actors: Optional[List[VoiceActor]] = Field(None, alias="voiceActors")  
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    voice_actors: Optional[List[VoiceActor]] = None
 
 
-class Characters(BaseModel):
+class Characters(AniListBaseModel):
     edges: List[CharacterEdge]
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class RecommendationMedia(BaseModel):
+class RecommendationMedia(AniListBaseModel):
     id: int
     title: Title
-    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
+    cover_image: Optional[CoverImage] = None
     format: Optional[str] = None
     status: Optional[str] = None
     type: str
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+class RecommendationNode(AniListBaseModel):
+    media_recommendation: Optional[RecommendationMedia] = None
 
 
-class RecommendationNode(BaseModel):
-    media_recommendation: Optional[RecommendationMedia] = Field(None, alias="mediaRecommendation")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class RecommendationEdge(BaseModel):
+class RecommendationEdge(AniListBaseModel):
     node: RecommendationNode
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class Recommendations(BaseModel):
+class Recommendations(AniListBaseModel):
     edges: List[RecommendationEdge]
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-class AnilistTrailer(BaseModel):
+class AnilistTrailer(AniListBaseModel):
     id: Optional[str] = None  
     site: Optional[str] = None
     thumbnail: Optional[str] = None
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-class AnilistMediaMinimal(BaseModel):
+class AnilistMediaMinimal(AniListBaseModel):
     # --- Identifiers ---
-    id: int = Field(..., alias="id")
-    type: Optional[str] = None
+    id: int 
+    type: str
 
     # --- Titles ---
     title: Optional[Title] = None
@@ -186,9 +147,9 @@ class AnilistMediaMinimal(BaseModel):
 
     # --- Dates & Season ---
     season: Optional[str] = None
-    season_year: Optional[int] = Field(None, alias="seasonYear")
-    start_date: Optional[MediaDate] = Field(None, alias="startDate")
-    end_date: Optional[MediaDate] = Field(None, alias="endDate")
+    season_year: Optional[int] = None
+    start_date: Optional[MediaDate] = None
+    end_date: Optional[MediaDate] = None
 
     # --- Content Structure ---
     episodes: Optional[int] = None
@@ -196,27 +157,23 @@ class AnilistMediaMinimal(BaseModel):
     chapters: Optional[int] = None
 
     # --- Scores ---
-    average_score: Optional[int] = Field(None, alias="averageScore")
+    average_score: Optional[int] = None
 
     # --- Media Assets ---
-    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
-    banner_image: Optional[str] = Field(None, alias="bannerImage")
+    cover_image: Optional[CoverImage] = None
+    banner_image: Optional[str] = None
 
     # --- Airing Info ---
-    next_airing_episode: Optional[NextAiringEpisode] = Field(
-        None, alias="nextAiringEpisode"
-    )
+    next_airing_episode: Optional[NextAiringEpisode] = None
 
     # --- Relations ---
-    studios: Optional[Studios] = Field(None, alias="studios")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    studios: Optional[Studios] = None
 
 
-class AnilistMediaDetail(BaseModel):
+class AnilistMediaDetail(AniListBaseModel):
     # --- Identifiers ---
     id: int
-    id_mal: Optional[int] = Field(None, alias="idMal")
+    id_mal: Optional[int] = None
     type: str
 
     # --- Titles & Description ---
@@ -229,15 +186,15 @@ class AnilistMediaDetail(BaseModel):
     source: Optional[str] = None
     genres: Optional[List[str]] = None
     tags: Optional[List[Tag]] = None
-    is_adult: Optional[bool] = Field(None, alias="isAdult")
+    is_adult: Optional[bool] = None
 
     # --- Dates & Season ---
     season: Optional[str] = None
-    season_year: Optional[int] = Field(None, alias="seasonYear")
-    start_date: Optional[MediaDate] = Field(None, alias="startDate")
-    end_date: Optional[MediaDate] = Field(None, alias="endDate")
+    season_year: Optional[int] = None
+    start_date: Optional[MediaDate] = None
+    end_date: Optional[MediaDate] = None
     status: Optional[str] = None
-    country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
+    country_of_origin: Optional[str] = None
 
     # --- Content Structure ---
     episodes: Optional[int] = None
@@ -246,18 +203,16 @@ class AnilistMediaDetail(BaseModel):
     volumes: Optional[int] = None
 
     # --- Scores & Popularity ---
-    average_score: Optional[int] = Field(None, alias="averageScore")
+    average_score: Optional[int] = None
     popularity: Optional[int] = None
 
     # --- Media Assets ---
-    cover_image: Optional[CoverImage] = Field(None, alias="coverImage")
-    banner_image: Optional[str] = Field(None, alias="bannerImage")
+    cover_image: Optional[CoverImage] = None
+    banner_image: Optional[str] = None
     trailer: Optional[AnilistTrailer] = None
 
     # --- Airing Info ---
-    next_airing_episode: Optional[NextAiringEpisode] = Field(
-        None, alias="nextAiringEpisode"
-    )
+    next_airing_episode: Optional[NextAiringEpisode] = None
 
     # --- Relations & Extras ---
     relations: Optional[Relations] = None
@@ -265,25 +220,17 @@ class AnilistMediaDetail(BaseModel):
     characters: Optional[Characters] = None
     recommendations: Optional[Recommendations] = None
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class AnilistPageInfo(BaseModel):
-    current_page: int = Field(..., alias="currentPage")
-    has_next_page: bool = Field(..., alias="hasNextPage")
-    per_page: int = Field(..., alias="perPage")
+class AnilistPageInfo(AniListBaseModel):
+    current_page: int
+    has_next_page: bool
+    per_page: int
     total: int
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class AnilistPagination(BaseModel):
+class AnilistPagination(AniListBaseModel):
     results: List[AnilistMediaMinimal]
-    current_page: int = Field(..., alias="currentPage")
-    per_page: int = Field(..., alias="perPage")
-    has_next_page: bool = Field(..., alias="hasNextPage")
+    current_page: int
+    per_page: int
+    has_next_page: bool
     total: int
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-

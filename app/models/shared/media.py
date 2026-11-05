@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.shared.base import CamelModel
+
 class MediaScoreSource(str, Enum):
     ANILIST = "ANILIST"
     MAL = "MAL"
@@ -11,13 +13,11 @@ class MediaScoreSource(str, Enum):
     METACRITIC = "METACRITIC"
     ROTTEN_TOMATOES = "ROTTEN_TOMATOES"
     
-class MediaScore(BaseModel):
+class MediaScore(CamelModel):
     source: MediaScoreSource
-    value: float  # ALWAYS 0–100
-    vote_count: Optional[int] = Field(None, alias="voteCount")
+    value: float = Field(ge=0, le=100)
+    vote_count: Optional[int] = None
     
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
 
 class MediaTitle(BaseModel):
     title: str
@@ -27,14 +27,14 @@ class MediaTitle(BaseModel):
     english: Optional[str] = None
 
 
-class MediaTag(BaseModel):
+
+class MediaTag(CamelModel):
     name: str
 
     # optional / extended
-    is_media_spoiler: Optional[bool] = Field(None, alias="isMediaSpoiler")
-    is_general_spoiler: Optional[bool] = Field(None, alias="isGeneralSpoiler")
+    is_media_spoiler: Optional[bool] = None
+    is_general_spoiler: Optional[bool] = None
     rank: Optional[int] = None
     description: Optional[str] = None
     category: Optional[str] = None
     
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

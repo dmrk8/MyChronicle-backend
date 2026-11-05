@@ -1,224 +1,152 @@
+from pydantic import Field
+from typing import Annotated, List, Literal, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from app.enums.media_enums import MediaExternalSource, MediaStatus, MediaType
 
-from app.enums.media_enums import MediaExternalSource, MediaType
-
+from app.models.shared.base import CamelModel
 from app.models.shared.media import MediaTag, MediaTitle, MediaScore
 
 
-class TMDBMediaLastEpisodeToAir(BaseModel):
-    name: Optional[str] = Field(None, alias="name")
-    overview: Optional[str] = Field(None, alias="overview")
-    vote_average: Optional[float] = Field(None, alias="voteAverage")
-    air_date: Optional[str] = Field(None, alias="airDate")
-    episode_number: Optional[int] = Field(None, alias="episodeNumber")
-    episode_type: Optional[str] = Field(None, alias="episodeType")
-    runtime: Optional[int] = Field(None, alias="runtime")
-    season_number: Optional[int] = Field(None, alias="seasonNumber")
-    still_path: Optional[str] = Field(None, alias="stillPath")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-class MediaNextAiringEpisode(BaseModel):
-    episode_number: Optional[int] = Field(None, alias="episodeNumber")
-    airing_at: Optional[str] = Field(None, alias="airingAt")
-    season_number: Optional[int] = Field(None, alias="seasonNumber")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class Trailer(BaseModel):
+class Trailer(CamelModel):
     url: Optional[str] = None
     thumbnail: Optional[str] = None
-
-
-class MediaStudio(BaseModel):
-    is_main: bool = Field(..., alias="isMain")
+    
+    
+class MediaStudio(CamelModel):
+    is_main: bool
     name: str
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-
-class MediaRelation(BaseModel):
-    relation_type: Optional[str] = Field(None, alias="relationType")
+class MediaRelation(CamelModel):
     id: int
+    media_type: MediaType
+    relation_type: Optional[str] = None
     title: Optional[str] = None
     format: Optional[str] = None
     status: Optional[str] = None
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    media_type: MediaType = Field(alias="mediaType")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    cover_image: Optional[str] = None
 
 
-class MediaRecommendation(BaseModel):
+class MediaRecommendation(CamelModel):
     id: int
     title: Optional[str]
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    media_type: MediaType = Field(alias="mediaType")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    cover_image: Optional[str] = None
+    media_type: MediaType
 
 
-class MediaVoiceActor(BaseModel):
+class MediaVoiceActor(CamelModel):
     image: str
     name: str
 
 
-class MediaCharacter(BaseModel):
+class MediaCharacter(CamelModel):
     role: str
     image: str
     name: str
-    voice_actor: Optional[MediaVoiceActor] = Field(None, alias="voiceActor")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    voice_actor: Optional[MediaVoiceActor] = None
 
 
-class MediaMinimal(BaseModel):
-    id: int
-    external_source: MediaExternalSource = Field(alias="externalSource")
-    media_type: MediaType = Field(alias="mediaType")
-
-    # shared
-    title: str = Field(description="Flattned title for display purposes")
-    format: Optional[str] = None
-    genres: Optional[List[str]] = None
-    status: Optional[str] = None
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    average_score: Optional[float] = Field(None, alias="averageScore")
-    banner_image: Optional[str] = Field(None, alias="bannerImage")
-
-    # anime
-    episodes: Optional[int] = None
-    main_studio: Optional[str] = Field(None, alias="mainStudio")
-
-    # manga
-    chapters: Optional[int] = None
-
-    # movie
-    release_date: Optional[str] = Field(None, alias="releaseDate")
-
-    # tv
-    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-
-class MediaPagination(BaseModel):
-    results: List[MediaMinimal]
-    current_page: int = Field(..., alias="currentPage")
-    per_page: Optional[int] = Field(None, alias="perPage")
-    has_next_page: bool = Field(..., alias="hasNextPage")
-    total: Optional[int] = None
-
-    model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
-
-
-class MediaCast(BaseModel):
+class MediaCastMember(CamelModel):
     name: str
     character: Optional[str] = None
-    cast_image: Optional[str] = Field(None, alias="castImage")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    image: Optional[str] = None
 
 
-class MediaBelongsToCollection(BaseModel):
-    id: int
-    name: str
-    poster_path: Optional[str] = Field(None, alias="posterPath")
-    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+class UpcomingEpisode(CamelModel):
+    episode_number: Optional[int] = None
+    airing_at: Optional[str] = None
+    season_number: Optional[int] = None
 
 
-class MediaSeason(BaseModel):
-    air_date: Optional[str] = Field(None, alias="airDate")
-    episode_count: int = Field(..., alias="episodeCount")
+class LastEpisodeToAir(CamelModel):
+    name: Optional[str] = None
+    overview: Optional[str] = None
+    air_date: Optional[str] = None
+    episode_number: Optional[int] = None
+    episode_type: Optional[str] = None
+    runtime: Optional[int] = None
+    season_number: Optional[int] = None
+    still_image: Optional[str] = None
+
+
+class TVSeason(CamelModel):
+    air_date: Optional[str] = None
+    episode_count: int
     name: str
     overview: str
-    poster_path: Optional[str] = Field(None, alias="posterPath")
-    season_number: int = Field(..., alias="seasonNumber")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    poster_image: Optional[str] = None
+    season_number: int
 
 
-class MovieCollectionPart(BaseModel):
-    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
+class MediaBelongsToCollection(CamelModel):
+    id: int
+    name: str
+    poster_image: Optional[str] = None
+    banner_image: Optional[str] = None
+
+
+class MovieCollectionPart(CamelModel):
+    banner_image: Optional[str] = None
     id: int
     title: str
-    original_title: str = Field(..., alias="originalTitle")
-    media_type: MediaType = Field(..., alias="mediaType")
-    release_date: str = Field(..., alias="releaseDate")
-    poster_path: Optional[str] = Field(None, alias="posterPath")
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    original_title: str
+    media_type: MediaType
+    release_date: str
+    poster_image: Optional[str] = None
 
 
-class MovieCollection(BaseModel):
+class MovieCollection(CamelModel):
     id: int
     name: str
     overview: Optional[str] = None
-    poster_path: Optional[str] = Field(None, alias="posterPath")
-    backdrop_path: Optional[str] = Field(None, alias="backdropPath")
-    parts: List[MovieCollectionPart]
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+    poster_image: Optional[str] = None
+    banner_image: Optional[str] = None
+    parts: Optional[List[MovieCollectionPart]] = None
 
 
-class MediaBase(BaseModel):
-    # --- Identifiers ---
-    id: Optional[str] = (
-        None  # Internal ID (UUID) Optional because when creating a new media using third party api responses with normalizer we do not have internal ID yet. It can be added but extra dependency need to be added to get the internal ID
-    )
-    media_type: MediaType = Field(alias="mediaType")
-
-    # --- Titles & Description ---
+############### Media Response Models ###############
+class MediaBase(CamelModel):
     title: MediaTitle
     description: Optional[str] = None
+    synonyms: Optional[List[str]] = None
 
-    # --- Media Details ---
-    format: Optional[str] = None
+    format: Optional[str] = Field(
+        None, description="Media format, e.g. TV, OVA, Movie, Manga, Scripted etc."
+    )
+    status: Optional[MediaStatus] = None
+    is_adult: Optional[bool] = None
+    content_rating: Optional[str] = Field(
+        None, description="Content rating, e.g. PG-13, R, etc."
+    )
+
     genres: Optional[List[str]] = None
-    status: Optional[str] = None
-    is_adult: Optional[bool] = Field(None, alias="isAdult")
+    tags: Optional[List[MediaTag]] = None
+
+    country_of_origin: Optional[str] = None
 
     # --- Media Assets ---
-    cover_image: Optional[str] = Field(None, alias="coverImage")
-    banner_image: Optional[str] = Field(None, alias="bannerImage")
+    cover_image: Optional[str] = None
+    banner_image: Optional[str] = None
     trailer: Optional[List[Trailer]] = None
 
     # --- Scores ---
     scores: Optional[List[MediaScore]] = None
-    
-    content_rating: Optional[str] = Field(
-        None, description="Content rating, e.g. PG-13, R, etc.", alias="contentRating"
-    )
 
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-    )
+    recommendations: Optional[List[MediaRecommendation]] = None
 
 
-class AniMediaBase(MediaBase):
+class AniMediaData(MediaBase):
     # --- External IDs ---
-    id_mal: Optional[int] = Field(None, alias="idMal")
+    id_mal: Optional[int] = None
 
-    # --- Dates -------
-    start_date: Optional[str] = Field(None, alias="startDate")
-    end_date: Optional[str] = Field(None, alias="endDate")
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
     # --- Production ---
-    country_of_origin: Optional[str] = Field(None, alias="countryOfOrigin")
     source: Optional[str] = None
 
-    synonyms: Optional[List[str]] = None
-
     # --- Metadata & Relations ---
-    tags: Optional[List[MediaTag]] = None
     relations: Optional[List[MediaRelation]] = None
-    recommendations: Optional[List[MediaRecommendation]] = None
     characters: Optional[List[MediaCharacter]] = None
 
     background: Optional[str] = Field(
@@ -227,27 +155,27 @@ class AniMediaBase(MediaBase):
     )
 
 
-class AnimeDetailed(AniMediaBase):
+class AnimeData(AniMediaData):
+    media_type: Literal[MediaType.ANIME] = MediaType.ANIME
+
     # --- Content Structure ---
     episodes: Optional[int] = None
     duration: Optional[int] = None
 
-    
-
     # --- Dates & Season ---
     season: Optional[str] = None
-    season_year: Optional[int] = Field(None, alias="seasonYear")
+    season_year: Optional[int] = None
 
     # --- Airing Info ---
-    next_airing_episode: Optional[MediaNextAiringEpisode] = Field(
-        None, alias="nextAiringEpisode"
-    )
+    next_airing_episode: Optional[UpcomingEpisode] = None
 
     # --- Production ---
     studios: Optional[List[MediaStudio]] = None
 
 
-class MangaDetailed(AniMediaBase):
+class MangaData(AniMediaData):
+    media_type: Literal[MediaType.MANGA] = MediaType.MANGA
+
     # --- Content Structure ---
     chapters: Optional[int] = None
     volumes: Optional[int] = None
@@ -255,47 +183,15 @@ class MangaDetailed(AniMediaBase):
     authors: Optional[List[str]] = None
 
 
-class TMDBMediaBase(MediaBase):
-    original_language: Optional[str] = Field(None, alias="originalLanguage")
+class MovieTVMediaBase(MediaBase):
+    original_language: Optional[str] = None
 
-    # --- Metadata ---
-    keywords: Optional[List[str]] = None
-    credits: Optional[List[MediaCast]] = None
-    recommendations: Optional[List[MediaRecommendation]] = None
-
-    alternative_titles: Optional[List[str]] = Field(None, alias="alternativeTitles")
+    cast: Optional[List[MediaCastMember]] = None
 
 
-class TVDetailed(TMDBMediaBase):
-    # --- Dates ---
-    first_air_date: Optional[str] = Field(None, alias="firstAirDate")
-    last_air_date: Optional[str] = Field(None, alias="lastAirDate")
+class MovieData(MovieTVMediaBase):
+    media_type: Literal[MediaType.MOVIE] = MediaType.MOVIE
 
-    # --- Content Structure ---
-    number_of_episodes: Optional[int] = Field(None, alias="numberOfEpisodes")
-    number_of_seasons: Optional[int] = Field(None, alias="numberOfSeasons")
-
-    # --- Airing Info ---
-    next_airing_episode: Optional[MediaNextAiringEpisode] = Field(
-        None, alias="nextAiringEpisode"
-    )
-    last_episode_to_air: Optional[TMDBMediaLastEpisodeToAir] = Field(
-        None, alias="lastEpisodeToAir"
-    )
-
-    # --- Production ---
-    created_by: Optional[List[str]] = Field(None, alias="createdBy")
-    networks: Optional[List[str]] = None
-    production_countries: Optional[List[str]] = Field(None, alias="productionCountries")
-    languages: Optional[List[str]] = None
-    in_production: Optional[bool] = Field(None, alias="inProduction")
-
-    # --- Structure ---
-    seasons: Optional[List[MediaSeason]] = None
-    type: Optional[str] = None  # Scripted, Documentary, etc.
-
-
-class MovieDetailed(TMDBMediaBase):
     # --- Dates ---
     release_date: Optional[str] = Field(None, alias="releaseDate")
 
@@ -317,5 +213,89 @@ class MovieDetailed(TMDBMediaBase):
     )
 
 
-class MovieDetailedWithCollection(MovieDetailed):
+class TVData(MovieTVMediaBase):
+    media_type: Literal[MediaType.TV] = MediaType.TV
+
+    # --- Dates ---
+    first_air_date: Optional[str] = None
+    last_air_date: Optional[str] = None
+    # --- Content Structure ---
+    number_of_episodes: Optional[int] = None
+    number_of_seasons: Optional[int] = None
+
+    # --- Airing Info ---
+    next_airing_episode: Optional[UpcomingEpisode] = None
+    last_episode_to_air: Optional[LastEpisodeToAir] = None
+    # --- Production ---
+    created_by: Optional[List[str]] = None
+    networks: Optional[List[str]] = None
+    production_countries: Optional[List[str]] = None
+    languages: Optional[List[str]] = None
+    in_production: Optional[bool] = None
+
+    # --- Structure ---
+    seasons: Optional[List[TVSeason]] = None
+    type: Optional[str] = None  # Scripted, Documentary, etc.
+
+
+class AnimeDetail(AnimeData):
+    id: str
+
+
+class MangaDetail(MangaData):
+    id: str
+
+
+class MovieDetail(MovieData):
+    id: str
     collection: Optional[MovieCollection] = None
+
+
+class TVDetail(TVData):
+    id: str
+
+
+NormalizedMedia = Annotated[
+    AnimeData | MangaData | MovieData | TVData, Field(discriminator="media_type")
+]
+
+MediaDetail = Annotated[
+    AnimeDetail | MangaDetail | MovieDetail | TVDetail,
+    Field(discriminator="media_type"),
+]
+
+
+class MediaMinimal(CamelModel):
+    external_id: int
+    external_source: MediaExternalSource
+    media_type: MediaType
+
+    # shared
+    title: Optional[str] = Field(description="Flattned title for display purposes")
+    format: Optional[str] = None
+    genres: Optional[List[str]] = None
+    status: Optional[str] = None
+    cover_image: Optional[str] = None
+    average_score: Optional[float] = None
+    banner_image: Optional[str] = None
+
+    # anime
+    episodes: Optional[int] = None
+    main_studio: Optional[str] = None
+
+    # manga
+    chapters: Optional[int] = None
+
+    # movie
+    release_date: Optional[str] = None
+
+    # tv
+    first_air_date: Optional[str] = None
+
+
+class MediaPagination(CamelModel):
+    results: List[MediaMinimal]
+    current_page: int
+    per_page: Optional[int] = None
+    has_next_page: bool
+    total: Optional[int] = None
