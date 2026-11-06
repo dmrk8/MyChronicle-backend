@@ -78,7 +78,7 @@ class AnilistApi:
                   }
                   season
                   seasonYear
-                  averageScore
+                  weightedScore
                 }
               }
             }
@@ -200,7 +200,7 @@ class AnilistApi:
                   }
                   season
                   seasonYear
-                  averageScore
+                  weightedScore
                   chapters
                   startDate {
                     year
@@ -254,7 +254,7 @@ class AnilistApi:
               Media(id: $mediaId) {
                 id
                 idMal
-                averageScore
+                weightedScore
                 bannerImage
                 chapters
                 countryOfOrigin

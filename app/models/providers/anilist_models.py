@@ -157,7 +157,7 @@ class AnilistMediaMinimal(AniListBaseModel):
     chapters: Optional[int] = None
 
     # --- Scores ---
-    average_score: Optional[int] = None
+    weighted_score: Optional[int] = None
 
     # --- Media Assets ---
     cover_image: Optional[CoverImage] = None
@@ -203,7 +203,7 @@ class AnilistMediaDetail(AniListBaseModel):
     volumes: Optional[int] = None
 
     # --- Scores & Popularity ---
-    average_score: Optional[int] = None
+    weighted_score: Optional[int] = None
     popularity: Optional[int] = None
 
     # --- Media Assets ---
