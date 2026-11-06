@@ -72,7 +72,7 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.ROTTEN_TOMATOES,
-                            voteCount=None
+                            vote_count=None
                         ) 
                     )
 
@@ -81,7 +81,7 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.METACRITIC,
-                            voteCount=None
+                            vote_count=None
                         )
                     )
                 else:
