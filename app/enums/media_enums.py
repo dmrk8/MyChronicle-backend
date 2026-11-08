@@ -2,20 +2,32 @@ from enum import Enum
 
 
 class MediaType(str, Enum):
-    ANIME = "ANIME"
-    MANGA = "MANGA"
-    MOVIE = "MOVIE"
-    TV = "TV"
+    ANIME = "anime"
+    MANGA = "manga"
+    MOVIE = "movie"
+    TV = "tv"
 
 
 class MediaExternalSource(str, Enum):
-    ANILIST = "ANILIST"
-    TMDB = "TMDB"
-    OMDB = "OMDB"
-    MAL = "MAL"
+    ANILIST = "anilist"
+    TMDB = "tmdb"
+    OMDB = "omdb"
+    MAL = "mal"
 
+class MediaStatus(str, Enum):
+    UPCOMING = "upcoming"
+    RELEASING = "releasing"
+    FINISHED = "finished"
+    HIATUS = "hiatus"
+    CANCELLED = "cancelled"
+    UNKNOWN = "unknown"
 
+    
 class StoredDataType(str, Enum):
-    MEDIA_DETAILS = "MEDIA_DETAILS"
-    OMDB_DATA = "OMDB_DATA"
-    MAL_DATA = "MAL_DATA"
+    ANILIST_MEDIA_DETAIL = "anilist_media_detail"
+    TMDB_MOVIE_DETAIL = "tmdb_movie_detail"
+    TMDB_TV_DETAIL = "tmdb_tv_detail"
+    TMDB_COLLECTION = "tmdb_collection"
+    OMDB_DATA = "omdb_data"
+    MAL_MANGA_DATA = "mal_manga_data"
+    MAL_ANIME_DATA = "mal_anime_data"
