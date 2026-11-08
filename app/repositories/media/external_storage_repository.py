@@ -42,8 +42,8 @@ class ExternalStorageRepository(UpsertRepository[ExternalDataDB]):
 
     async def get(
         self,
-        external_id: str,
         payload_type: StoredDataType,
+        external_id: str,
         
     ) -> Optional[ExternalDataDB]:
         return await self._find_one(
@@ -57,8 +57,8 @@ class ExternalStorageRepository(UpsertRepository[ExternalDataDB]):
 
     async def delete(
         self,
-        external_id: str,
         payload_type: StoredDataType,
+        external_id: str,
     ) -> bool:
         return await self._delete_one(
             {

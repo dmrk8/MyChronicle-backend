@@ -93,6 +93,15 @@ class BaseRepository(Generic[DBModel]):
         )
 
     async def _delete_one(self, query: dict, context: DBOpContext) -> bool:
+        """ Deletes a single document matching the query.
+
+        Args:
+            query (dict): The query to match the document to delete.
+            context (DBOpContext): The context for the database operation.
+
+        Returns:
+            bool: True if a document was deleted, False otherwise.
+        """
         success_event, error_event = self._event("delete_one")
 
         async def _op() -> DeleteResult:
