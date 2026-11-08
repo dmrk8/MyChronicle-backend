@@ -12,12 +12,4 @@ class CamelModel(BaseModel):
         serialize_by_alias=True,
     )
 
-class AniListBaseModel(BaseModel):
-    """Accept AniList's camelCase API responses."""
 
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        validate_by_name=True,
-        validate_by_alias=True,
-    )
-    

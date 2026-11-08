@@ -1,34 +1,34 @@
 from pydantic import Field
 from typing import List, Optional
 
-from app.models.shared.base import AniListBaseModel
+from app.models.shared.base import CamelModel
 
 
-class Title(AniListBaseModel):
+class Title(CamelModel):
     english: Optional[str] = None
     romaji: Optional[str] = None
     native: Optional[str] = None
 
 
-class NextAiringEpisode(AniListBaseModel):
+class NextAiringEpisode(CamelModel):
     episode: Optional[int] = None
     airing_at: Optional[int] = None
     time_until_airing: Optional[int] = None
 
 
-class MediaDate(AniListBaseModel):
+class MediaDate(CamelModel):
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None
 
 
-class CoverImage(AniListBaseModel):
+class CoverImage(CamelModel):
     medium: Optional[str] = None
     large: Optional[str] = None
     extra_large: Optional[str] = None
 
 
-class Tag(AniListBaseModel):
+class Tag(CamelModel):
     name: str
     is_media_spoiler: bool 
     is_general_spoiler: bool
@@ -37,7 +37,7 @@ class Tag(AniListBaseModel):
     category: str
 
 
-class RelationNode(AniListBaseModel):
+class RelationNode(CamelModel):
     id: int
     title: Title
     format: Optional[str] = None
@@ -46,66 +46,66 @@ class RelationNode(AniListBaseModel):
     type: str
 
 
-class RelationEdge(AniListBaseModel):
+class RelationEdge(CamelModel):
     relation_type: str 
     node: RelationNode
 
 
-class Relations(AniListBaseModel):
+class Relations(CamelModel):
     edges: List[RelationEdge]
 
 
-class StudioNode(AniListBaseModel):
+class StudioNode(CamelModel):
     id: int
     name: str
 
 
-class StudioEdge(AniListBaseModel):
+class StudioEdge(CamelModel):
     is_main: bool = Field(...)
     node: StudioNode
 
 
-class Studios(AniListBaseModel):
+class Studios(CamelModel):
     edges: List[StudioEdge]
 
 
-class CharacterImage(AniListBaseModel):
+class CharacterImage(CamelModel):
     large: Optional[str] = None
 
 
-class CharacterName(AniListBaseModel):
+class CharacterName(CamelModel):
     full: str
 
 
-class VoiceActorName(AniListBaseModel):
+class VoiceActorName(CamelModel):
     full: str
 
 
-class VoiceActorImage(AniListBaseModel):
+class VoiceActorImage(CamelModel):
     large: Optional[str] = None
 
 
-class VoiceActor(AniListBaseModel):
+class VoiceActor(CamelModel):
     name: VoiceActorName
     image: VoiceActorImage
 
 
-class CharacterNode(AniListBaseModel):
+class CharacterNode(CamelModel):
     image: CharacterImage
     name: CharacterName
 
 
-class CharacterEdge(AniListBaseModel):
+class CharacterEdge(CamelModel):
     node: CharacterNode
     role: str
     voice_actors: Optional[List[VoiceActor]] = None
 
 
-class Characters(AniListBaseModel):
+class Characters(CamelModel):
     edges: List[CharacterEdge]
 
 
-class RecommendationMedia(AniListBaseModel):
+class RecommendationMedia(CamelModel):
     id: int
     title: Title
     cover_image: Optional[CoverImage] = None
@@ -114,25 +114,26 @@ class RecommendationMedia(AniListBaseModel):
     type: str
 
 
-class RecommendationNode(AniListBaseModel):
+class RecommendationNode(CamelModel):
     media_recommendation: Optional[RecommendationMedia] = None
 
 
-class RecommendationEdge(AniListBaseModel):
+class RecommendationEdge(CamelModel):
     node: RecommendationNode
 
 
-class Recommendations(AniListBaseModel):
+class Recommendations(CamelModel):
     edges: List[RecommendationEdge]
 
 
-class AnilistTrailer(AniListBaseModel):
+class AnilistTrailer(CamelModel):
     id: Optional[str] = None  
     site: Optional[str] = None
     thumbnail: Optional[str] = None
 
 
-class AnilistMediaMinimal(AniListBaseModel):
+
+class AnilistMediaMinimal(CamelModel):
     # --- Identifiers ---
     id: int 
     type: str
@@ -170,7 +171,7 @@ class AnilistMediaMinimal(AniListBaseModel):
     studios: Optional[Studios] = None
 
 
-class AnilistMediaDetail(AniListBaseModel):
+class AnilistMediaDetail(CamelModel):
     # --- Identifiers ---
     id: int
     id_mal: Optional[int] = None
@@ -221,14 +222,14 @@ class AnilistMediaDetail(AniListBaseModel):
     recommendations: Optional[Recommendations] = None
 
 
-class AnilistPageInfo(AniListBaseModel):
+class AnilistPageInfo(CamelModel):
     current_page: int
     has_next_page: bool
     per_page: int
     total: int
 
 
-class AnilistPagination(AniListBaseModel):
+class AnilistPagination(CamelModel):
     results: List[AnilistMediaMinimal]
     current_page: int
     per_page: int
