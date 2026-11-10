@@ -24,12 +24,18 @@ async def run_db_op(
         result = await op()
         elapsed_ms = int((time.perf_counter() - start) * 1000)
 
-        logger.info(
-            success_event,
-            **context.model_dump(exclude_unset=True),
-            elapsed_ms=elapsed_ms,
-            slow=elapsed_ms > SLOW_DB_THRESHOLD_MS,
-        )
+        if elapsed_ms > SLOW_DB_THRESHOLD_MS:
+            logger.warning(
+                "slow_db_operation",
+                **context.model_dump(exclude_unset=True),
+                elapsed_ms=elapsed_ms,
+            )
+        else:
+            logger.debug(
+                success_event,
+                **context.model_dump(exclude_unset=True),
+                elapsed_ms=elapsed_ms,
+            )     
 
         return result
 
