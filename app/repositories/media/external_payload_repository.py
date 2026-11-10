@@ -9,7 +9,7 @@ from app.repositories._base_repository import UpsertRepository
 from app.utils.time_helpers import utc_now
 
 
-class ExternalStorageRepository(UpsertRepository[ExternalDataDB]):
+class ExternalPayloadRepository(UpsertRepository[ExternalDataDB]):
     db_model = ExternalDataDB
 
     def _key(self, payload_type: StoredDataType, external_id: str) -> str:

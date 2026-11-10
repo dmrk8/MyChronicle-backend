@@ -12,7 +12,7 @@ from app.models.db.external_storage_models import (
     ExternalDataDB,
     ExternalDataUpsert,
 )
-from app.repositories.media.external_storage_repository import ExternalStorageRepository
+from app.repositories.media.external_payload_repository import ExternalPayloadRepository
 from app.utils.time_helpers import utc_now
 
 T = TypeVar("T", bound=BaseModel)
@@ -20,10 +20,10 @@ T = TypeVar("T", bound=BaseModel)
 logger = structlog.get_logger()
 
 
-class ExternalStorageService:
+class ExternalPayloadService:
     def __init__(
         self,
-        repository: ExternalStorageRepository,
+        repository: ExternalPayloadRepository,
     ):
         self.repository = repository
         self.logger = logger.bind(service="ExternalStorageService")
