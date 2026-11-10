@@ -10,8 +10,8 @@ from app.models.shared.media import MediaTag, MediaTitle, MediaScore
 class Trailer(CamelModel):
     url: Optional[str] = None
     thumbnail: Optional[str] = None
-    
-    
+
+
 class MediaStudio(CamelModel):
     is_main: bool
     name: str
@@ -101,38 +101,38 @@ class MovieCollection(CamelModel):
     overview: Optional[str] = None
     poster_image: Optional[str] = None
     banner_image: Optional[str] = None
-    parts: Optional[List[MovieCollectionPart]] = None
+    parts: List[MovieCollectionPart] = Field(default_factory=list)
 
 
 ############### Media Response Models ###############
 class MediaBase(CamelModel):
     title: MediaTitle
     description: Optional[str] = None
-    synonyms: Optional[List[str]] = None
+    synonyms: List[str] = Field(default_factory=list)
 
     format: Optional[str] = Field(
         None, description="Media format, e.g. TV, OVA, Movie, Manga, Scripted etc."
     )
-    status: Optional[MediaStatus] = None
+    status: Optional[str] = None
     is_adult: Optional[bool] = None
     content_rating: Optional[str] = Field(
         None, description="Content rating, e.g. PG-13, R, etc."
     )
 
-    genres: Optional[List[str]] = None
-    tags: Optional[List[MediaTag]] = None
+    genres: List[str] = Field(default_factory=list)
+    tags: List[MediaTag] = Field(default_factory=list)
 
     country_of_origin: Optional[str] = None
 
     # --- Media Assets ---
     cover_image: Optional[str] = None
     banner_image: Optional[str] = None
-    trailer: Optional[List[Trailer]] = None
+    trailer: List[Trailer] = Field(default_factory=list)
 
     # --- Scores ---
-    scores: Optional[List[MediaScore]] = None
+    scores: List[MediaScore] = Field(default_factory=list)
 
-    recommendations: Optional[List[MediaRecommendation]] = None
+    recommendations: List[MediaRecommendation] = Field(default_factory=list)
 
 
 class AniMediaData(MediaBase):
@@ -146,8 +146,8 @@ class AniMediaData(MediaBase):
     source: Optional[str] = None
 
     # --- Metadata & Relations ---
-    relations: Optional[List[MediaRelation]] = None
-    characters: Optional[List[MediaCharacter]] = None
+    relations: List[MediaRelation] = Field(default_factory=list)
+    characters: List[MediaCharacter] = Field(default_factory=list)
 
     background: Optional[str] = Field(
         None,
@@ -180,13 +180,13 @@ class MangaData(AniMediaData):
     chapters: Optional[int] = None
     volumes: Optional[int] = None
 
-    authors: Optional[List[str]] = None
+    authors: List[str] = Field(default_factory=list)
 
 
 class MovieTVMediaBase(MediaBase):
     original_language: Optional[str] = None
 
-    cast: Optional[List[MediaCastMember]] = None
+    cast: List[MediaCastMember] = Field(default_factory=list)
 
 
 class MovieData(MovieTVMediaBase):
@@ -227,14 +227,14 @@ class TVData(MovieTVMediaBase):
     next_airing_episode: Optional[UpcomingEpisode] = None
     last_episode_to_air: Optional[LastEpisodeToAir] = None
     # --- Production ---
-    created_by: Optional[List[str]] = None
-    networks: Optional[List[str]] = None
-    production_countries: Optional[List[str]] = None
-    languages: Optional[List[str]] = None
+    created_by: List[str] = Field(default_factory=list)
+    networks: List[str] = Field(default_factory=list)
+    production_countries: List[str] = Field(default_factory=list)
+    languages: List[str] = Field(default_factory=list)
     in_production: Optional[bool] = None
 
     # --- Structure ---
-    seasons: Optional[List[TVSeason]] = None
+    seasons: List[TVSeason] = Field(default_factory=list)
     type: Optional[str] = None  # Scripted, Documentary, etc.
 
 
@@ -273,7 +273,7 @@ class MediaMinimal(CamelModel):
     # shared
     title: Optional[str] = Field(description="Flattned title for display purposes")
     format: Optional[str] = None
-    genres: Optional[List[str]] = None
+    genres: List[str] = Field(default_factory=list)
     status: Optional[str] = None
     cover_image: Optional[str] = None
     average_score: Optional[float] = None

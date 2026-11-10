@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import calendar
 
-from app.enums.media_enums import MediaExternalSource, MediaType
+from app.enums.media_enums import MediaExternalSource, MediaType, MediaStatus
 from app.models.providers.anilist_models import (
     AnilistMediaDetail,
     AnilistMediaMinimal,
@@ -17,17 +17,17 @@ from app.models.providers.anilist_models import (
 )
 from app.models.shared.media import MediaTitle
 from app.models.api.media_response_models import (
-    AniMediaBase,
-    AnimeDetailed,
-    MangaDetailed,
+    AniMediaData,
+    AnimeData,
+    MangaData,
     MediaCharacter,
     MediaMinimal,
-    MediaNextAiringEpisode,
     MediaRecommendation,
     MediaRelation,
     MediaStudio,
     MediaVoiceActor,
     Trailer,
+    UpcomingEpisode,
 )
 from app.models.shared.media import MediaTag
 from app.utils.normalizers.text_utils import normalize_title_text, strip_html
@@ -41,22 +41,22 @@ class AnilistNormalizer:
         media_list = []
         for media in results:
             mm = MediaMinimal(
-                id=media.id,
-                mediaType=media.type,
-                externalSource=MediaExternalSource.ANILIST,
+                external_id=media.id,
+                media_type=MediaType(media.type.lower()),
+                external_source=MediaExternalSource.ANILIST,
                 title=AnilistNormalizer._get_title(media.title),
                 format=media.format,
-                genres=media.genres,
+                genres=media.genres or [],
                 status=AnilistNormalizer._convert_enum_field(media.status),
-                coverImage=(
+                cover_image=(
                     media.cover_image.extra_large if media.cover_image else None
                 ),
-                bannerImage=media.banner_image,
-                averageScore=(
-                    round(media.average_score / 10, 1) if media.average_score else None
+                banner_image=media.banner_image,
+                average_score=(
+                    round(media.weighted_score / 10, 1) if media.weighted_score else None
                 ),
                 episodes=media.episodes,
-                mainStudio=AnilistNormalizer._get_main_studio(media.studios),
+                main_studio=AnilistNormalizer._get_main_studio(media.studios),
                 chapters=media.chapters,
             )  # type: ignore
             media_list.append(mm)
@@ -64,7 +64,7 @@ class AnilistNormalizer:
         return media_list
 
     @staticmethod
-    def _normalize_anilist_shared(media: AnilistMediaDetail) -> AniMediaBase:
+    def _normalize_anilist_shared(media: AnilistMediaDetail) -> AniMediaData:
         """Normalize shared fields between minimal and detailed"""
 
         relations = AnilistNormalizer._normalize_relations(media.relations)
@@ -76,61 +76,63 @@ class AnilistNormalizer:
         start_date = AnilistNormalizer._convert_date(media.start_date)
         end_date = AnilistNormalizer._convert_date(media.end_date)
 
-        return AniMediaBase(
-            idMal=media.id_mal,
-            mediaType=MediaType.ANIME,
+        return AniMediaData(
+            id_mal=media.id_mal,
             title=AnilistNormalizer._build_title(media.title),
             format=AnilistNormalizer._convert_enum_field(media.format),
-            genres=media.genres,
-            status=AnilistNormalizer._convert_enum_field(media.status),
-            coverImage=media.cover_image.extra_large if media.cover_image else None,
+            genres=media.genres or [],
+            status=MediaStatus(
+                AnilistNormalizer._convert_enum_field(media.status)
+                or MediaStatus.UNKNOWN.value
+            ),
+            cover_image=media.cover_image.extra_large if media.cover_image else None,
             description=strip_html(media.description),
-            bannerImage=media.banner_image,
-            isAdult=media.is_adult,
-            synonyms=media.synonyms,
-            countryOfOrigin=media.country_of_origin,
+            banner_image=media.banner_image,
+            is_adult=media.is_adult,
+            synonyms=media.synonyms or [],
+            country_of_origin=media.country_of_origin,
             source=AnilistNormalizer._convert_enum_field(media.source),
-            startDate=start_date,
-            endDate=end_date,
+            start_date=start_date,
+            end_date=end_date,
             tags=(
                 [MediaTag.model_validate(tag.model_dump()) for tag in media.tags]
                 if media.tags
                 else []
             ),
-            relations=relations,
-            recommendations=recommendations,
-            characters=characters,
+            relations=relations or [],
+            recommendations=recommendations or [],
+            characters=characters or [],
             trailer=AnilistNormalizer._convert_trailer_url(media.trailer),
-            background=None,  
-            contentRating=None,  
+            content_rating=None,
+            background=None,
         )
 
     @staticmethod
-    def normalize_anime_detailed(media: AnilistMediaDetail) -> AnimeDetailed:
+    def normalize_anime_detail(media: AnilistMediaDetail) -> AnimeData:
         """Normalize AniList anime data to AnimeDetailed"""
         shared_data = AnilistNormalizer._normalize_anilist_shared(media)
 
         studios = AnilistNormalizer._normalize_studios(media.studios)
 
-        return AnimeDetailed(
+        return AnimeData(
             **shared_data.model_dump(),
             season=AnilistNormalizer._convert_enum_field(media.season),
-            seasonYear=media.season_year,
+            season_year=media.season_year,
             episodes=media.episodes,
             duration=media.duration,
             studios=studios,
-            nextAiringEpisode=AnilistNormalizer._build_next_airing_episode(
+            next_airing_episode=AnilistNormalizer._build_next_airing_episode(
                 media.next_airing_episode
             ),
         )
 
     @staticmethod
-    def normalize_manga_detailed(media: AnilistMediaDetail) -> MangaDetailed:
+    def normalize_manga_detail(media: AnilistMediaDetail) -> MangaData:
         """Normalize AniList manga data to MangaDetailed"""
 
         shared_data = AnilistNormalizer._normalize_anilist_shared(media)
 
-        return MangaDetailed(
+        return MangaData(
             **shared_data.model_dump(),
             chapters=media.chapters,
             volumes=media.volumes,
@@ -153,13 +155,13 @@ class AnilistNormalizer:
             media_type = MediaType(edge.node.type)
 
             relation = MediaRelation(
-                relationType=AnilistNormalizer._convert_enum_field(edge.relation_type),
+                relation_type=AnilistNormalizer._convert_enum_field(edge.relation_type),
                 id=edge.node.id,
                 title=AnilistNormalizer._get_title(edge.node.title),
                 format=AnilistNormalizer._convert_enum_field(edge.node.format),
                 status=AnilistNormalizer._convert_enum_field(edge.node.status),
-                coverImage=cover_image,
-                mediaType=media_type,
+                cover_image=cover_image,
+                media_type=media_type,
             )
             result.append(relation)
 
@@ -187,8 +189,8 @@ class AnilistNormalizer:
             recommendation = MediaRecommendation(
                 id=media_rec.id,
                 title=title,
-                coverImage=cover_image,
-                mediaType=MediaType(media_rec.type),
+                cover_image=cover_image,
+                media_type=MediaType(media_rec.type),
             )
             result.append(recommendation)
 
@@ -221,7 +223,7 @@ class AnilistNormalizer:
                 role=AnilistNormalizer._convert_enum_field(edge.role),  # type: ignore
                 image=image,
                 name=name,
-                voiceActor=voice_actor,
+                voice_actor=voice_actor,
             )
             result.append(character)
 
@@ -234,7 +236,7 @@ class AnilistNormalizer:
             return None
 
         return [
-            MediaStudio(isMain=studio.is_main, name=studio.node.name)
+            MediaStudio(is_main=studio.is_main, name=studio.node.name)
             for studio in studios.edges
         ]
 
@@ -285,15 +287,17 @@ class AnilistNormalizer:
     @staticmethod
     def _convert_trailer_url(
         trailer: Optional[AnilistTrailer],
-    ) -> Optional[List[Trailer]]:
+    ) -> List[Trailer]:
         """Convert trailer URL to embeddable format if it's a YouTube link"""
         if not trailer:
-            return None
+            return []
 
         if trailer.site == "youtube" and trailer.id:
             url = f"https://www.youtube.com/watch?v={trailer.id}"
             thumbnail = trailer.thumbnail
             return [Trailer(url=url, thumbnail=thumbnail)]
+        
+        return []
 
     @staticmethod
     def _get_title(title: Optional[Title]) -> Optional[str]:
@@ -305,7 +309,7 @@ class AnilistNormalizer:
     @staticmethod
     def _build_next_airing_episode(
         airing: Optional[NextAiringEpisode],
-    ) -> Optional[MediaNextAiringEpisode]:
+    ) -> Optional[UpcomingEpisode]:
         """Convert AniList's next airing episode to our common format"""
         if not airing or airing.airing_at is None:
             return None
@@ -313,8 +317,8 @@ class AnilistNormalizer:
         airing_datetime = datetime.fromtimestamp(
             airing.airing_at, tz=timezone.utc
         ).isoformat()
-        return MediaNextAiringEpisode(
-            episodeNumber=airing.episode,
-            airingAt=airing_datetime,
-            seasonNumber=None,
+        return UpcomingEpisode(
+            episode_number=airing.episode,
+            airing_at=airing_datetime,
+            season_number=None,
         )
