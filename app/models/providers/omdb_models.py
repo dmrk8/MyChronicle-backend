@@ -1,5 +1,7 @@
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from app.models.shared.base import CamelModel
 
 
 class Rating(BaseModel):
@@ -7,7 +9,7 @@ class Rating(BaseModel):
     Value: str
 
 
-class OMDbData(BaseModel):
+class OMDbData(CamelModel):
     Title: str
     Year: str
     Rated: Optional[str]
@@ -24,15 +26,13 @@ class OMDbData(BaseModel):
     Poster: Optional[str]
     Ratings: Optional[List[Rating]]
     Metascore: Optional[str]
-    imdb_rating: Optional[str] = Field(None, alias="imdbRating")
-    imdb_votes: Optional[str] = Field(None, alias="imdbVotes")
+    imdb_rating: Optional[str]  
+    imdb_votes: Optional[str] 
     imdbID: str
     Type: str
     DVD: Optional[str] = None
     BoxOffice: Optional[str] = None
     Production: Optional[str] = None
     Website: Optional[str] = None
-    total_seasons: Optional[str] = Field(None, alias="totalSeasons")
+    total_seasons: Optional[str] 
     Response: str
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
