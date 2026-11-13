@@ -1,6 +1,4 @@
 
-import uuid
-
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import structlog
@@ -10,9 +8,9 @@ from redis.asyncio import Redis
 from httpx import AsyncClient
 
 from app.core.logging import setup_logging
-from app.core.repositories import init_repositories
-from app.auth.password_handler import PasswordHandler
-from app.auth.jwt_handler import JWTHandler
+from app.repositories.registry import init_repositories
+from app.core.state import AppState
+
 
 logger = structlog.get_logger()
 
@@ -52,19 +50,20 @@ def create_app(settings) -> FastAPI:
         app.state.omdb_client = AsyncClient(timeout=10.0)
         app.state.jikan_client = AsyncClient(timeout=10.0)
 
-        # Core services
-        app.state.password_handler = PasswordHandler()
-        app.state.jwt_handler = JWTHandler(
-            secret=settings.jwt_secret_key,
-            algorithm=settings.jwt_algorithm,
-            issuer=settings.jwt_issuer,
-            audience=settings.jwt_audience,
-            expire_days=settings.jwt_access_token_expire_days,
-        )
-
         # Repositories
         db = app.state.mongo_client[settings.database_name]
         app.state.repositories = await init_repositories(db, settings)
+        
+        app.state.app_state = AppState(
+            settings=settings,
+            mongo_client=app.state.mongo_client,
+            redis_client=app.state.redis_client,
+            anilist_client=app.state.anilist_client,
+            tmdb_client=app.state.tmdb_client,
+            omdb_client=app.state.omdb_client,
+            jikan_client=app.state.jikan_client,
+            repositories=app.state.repositories,
+        )
         
 
         yield
@@ -120,16 +119,10 @@ def create_app(settings) -> FastAPI:
             "environment": settings.env,
         }
 
-    from app.routes.auth_router import auth_router
-    from app.routes.user_router import user_router
     from app.routes.media_router import media_router
-    from app.routes.user_media_entry_router import user_media_entry_router
     from app.routes.media_core_router import media_core_router
     
-    app.include_router(auth_router)
-    app.include_router(user_router)
     app.include_router(media_router)
-    app.include_router(user_media_entry_router)
     app.include_router(media_core_router)
     
     return app

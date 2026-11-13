@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     user_media_entry_collection: str = Field(
         description="Name of the MongoDB collection for storing user media entries"
     )
-    external_storage_collection: str = Field(
+    external_payload_collection: str = Field(
         description="Name of the MongoDB collection for storing external media data"
     )
     media_core_collection: str = Field(
