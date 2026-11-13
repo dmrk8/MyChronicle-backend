@@ -11,6 +11,7 @@ class DBOpContext(BaseModel):
     media_type: Optional[str] = None
     username: Optional[str] = None
     payload_type: Optional[str] = None
-    
+    id: Optional[str] = None
+        
     operation: str 
     collection: str
