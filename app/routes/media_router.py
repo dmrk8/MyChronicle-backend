@@ -1,43 +1,53 @@
-from typing import List, Optional, Union
+from typing import List, Literal, Optional
 from fastapi import APIRouter, Path, Query, Depends
 
 from app.enums.tmdb_enums import TmdbMovieSortOptions, TmdbTvSortOptions
-from app.models.api.media_response_models import AnimeDetailed, MangaDetailed, MediaPagination
-from app.enums.anilist_enums import AnilistSortOption, AnilistMediaType
-from app.services.media_service import MediaService
+from app.models.api.media_response_models import (
+    AnimeDetail,
+    MangaDetail,
+    MediaPagination,
+    MovieDetail,
+    TVDetail,
+)
+from app.enums.anilist_enums import (
+    AnilistCountryOfOrigin,
+    AnilistFormat,
+    AnilistSeason,
+    AnilistSortOption,
+    AnilistMediaType,
+    AnilistStatus,
+)
+from app.services.media.media_service import MediaService
 from app.core.dependencies import get_media_service
 
 media_router = APIRouter(prefix="/media")
 
 
-@media_router.get("/ani/search/{media_type}", response_model=MediaPagination)
+@media_router.get("/search/{media_type}", response_model=MediaPagination)
 async def search_anime_manga(
-    media_type: str = Path(...),
+    media_type: Literal["anime", "manga"] = Path(...),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=50, alias="perPage"),
     search: Optional[str] = Query(None, min_length=1),
     sort: AnilistSortOption = Query(AnilistSortOption.POPULARITY_DESC),
-    season: Optional[str] = Query(None, pattern="^(SPRING|SUMMER|FALL|WINTER)$"),
+    season: Optional[AnilistSeason] = Query(None),
     season_year: Optional[int] = Query(None, alias="seasonYear"),
-    format: Optional[str] = Query(
-        None, pattern="^(TV|TV_SHORT|MOVIE|SPECIAL|OVA|ONA|MUSIC|MANGA|NOVEL|ONE_SHOT)$"
-    ),
-    status: Optional[str] = Query(None),
+    format: Optional[AnilistFormat] = Query(None),
+    status: Optional[AnilistStatus] = Query(None),
     genre_in: Optional[List[str]] = Query(None, alias="genreIn"),
     tag_in: Optional[List[str]] = Query(None, alias="tagIn"),
     is_adult: Optional[bool] = Query(False, alias="isAdult"),
-    country_of_origin: Optional[str] = Query(
-        None, pattern="^(JP|KR|CN)$", alias="countryOfOrigin"
+    country_of_origin: Optional[AnilistCountryOfOrigin] = Query(
+        None, alias="countryOfOrigin"
     ),
     genre_not_in: Optional[List[str]] = Query(None, alias="genreNotIn"),
     tag_not_in: Optional[List[str]] = Query(None, alias="tagNotIn"),
     service: MediaService = Depends(get_media_service),
 ):
-    media_type_enum = AnilistMediaType(media_type.upper())
     return await service.search_anime_manga(
         page,
         per_page,
-        media_type_enum,
+        AnilistMediaType(media_type.upper()),
         sort,
         search,
         season,
@@ -53,24 +63,23 @@ async def search_anime_manga(
     )
 
 
-@media_router.get(
-    "/anime/{media_id}",
-    response_model=Union[AnimeDetailed, MangaDetailed],
-)
+@media_router.get("/anime/{media_id}", response_model=AnimeDetail)
 async def get_anime_detail(
-    media_id: int = Path(..., ge=1, description="Media ID"),
+    media_id: int = Path(..., ge=1),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_anime_or_manga_media_detail(media_id, AnilistMediaType.ANIME)
+    return await service.get_anime_detail(media_id)
 
-@media_router.get("/manga/{media_id}")
+
+@media_router.get("/manga/{media_id}", response_model=MangaDetail)
 async def get_manga_detail(
-    media_id: int = Path(..., ge=1, description="Media ID"),
+    media_id: int = Path(..., ge=1),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_anime_or_manga_media_detail(media_id, AnilistMediaType.MANGA)
+    return await service.get_manga_detail(media_id)
 
-@media_router.get("/search/movie")
+
+@media_router.get("/search/movie", response_model=MediaPagination)
 async def search_movie(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -130,7 +139,7 @@ async def search_movie(
     )
 
 
-@media_router.get("/search/tv")
+@media_router.get("/search/tv", response_model=MediaPagination)
 async def search_tv(
     search: str = Query(None, min_length=1, description="search query"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -202,47 +211,24 @@ async def search_tv(
     )
 
 
-@media_router.get("/movie/{movie_id}")
+@media_router.get("/movie/{movie_id}", response_model=MovieDetail)
 async def get_movie_detail(
-    movie_id: int = Path(..., ge=1, description="Movie ID"),
-    language: str = Query("en-US", description="Language for results"),
+    movie_id: int = Path(..., ge=1),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_movie_detail(
-        movie_id=movie_id,
-        language=language,
-    )
+    return await service.get_movie_detail(movie_id)
 
 
-@media_router.get("/tv/{tv_id}")
+@media_router.get("/tv/{tv_id}", response_model=TVDetail)
 async def get_tv_detail(
-    tv_id: int = Path(..., ge=1, description="TV Show ID"),
-    language: str = Query("en-US", description="Language for results"),
+    tv_id: int = Path(..., ge=1),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_tv_detail(
-        tv_id=tv_id,
-        language=language,
-    )
+    return await service.get_tv_detail(tv_id)
 
 
-@media_router.get("/movie/collection/{collection_id}")
-async def get_movie_collection_detail(
-    collection_id: int = Path(..., ge=1, description="Collection ID"),
-    language: str = Query("en-US", description="Language for results"),
-    service: MediaService = Depends(get_media_service),
-):
-    return await service.get_movie_collection_detail(
-        collection_id=collection_id,
-        language=language,
-    )
-
-
-@media_router.get("/trending/{media_type}")
-async def get_trending_movie_or_tv(
-    media_type: str = Path(
-        ..., pattern="^(movie|tv)$", description="Media type: movie or tv"
-    ),
+@media_router.get("/trending/movie", response_model=MediaPagination)
+async def get_trending_movie(
     time_window: str = Query(
         "week", pattern="^(day|week)$", description="Time window: day or week"
     ),
@@ -250,9 +236,19 @@ async def get_trending_movie_or_tv(
     page: int = Query(1, ge=1, description="Page number"),
     service: MediaService = Depends(get_media_service),
 ):
-    return await service.get_trending_movie_or_tv(
-        media_type, time_window, language, page
-    )
+    return await service.get_trending_movie_or_tv("movie", time_window, language, page)
+
+
+@media_router.get("/trending/tv", response_model=MediaPagination)
+async def get_trending_tv(
+    time_window: str = Query(
+        "week", pattern="^(day|week)$", description="Time window: day or week"
+    ),
+    language: str = Query("en-US", description="Language for results"),
+    page: int = Query(1, ge=1, description="Page number"),
+    service: MediaService = Depends(get_media_service),
+):
+    return await service.get_trending_movie_or_tv("tv", time_window, language, page)
 
 
 @media_router.get("/keyword/search")
@@ -261,19 +257,3 @@ async def search_keyword(
     service: MediaService = Depends(get_media_service),
 ):
     return await service.search_keyword_for_movie_or_tv(query=query)
-
-
-@media_router.get("/detail/by-internal-id/{media_id}")
-async def get_media_detail_with_internal_id(
-    media_id: str = Path(..., description="Internal media ID"),
-    service: MediaService = Depends(get_media_service),
-):
-    return await service.get_media_detail_with_internal_id(media_id=media_id)
-
-
-@media_router.get("/minimal/by-internal-id/{media_id}")
-async def get_media_minimal_with_internal_id(
-    media_id: str = Path(..., description="Internal media ID"),
-    service: MediaService = Depends(get_media_service),
-):
-    return await service.get_media_minimal_with_internal_id(media_id=media_id)

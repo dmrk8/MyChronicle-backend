@@ -20,4 +20,28 @@ class AnilistStatus(str, Enum):
     CANCELLED = "CANCELLED"
     HIATUS = "HIATUS"
     
+class AnilistFormat(str, Enum):
+    TV = "TV"
+    TV_SHORT = "TV_SHORT"
+    MOVIE = "MOVIE"
+    SPECIAL = "SPECIAL"
+    OVA = "OVA"
+    ONA = "ONA"
+    MUSIC = "MUSIC"
+    MANGA = "MANGA"
+    NOVEL = "NOVEL"
+    ONE_SHOT = "ONE_SHOT"
+    
+class AnilistSeason(str, Enum):
+    WINTER = "WINTER"
+    SPRING = "SPRING"
+    SUMMER = "SUMMER"
+    FALL = "FALL"
+    
+    
+class AnilistCountryOfOrigin(str, Enum):
+    JAPAN = "JP"
+    KOREA = "KR"
+    CHINA = "CN"
+    
     
