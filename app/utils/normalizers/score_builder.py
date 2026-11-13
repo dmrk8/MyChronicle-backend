@@ -13,15 +13,15 @@ class ScoreBuilder:
     def build_anime_or_manga_score(
         media: AnilistMediaDetail,
         mal_data: Optional[MALAnimeResponse | MALMangaResponse],
-    ) -> Optional[List[MediaScore]]:
+    ) -> List[MediaScore]:
         scores = []
 
-        if media.average_score:
+        if media.weighted_score:
             scores.append(
                 MediaScore(
-                    value=float(media.average_score),
+                    value=float(media.weighted_score),
                     source=MediaScoreSource.ANILIST,
-                    vote_count=None
+                    vote_count=None,
                 )
             )
         if mal_data and mal_data.data.score:
@@ -37,7 +37,7 @@ class ScoreBuilder:
     @staticmethod
     def build_movie_or_tv_score(
         media: TMDBMovieDetail | TMDBTVDetail, omdb_data: Optional[OMDbData]
-    ) -> Optional[List[MediaScore]]:
+    ) -> List[MediaScore]:
         scores = OMDbNormalizer.normalize_omdb_rating(omdb_data) if omdb_data else []
 
         if media.vote_average:
@@ -48,6 +48,5 @@ class ScoreBuilder:
                     vote_count=media.vote_count,
                 )
             )
-        
 
-        return scores
+        return []

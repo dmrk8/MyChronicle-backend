@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -143,17 +142,17 @@ class TMDBNormalizer:
         )
         return MovieData(
             **shared_base.model_dump(),
-            releaseDate=media.release_date,
+            release_date=media.release_date,
             budget=media.budget,
             revenue=media.revenue,
             runtime=media.runtime,
-            belongsToCollection=belongs_to_collection,
-            productionCompanies=(
+            belongs_to_collection=belongs_to_collection,
+            production_companies=(
                 [company.name for company in media.production_companies]
                 if media.production_companies
                 else []
             ),
-            spokenLanguages=(
+            spoken_languages=(
                 [language.english_name for language in media.spoken_languages]
                 if media.spoken_languages
                 else []

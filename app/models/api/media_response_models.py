@@ -193,7 +193,7 @@ class MovieData(MovieTVMediaBase):
     media_type: Literal[MediaType.MOVIE] = MediaType.MOVIE
 
     # --- Dates ---
-    release_date: Optional[str] = Field(None, alias="releaseDate")
+    release_date: Optional[str] = None
 
     # --- Financials ---
     budget: Optional[int] = None
@@ -203,14 +203,12 @@ class MovieData(MovieTVMediaBase):
     runtime: Optional[int] = None
 
     # --- Production ---
-    origin_country: Optional[List[str]] = Field(None, alias="originCountry")
-    production_companies: Optional[List[str]] = Field(None, alias="productionCompanies")
-    spoken_languages: Optional[List[str]] = Field(None, alias="spokenLanguages")
+    origin_country: List[str] = Field(default_factory=list) 
+    production_companies: List[str] = Field(default_factory=list)
+    spoken_languages: List[str] = Field(default_factory=list)
 
     # --- Collections ---
-    belongs_to_collection: Optional[MediaBelongsToCollection] = Field(
-        None, alias="belongsToCollection"
-    )
+    belongs_to_collection: Optional[MediaBelongsToCollection] = None
 
 
 class TVData(MovieTVMediaBase):

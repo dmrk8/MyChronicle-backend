@@ -62,7 +62,7 @@ class OMDbNormalizer:
                         MediaScore(
                             value=OMDbNormalizer.normalize_score_value(rating.Value),
                             source=MediaScoreSource.IMDB,
-                            vote_count=OMDbNormalizer.parse_vote_count( # type: ignore
+                            vote_count=OMDbNormalizer.parse_vote_count( 
                                 omdb_data.imdb_votes
                             ),
                         )
