@@ -18,7 +18,7 @@ from app.enums.anilist_enums import (
     AnilistStatus,
 )
 from app.services.media.media_service import MediaService
-from app.core.dependencies import get_media_service
+from app.core.dependencies.media import get_media_service 
 
 media_router = APIRouter(prefix="/media")
 
