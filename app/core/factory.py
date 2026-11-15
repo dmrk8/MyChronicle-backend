@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import structlog
@@ -10,7 +9,6 @@ from httpx import AsyncClient
 from app.core.logging import setup_logging
 from app.repositories.registry import init_repositories
 from app.core.state import AppState
-
 
 logger = structlog.get_logger()
 
@@ -53,7 +51,7 @@ def create_app(settings) -> FastAPI:
         # Repositories
         db = app.state.mongo_client[settings.database_name]
         app.state.repositories = await init_repositories(db, settings)
-        
+
         app.state.app_state = AppState(
             settings=settings,
             mongo_client=app.state.mongo_client,
@@ -64,7 +62,6 @@ def create_app(settings) -> FastAPI:
             jikan_client=app.state.jikan_client,
             repositories=app.state.repositories,
         )
-        
 
         yield
 
@@ -78,7 +75,6 @@ def create_app(settings) -> FastAPI:
         await app.state.jikan_client.aclose()
 
     app = FastAPI(title=settings.service_name, lifespan=lifespan)
-
 
     # ------------------------
     # Middleware
@@ -120,9 +116,7 @@ def create_app(settings) -> FastAPI:
         }
 
     from app.routes.media_router import media_router
-    from app.routes.media_core_router import media_core_router
-    
+
     app.include_router(media_router)
-    app.include_router(media_core_router)
-    
+
     return app
