@@ -12,9 +12,14 @@ from app.repositories.registry import Repositories
 from app.services.media.core.media_core_ensure_service import MediaCoreEnsureService
 from app.services.media.core.media_core_service import MediaCoreService
 from app.services.media.details.media_detail_service import MediaDetailService
-from app.services.media.details.providers.anilist_detail_service import AnilistDetailService
+from app.services.media.details.providers.anilist_detail_service import (
+    AnilistDetailService,
+)
 from app.services.media.details.providers.mal_detail_service import MALDetailService
 from app.services.media.details.providers.omdb_detail_service import OMDbDetailService
+from app.services.media.details.providers.tmdb_collection_service import (
+    TMDBCollectionService,
+)
 from app.services.media.details.providers.tmdb_detail_service import TMDBDetailService
 from app.services.media.media_service import MediaService
 from app.services.media.storage.external_payload_service import ExternalPayloadService
@@ -61,15 +66,21 @@ def get_sync_expiry_policy() -> SyncExpiryPolicy:
 
 def get_anilist_detail_service(
     anilist_service: AnilistService = Depends(get_anilist_service),
-    external_payload_service: ExternalPayloadService = Depends(get_external_payload_service),
+    external_payload_service: ExternalPayloadService = Depends(
+        get_external_payload_service
+    ),
     sync_expiry_policy: SyncExpiryPolicy = Depends(get_sync_expiry_policy),
 ) -> AnilistDetailService:
-    return AnilistDetailService(anilist_service, external_payload_service, sync_expiry_policy)
+    return AnilistDetailService(
+        anilist_service, external_payload_service, sync_expiry_policy
+    )
 
 
 def get_mal_detail_service(
     jikan_service: JikanService = Depends(get_jikan_service),
-    external_payload_service: ExternalPayloadService = Depends(get_external_payload_service),
+    external_payload_service: ExternalPayloadService = Depends(
+        get_external_payload_service
+    ),
     sync_expiry_policy: SyncExpiryPolicy = Depends(get_sync_expiry_policy),
 ) -> MALDetailService:
     return MALDetailService(jikan_service, external_payload_service, sync_expiry_policy)
@@ -77,7 +88,9 @@ def get_mal_detail_service(
 
 def get_omdb_detail_service(
     omdb_service: OMDbService = Depends(get_omdb_service),
-    external_payload_service: ExternalPayloadService = Depends(get_external_payload_service),
+    external_payload_service: ExternalPayloadService = Depends(
+        get_external_payload_service
+    ),
     sync_expiry_policy: SyncExpiryPolicy = Depends(get_sync_expiry_policy),
 ) -> OMDbDetailService:
     return OMDbDetailService(omdb_service, external_payload_service, sync_expiry_policy)
@@ -85,10 +98,24 @@ def get_omdb_detail_service(
 
 def get_tmdb_detail_service(
     tmdb_service: TMDBService = Depends(get_tmdb_service),
-    external_payload_service: ExternalPayloadService = Depends(get_external_payload_service),
+    external_payload_service: ExternalPayloadService = Depends(
+        get_external_payload_service
+    ),
     sync_expiry_policy: SyncExpiryPolicy = Depends(get_sync_expiry_policy),
 ) -> TMDBDetailService:
     return TMDBDetailService(tmdb_service, external_payload_service, sync_expiry_policy)
+
+
+def get_tmdb_collection_service(
+    tmdb_service: TMDBService = Depends(get_tmdb_service),
+    external_payload_service: ExternalPayloadService = Depends(
+        get_external_payload_service
+    ),
+) -> TMDBCollectionService:
+    return TMDBCollectionService(
+        tmdb_service=tmdb_service,
+        external_payload_service=external_payload_service,
+    )
 
 
 def get_media_detail_service(
@@ -96,8 +123,13 @@ def get_media_detail_service(
     tmdb_detail_service: TMDBDetailService = Depends(get_tmdb_detail_service),
     mal_detail_service: MALDetailService = Depends(get_mal_detail_service),
     omdb_detail_service: OMDbDetailService = Depends(get_omdb_detail_service),
-    media_core_ensure_service: MediaCoreEnsureService = Depends(get_media_core_ensure_service),
+    media_core_ensure_service: MediaCoreEnsureService = Depends(
+        get_media_core_ensure_service
+    ),
     tmdb_service: TMDBService = Depends(get_tmdb_service),
+    get_tmdb_collection_service: TMDBCollectionService = Depends(
+        get_tmdb_collection_service
+    ),
 ) -> MediaDetailService:
     return MediaDetailService(
         anilist_detail_service=anilist_detail_service,
@@ -106,6 +138,7 @@ def get_media_detail_service(
         omdb_detail_service=omdb_detail_service,
         media_core_ensure_service=media_core_ensure_service,
         tmdb_service=tmdb_service,
+        tmdb_collection_service=get_tmdb_collection_service,
     )
 
 

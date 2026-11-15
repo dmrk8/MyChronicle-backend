@@ -5,11 +5,16 @@ from app.models.api.media_response_models import (
     MovieDetail,
     TVDetail,
 )
-from app.services.media.details.providers.anilist_detail_service import AnilistDetailService
+from app.services.media.details.providers.anilist_detail_service import (
+    AnilistDetailService,
+)
 from app.services.media.details.providers.mal_detail_service import MALDetailService
 from app.services.media.core.media_core_ensure_service import MediaCoreEnsureService
 from app.services.media.details.media_response_assembler import MediaResponseAssembler
 from app.services.media.details.providers.omdb_detail_service import OMDbDetailService
+from app.services.media.details.providers.tmdb_collection_service import (
+    TMDBCollectionService,
+)
 from app.services.media.details.providers.tmdb_detail_service import TMDBDetailService
 from app.services.metadata.tmdb_service import TMDBService
 from app.utils.normalizers.tmdb_normalizer import TMDBNormalizer
@@ -26,6 +31,7 @@ class MediaDetailService:
         omdb_detail_service: OMDbDetailService,
         media_core_ensure_service: MediaCoreEnsureService,
         tmdb_service: TMDBService,
+        tmdb_collection_service: TMDBCollectionService,
     ):
         self.anilist_detail_service = anilist_detail_service
         self.tmdb_detail_service = tmdb_detail_service
@@ -33,6 +39,7 @@ class MediaDetailService:
         self.omdb_detail_service = omdb_detail_service
         self.media_core_ensure_service = media_core_ensure_service
         self.tmdb_service = tmdb_service
+        self.tmdb_collection_service = tmdb_collection_service
 
     async def get_anime_detail(self, media_id: int) -> AnimeDetail:
         anilist = await self.anilist_detail_service.get_media_detail(media_id)
@@ -58,7 +65,7 @@ class MediaDetailService:
         core = await self.media_core_ensure_service.ensure_tmdb_movie(movie, omdb)
         collection = None
         if movie.belongs_to_collection:
-            raw_collection = await self.tmdb_service.get_collection_detail(
+            raw_collection = await self.tmdb_collection_service.get_collection_detail(
                 movie.belongs_to_collection.id
             )
             collection = TMDBNormalizer.get_movie_collection(raw_collection)
