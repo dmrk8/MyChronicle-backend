@@ -12,27 +12,27 @@ class Rating(BaseModel):
 class OMDbData(CamelModel):
     Title: str
     Year: str
-    Rated: Optional[str]
-    Released: Optional[str]
-    Runtime: Optional[str]
-    Genre: Optional[str]
-    Director: Optional[str]
-    Writer: Optional[str]
-    Actors: Optional[str]
-    Plot: Optional[str]
-    Language: Optional[str]
-    Country: Optional[str]
-    Awards: Optional[str]
-    Poster: Optional[str]
-    Ratings: Optional[List[Rating]]
-    Metascore: Optional[str]
-    imdb_rating: Optional[str]  
-    imdb_votes: Optional[str] 
+    Rated: Optional[str] = None
+    Released: Optional[str] = None
+    Runtime: Optional[str] = None
+    Genre: Optional[str] = None
+    Director: Optional[str] = None
+    Writer: Optional[str] = None
+    Actors: Optional[str] = None
+    Plot: Optional[str] = None
+    Language: Optional[str] = None
+    Country: Optional[str] = None
+    Awards: Optional[str] = None
+    Poster: Optional[str] = None
+    Ratings: Optional[List[Rating]] = None
+    Metascore: Optional[str] = None
+    imdb_rating: Optional[str] = None
+    imdb_votes: Optional[str] = None
     imdbID: str
     Type: str
     DVD: Optional[str] = None
     BoxOffice: Optional[str] = None
     Production: Optional[str] = None
     Website: Optional[str] = None
-    total_seasons: Optional[str] 
+    total_seasons: Optional[str] = None
     Response: str

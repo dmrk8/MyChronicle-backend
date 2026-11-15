@@ -3,7 +3,7 @@ from typing import Optional
 from app.integrations.http_helpers import perform_request
 from app.models.providers.omdb_models import OMDbData
 
-OMDB_API_URL = "http://www.omdbapi.com/"
+OMDB_API_URL = "https://www.omdbapi.com/"
 
 
 class OMDbApi:
