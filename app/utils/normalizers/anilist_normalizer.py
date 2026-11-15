@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import calendar
 
-from app.enums.media_enums import MediaExternalSource, MediaType, MediaStatus
+from app.enums.media_enums import MediaExternalSource, MediaType
 from app.models.providers.anilist_models import (
     AnilistMediaDetail,
     AnilistMediaMinimal,
@@ -58,7 +58,7 @@ class AnilistNormalizer:
                 episodes=media.episodes,
                 main_studio=AnilistNormalizer._get_main_studio(media.studios),
                 chapters=media.chapters,
-            )  # type: ignore
+            )  
             media_list.append(mm)
 
         return media_list
@@ -81,10 +81,7 @@ class AnilistNormalizer:
             title=AnilistNormalizer._build_title(media.title),
             format=AnilistNormalizer._convert_enum_field(media.format),
             genres=media.genres or [],
-            status=MediaStatus(
-                AnilistNormalizer._convert_enum_field(media.status)
-                or MediaStatus.UNKNOWN.value
-            ),
+            status=media.status.lower() if media.status else None,
             cover_image=media.cover_image.extra_large if media.cover_image else None,
             description=strip_html(media.description),
             banner_image=media.banner_image,
@@ -152,7 +149,7 @@ class AnilistNormalizer:
                 edge.node.cover_image.extra_large if edge.node.cover_image else None
             )
 
-            media_type = MediaType(edge.node.type)
+            media_type = MediaType(edge.node.type.lower())
 
             relation = MediaRelation(
                 relation_type=AnilistNormalizer._convert_enum_field(edge.relation_type),
@@ -190,7 +187,7 @@ class AnilistNormalizer:
                 id=media_rec.id,
                 title=title,
                 cover_image=cover_image,
-                media_type=MediaType(media_rec.type),
+                media_type=MediaType(media_rec.type.lower()),
             )
             result.append(recommendation)
 

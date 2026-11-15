@@ -49,4 +49,4 @@ class ScoreBuilder:
                 )
             )
 
-        return []
+        return scores
