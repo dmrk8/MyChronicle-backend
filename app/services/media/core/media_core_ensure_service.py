@@ -41,13 +41,4 @@ class MediaCoreEnsureService:
         return await self._get_or_create(data)
 
     async def _get_or_create(self, data: MediaDBUpsert) -> MediaDB:
-        existing = await self.service.get_media_by_external_ref(
-            data.primary_external_id,
-            data.primary_external_source,
-            data.media_type,
-        )
-
-        if existing:
-            return existing
-
         return await self.service.upsert_media(data)
