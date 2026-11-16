@@ -87,7 +87,7 @@ class TMDBDetailService:
         try:
             if media_type == "movie":
                 media = await self.tmdb_service.get_movie_detail(media_id)
-                ttl = await self.sync_expiry_policy.calculate_tmdb_movie_sync_ttl(media)
+                ttl = await self.sync_expiry_policy.calculate_tmdb_movie_sync_ttl()
                 payload_type = StoredDataType.TMDB_MOVIE_DETAIL
             else:
                 media = await self.tmdb_service.get_tv_detail(media_id)

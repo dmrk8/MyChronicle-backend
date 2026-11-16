@@ -2,6 +2,7 @@ import asyncio
 
 import structlog
 
+from app.core.exceptions import UpstreamServiceException
 from app.enums.media_enums import StoredDataType
 from app.models.providers.omdb_models import OMDbData
 from app.services.media.storage.external_payload_service import ExternalPayloadService
@@ -42,10 +43,11 @@ class OMDbDetailService:
     async def _refresh(self, imdb_id: str) -> OMDbData | None:
         try:
             data = await self.omdb_service.fetch_data(imdb_id=imdb_id)
+
             if data is None:
                 return None
 
-            ttl = await self.sync_expiry_policy.calculate_omdb_sync_ttl(data)
+            ttl = await self.sync_expiry_policy.calculate_omdb_sync_ttl()
             await self.external_payload_service.save(
                 payload_type=StoredDataType.OMDB_DATA,
                 external_id=imdb_id,
@@ -53,6 +55,14 @@ class OMDbDetailService:
                 ttl=ttl,
             )
             return data
+
+        except UpstreamServiceException:
+            self.logger.warning(
+                "omdb_unavailable",
+                imdb_id=imdb_id,
+            )
+            return None
+
         except Exception:
             self.logger.exception(
                 "omdb_data_refresh_failed",
