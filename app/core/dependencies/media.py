@@ -2,7 +2,7 @@ from fastapi import Depends
 
 from app.core.dependencies.metadata import (
     get_anilist_service,
-    get_jikan_service,
+    get_mal_service,
     get_omdb_service,
     get_tmdb_service,
 )
@@ -25,7 +25,7 @@ from app.services.media.media_service import MediaService
 from app.services.media.storage.external_payload_service import ExternalPayloadService
 from app.services.media.sync.sync_expiry_policy import SyncExpiryPolicy
 from app.services.metadata.anilist_service import AnilistService
-from app.services.metadata.jikan_service import JikanService
+from app.services.metadata.mal_service import MALService
 from app.services.metadata.omdb_service import OMDbService
 from app.services.metadata.tmdb_service import TMDBService
 from app.services.redis_service import RedisService
@@ -77,13 +77,13 @@ def get_anilist_detail_service(
 
 
 def get_mal_detail_service(
-    jikan_service: JikanService = Depends(get_jikan_service),
+    mal_service: MALService = Depends(get_mal_service),
     external_payload_service: ExternalPayloadService = Depends(
         get_external_payload_service
     ),
     sync_expiry_policy: SyncExpiryPolicy = Depends(get_sync_expiry_policy),
 ) -> MALDetailService:
-    return MALDetailService(jikan_service, external_payload_service, sync_expiry_policy)
+    return MALDetailService(mal_service, external_payload_service, sync_expiry_policy)
 
 
 def get_omdb_detail_service(

@@ -5,7 +5,7 @@ from redis.asyncio import Redis
 
 from app.core.state import AppState
 from app.integrations.anilist_api import AnilistApi
-from app.integrations.jikan_api import JikanAPI
+from app.integrations.mal_api import MALApi
 from app.integrations.omdb_api import OMDbApi
 from app.integrations.tmdb_api import TMDBApi
 from app.repositories.registry import Repositories
@@ -35,5 +35,5 @@ def get_omdb_api(state: AppState = Depends(get_app_state)) -> OMDbApi:
     return OMDbApi(state.settings.omdb_api_key, state.omdb_client)
 
 
-def get_jikan_api(state: AppState = Depends(get_app_state)) -> JikanAPI:
-    return JikanAPI(state.jikan_client)
+def get_mal_api(state: AppState = Depends(get_app_state)) -> MALApi:
+    return MALApi(state.settings.mal_client_id, state.mal_client)

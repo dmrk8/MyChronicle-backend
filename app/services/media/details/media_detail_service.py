@@ -1,3 +1,5 @@
+import structlog
+
 from app.enums.media_enums import MediaType
 from app.models.api.media_response_models import (
     AnimeDetail,
@@ -44,16 +46,20 @@ class MediaDetailService:
     async def get_anime_detail(self, media_id: int) -> AnimeDetail:
         anilist = await self.anilist_detail_service.get_media_detail(media_id)
         mal = None
+
         if anilist.id_mal:
             mal = await self.mal_detail_service.get_anime_detail(anilist.id_mal)
+
         core = await self.media_core_ensure_service.ensure_anilist(anilist, mal)
         return MediaResponseAssembler.to_anime_detail(core, anilist, mal)
 
     async def get_manga_detail(self, media_id: int) -> MangaDetail:
         anilist = await self.anilist_detail_service.get_media_detail(media_id)
         mal = None
+
         if anilist.id_mal:
             mal = await self.mal_detail_service.get_manga_detail(anilist.id_mal)
+
         core = await self.media_core_ensure_service.ensure_anilist(anilist, mal)
         return MediaResponseAssembler.to_manga_detail(core, anilist, mal)
 

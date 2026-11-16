@@ -46,7 +46,7 @@ def create_app(settings) -> FastAPI:
         app.state.anilist_client = AsyncClient(timeout=10.0)
         app.state.tmdb_client = AsyncClient(timeout=10.0)
         app.state.omdb_client = AsyncClient(timeout=10.0)
-        app.state.jikan_client = AsyncClient(timeout=10.0)
+        app.state.mal_client = AsyncClient(timeout=10.0)
 
         # Repositories
         db = app.state.mongo_client[settings.database_name]
@@ -59,7 +59,7 @@ def create_app(settings) -> FastAPI:
             anilist_client=app.state.anilist_client,
             tmdb_client=app.state.tmdb_client,
             omdb_client=app.state.omdb_client,
-            jikan_client=app.state.jikan_client,
+            mal_client=app.state.mal_client,
             repositories=app.state.repositories,
         )
 

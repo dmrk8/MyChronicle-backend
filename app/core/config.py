@@ -47,16 +47,9 @@ class Settings(BaseSettings):
 
     tmdb_api_key: str = Field(description="API key for The Movie Database (TMDB)")
     tmdb_access_token: str = Field(description="Access token for TMDB API")
-
-    # twitch_client_id: str = Field(description="Client ID for Twitch API")
-    # twitch_client_secret: str = Field(description="Client secret for Twitch API")
-    # igdb_access_token: str = Field(description="Access token for IGDB API")
-    # igdb_expires_in: int = Field(
-    #    description="Expiration time for IGDB access token in seconds"
-    # )#
-    # steam_web_api_key: str = Field(description="API key for Steam Web API")
     omdb_api_key: str = Field(description="API key for Open Movie Database (OMDB)")
-
+    mal_client_id: str = Field(description="Client ID for MyAnimeList API")
+    
     allow_origins: str = Field(
         default="http://localhost:5173",
         description="Allowed origin for CORS",

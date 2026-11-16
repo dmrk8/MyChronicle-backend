@@ -4,8 +4,7 @@ from app.models.db.media_core_models import (
 )
 
 from app.models.providers.anilist_models import AnilistMediaDetail
-from app.models.providers.mal_models import MALMangaResponse, MALMangaResponse
-from app.models.providers.mal_models import MALAnimeResponse
+from app.models.providers.mal_models import MALAnimeData, MALMangaData
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.services.media.core.media_core_service import MediaCoreService
@@ -19,7 +18,7 @@ class MediaCoreEnsureService:
     async def ensure_anilist(
         self,
         anilist: AnilistMediaDetail,
-        mal: MALAnimeResponse | MALMangaResponse | None = None,
+        mal: MALAnimeData | MALMangaData | None = None,
     ) -> MediaDB:
         data = MediaDBNormalizer.normalize_ani(anilist, mal)
         return await self._get_or_create(data)

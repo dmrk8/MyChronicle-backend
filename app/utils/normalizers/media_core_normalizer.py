@@ -1,6 +1,6 @@
 from typing import Optional
 from app.models.providers.anilist_models import AnilistMediaDetail
-from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
+from app.models.providers.mal_models import MALAnimeData, MALMangaData
 from app.models.providers.omdb_models import OMDbData
 from app.models.db.media_core_models import (
     ExternalReference,
@@ -15,7 +15,7 @@ class MediaDBNormalizer:
     @staticmethod
     def normalize_ani(
         media: AnilistMediaDetail,
-        mal_data: Optional[MALAnimeResponse | MALMangaResponse] = None,
+        mal_data: Optional[MALAnimeData | MALMangaData] = None,
     ) -> MediaDBUpsert:
         external_ids = [
             ExternalReference(
@@ -27,7 +27,7 @@ class MediaDBNormalizer:
         if mal_data:
             external_ids.append(
                 ExternalReference(
-                    id=str(mal_data.data.mal_id),
+                    id=str(mal_data.id),
                     source=MediaExternalSource.MAL,
                 )
             )

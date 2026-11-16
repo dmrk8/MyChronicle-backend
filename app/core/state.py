@@ -16,5 +16,5 @@ class AppState:
     anilist_client: AsyncClient
     tmdb_client: AsyncClient
     omdb_client: AsyncClient
-    jikan_client: AsyncClient
+    mal_client: AsyncClient
     repositories: Repositories

@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from app.models.providers.anilist_models import AnilistMediaDetail
-from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
+from app.models.providers.mal_models import MALAnimeData, MALMangaData
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.models.shared.media import MediaScore, MediaScoreSource
@@ -12,7 +12,7 @@ class ScoreBuilder:
     @staticmethod
     def build_anime_or_manga_score(
         media: AnilistMediaDetail,
-        mal_data: Optional[MALAnimeResponse | MALMangaResponse],
+        mal_data: Optional[MALAnimeData | MALMangaData],
     ) -> List[MediaScore]:
         scores = []
 
@@ -24,12 +24,12 @@ class ScoreBuilder:
                     vote_count=None,
                 )
             )
-        if mal_data and mal_data.data.score:
+        if mal_data and mal_data.mean:
             scores.append(
                 MediaScore(
-                    value=float(mal_data.data.score) * 10,
+                    value=float(mal_data.mean) * 10,
                     source=MediaScoreSource.MAL,
-                    vote_count=mal_data.data.scored_by,
+                    vote_count=mal_data.num_scoring_users,
                 )
             )
         return scores

@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 
 from app.enums.anilist_enums import AnilistStatus
 from app.models.providers.anilist_models import AnilistMediaDetail
-from app.models.providers.mal_models import MALAnimeResponse, MALMangaResponse
 from app.models.providers.omdb_models import OMDbData
 from app.models.providers.tmdb_models import TMDBMovieDetail, TMDBTVDetail
 from app.utils.normalizers.omdb_normalizer import OMDbNormalizer
@@ -41,9 +40,7 @@ class SyncExpiryPolicy:
 
         return timedelta(days=365)  # Older releases, sync annually
 
-    async def calculate_anilist_sync_ttl(
-        self, media: AnilistMediaDetail
-    ) -> timedelta:
+    async def calculate_anilist_sync_ttl(self, media: AnilistMediaDetail) -> timedelta:
         """
         Calculate Anilist media sync expiry based on media status
 
@@ -87,9 +84,7 @@ class SyncExpiryPolicy:
 
         return timedelta(days=90)
 
-    async def calculate_tmdb_movie_sync_ttl(
-        self, media: TMDBMovieDetail
-    ) -> timedelta:
+    async def calculate_tmdb_movie_sync_ttl(self, media: TMDBMovieDetail) -> timedelta:
         """Calculate tmdb expirery based on release date.
         if movie is upcoming: sync after release date (1 hour after release)
         if movie is recently released: sync after 30 days (to capture any changes)
@@ -114,11 +109,11 @@ class SyncExpiryPolicy:
                     return release_dt - now + timedelta(hours=1)
 
                 if release_dt > now - timedelta(days=30):
-                    return timedelta(days=30)
+                    return timedelta(days=14)
             except ValueError:
                 pass
 
-        return timedelta(days=90)
+        return timedelta(days=30)
 
     async def calculate_tmdb_tv_sync_ttl(self, media: TMDBTVDetail) -> timedelta:
         """Calculate tmdb expirery based on next episode air date or last air date.
@@ -159,32 +154,11 @@ class SyncExpiryPolicy:
                 ).replace(tzinfo=timezone.utc)
 
                 if last_air_dt > now - timedelta(days=30):
-                    return timedelta(days=30)
+                    return timedelta(days=14)
             except ValueError:
                 pass
 
-        return timedelta(days=90)
+        return timedelta(days=30)
 
-    async def calculate_mal_sync_ttl(
-        self, mal_data: MALAnimeResponse | MALMangaResponse
-    ) -> timedelta:
-        """
-        Calculate the sync expiry for MAL data.
-        if airing/publishing: sync after 1 week for anime and 60 days for manga
-        if not airing/publishing: return None
-
-        Args:
-            mal_data (MALAnimeResponse | MALMangaResponse):
-
-        Returns:
-            Optional[timedelta]: _description_
-        """
-        if isinstance(mal_data, MALAnimeResponse):
-            if mal_data.data.airing:
-                return timedelta(weeks=1)
-
-        if isinstance(mal_data, MALMangaResponse):
-            if mal_data.data.publishing:
-                return timedelta(days=60)
-
-        return timedelta(days=360) 
+    async def calculate_mal_sync_ttl(self) -> timedelta:
+        return timedelta(days=7)

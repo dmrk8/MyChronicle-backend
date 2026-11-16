@@ -180,8 +180,6 @@ class MangaData(AniMediaData):
     chapters: Optional[int] = None
     volumes: Optional[int] = None
 
-    authors: List[str] = Field(default_factory=list)
-
 
 class MovieTVMediaBase(MediaBase):
     original_language: Optional[str] = None
